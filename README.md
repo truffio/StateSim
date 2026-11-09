@@ -107,6 +107,9 @@ state with no outgoing transition, a global transition to the current state and
 undefined variable names are not detected at load. An undefined name raises
 `EvaluationError` at run time with the file, line, tick and item.
 
+Cheat sheet: `docs/cheatsheet.md`. Jupyter demos: `notebooks/` (quickstart,
+autopilot state machine, bands/timers/errors), with example CSV sets in `examples/`.
+
 ## Tests and report
 
 ```

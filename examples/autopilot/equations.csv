@@ -1,0 +1,2 @@
+equation,explanation,rationale,result_variable,band,order
+AP == 'ENGAGED' and not alt_cap,Engaged without capture,Monitoring layer,mon_no_cap,20,2
