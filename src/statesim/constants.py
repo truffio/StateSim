@@ -1,0 +1,46 @@
+"""Tool-level constants (spec: supported_logic.tool_constraints)."""
+
+from __future__ import annotations
+
+# Limits. Equations inside state machine files (one per SM CSV row) count
+# toward MAX_EQUATIONS together with the standalone equations.
+MAX_EQUATIONS: int = 10_000
+MAX_STATE_MACHINES: int = 10_000
+
+# Context names provided by the engine; no input, result_variable or state
+# machine may use them.
+RESERVED_NAMES: frozenset[str] = frozenset({"tick", "t", "dt"})
+
+# Master CSV.
+MASTER_COLUMNS: tuple[str, ...] = ("file_name", "type", "order")
+TYPE_STATE_MACHINE = "state_machine"
+TYPE_EQUATIONS = "equations"
+TYPE_INPUTS = "inputs"
+FILE_TYPES: tuple[str, ...] = (TYPE_STATE_MACHINE, TYPE_EQUATIONS, TYPE_INPUTS)
+
+# Definition CSV columns (required headers; extra columns are ignored).
+STATE_MACHINE_COLUMNS: tuple[str, ...] = (
+    "transition_id",
+    "current_state",
+    "next_state",
+    "default_state",
+    "equation",
+    "result_variable",
+    "rationale",
+    "title",
+    "band",
+    "order",
+)
+EQUATIONS_COLUMNS: tuple[str, ...] = (
+    "equation",
+    "explanation",
+    "rationale",
+    "result_variable",
+    "band",
+    "order",
+)
+INPUTS_COLUMNS: tuple[str, ...] = ("variable_name", "type", "default_value")
+
+# Trace component names for events that do not belong to a state machine.
+EQUATIONS_COMPONENT = "EQ"
+INPUT_COMPONENT = "INPUT"
