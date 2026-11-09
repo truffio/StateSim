@@ -37,7 +37,38 @@ def build_schedule(model: Model) -> tuple[ScheduleItem, ...]:
     then ascending ``order``, then declaration ``seq``. Never depends on dict
     or set iteration order. Pure function of the model.
     """
-    raise NotImplementedError
+    items: list[ScheduleItem] = []
+    for sm in model.state_machines:
+        items.append(
+            ScheduleItem(
+                kind="state_machine",
+                name=sm.name,
+                band_hz=sm.band_hz,
+                order=sm.master_order,
+                period_ticks=_period_ticks(model.tick_hz, sm.band_hz, sm.name),
+                seq=len(items),
+            )
+        )
+    for eq in model.equations:
+        items.append(
+            ScheduleItem(
+                kind="equation",
+                name=eq.result_variable,
+                band_hz=eq.band_hz,
+                order=eq.order,
+                period_ticks=_period_ticks(model.tick_hz, eq.band_hz, eq.result_variable),
+                seq=len(items),
+            )
+        )
+    items.sort(key=lambda it: (-it.band_hz, it.order, it.seq))
+    return tuple(items)
+
+
+def _period_ticks(tick_hz: Fraction, band_hz: Fraction, name: str) -> int:
+    ratio = Fraction(tick_hz) / Fraction(band_hz)
+    if ratio.denominator != 1 or ratio < 1:
+        raise ValueError(f"{name}: tick_hz {tick_hz} / band_hz {band_hz} is not a positive int")
+    return int(ratio)
 
 
 def due_items(schedule: tuple[ScheduleItem, ...], tick: int) -> tuple[ScheduleItem, ...]:
@@ -45,4 +76,6 @@ def due_items(schedule: tuple[ScheduleItem, ...], tick: int) -> tuple[ScheduleIt
     it): those with ``(tick - 1) % period_ticks == 0``, so every band runs on
     tick 1. Preserves ``schedule`` order (already sorted by build_schedule).
     """
-    raise NotImplementedError
+    if tick < 1:
+        raise ValueError(f"tick must be >= 1, got {tick}")
+    return tuple(it for it in schedule if (tick - 1) % it.period_ticks == 0)

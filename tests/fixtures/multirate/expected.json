@@ -1,0 +1,12 @@
+{"description":"30 Hz and 20 Hz equation bands (tick_hz 60: 30 Hz on ticks 1,3,5,7,9; 20 Hz on ticks 1,4,7,10); 30 Hz runs first when both due.","steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{},"outputs":{"f_late":false,"s_late":false,"s_copy":false,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":2,"states":{},"outputs":{"f_late":false,"s_late":false,"s_copy":false,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":3,"states":{},"outputs":{"f_late":false,"s_late":false,"s_copy":false,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":4,"states":{},"outputs":{"f_late":false,"s_late":true,"s_copy":false,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":5,"states":{},"outputs":{"f_late":false,"s_late":true,"s_copy":false,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":6,"states":{},"outputs":{"f_late":false,"s_late":true,"s_copy":false,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":7,"states":{},"outputs":{"f_late":true,"s_late":true,"s_copy":true,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":8,"states":{},"outputs":{"f_late":true,"s_late":true,"s_copy":true,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":9,"states":{},"outputs":{"f_late":true,"s_late":true,"s_copy":true,"f_dt":true,"s_dt":true}}},
+{"set_inputs":{},"expect":{"tick":10,"states":{},"outputs":{"f_late":true,"s_late":true,"s_copy":true,"f_dt":true,"s_dt":true}}}
+]}

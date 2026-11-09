@@ -1,0 +1,11 @@
+{"description":"AP OFF/ARMED/ENGAGED with a guard row, global disconnect and a monitor equation ordered after the SM.",
+"steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{"AP":"OFF"},"outputs":{"t1_sw":false,"t2_sw":false,"t2_cap":false,"t3_disc":false,"mon_no_cap":false}}},
+{"set_inputs":{"ap_sw":true},"expect":{"tick":2,"states":{"AP":"ARMED"},"outputs":{"t1_sw":true,"t2_sw":true,"t2_cap":false,"mon_no_cap":false}}},
+{"set_inputs":{},"expect":{"tick":3,"states":{"AP":"ARMED"},"outputs":{"t2_sw":true,"t2_cap":false,"mon_no_cap":false}}},
+{"set_inputs":{"alt_cap":true},"expect":{"tick":4,"states":{"AP":"ENGAGED"},"outputs":{"t2_cap":true,"mon_no_cap":false}}},
+{"set_inputs":{"alt_cap":false},"expect":{"tick":5,"states":{"AP":"ENGAGED"},"outputs":{"t2_cap":false,"mon_no_cap":true}}},
+{"set_inputs":{"disc":true},"expect":{"tick":6,"states":{"AP":"OFF"},"outputs":{"t3_disc":true,"t1_sw":true,"mon_no_cap":false}}},
+{"set_inputs":{},"expect":{"tick":7,"states":{"AP":"ARMED"},"outputs":{"t1_sw":true,"t3_disc":true,"mon_no_cap":false}}},
+{"set_inputs":{},"expect":{"tick":8,"states":{"AP":"OFF"},"outputs":{"t3_disc":true,"mon_no_cap":false}}}
+]}

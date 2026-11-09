@@ -1,0 +1,6 @@
+{"description":"Two transitions enabled in one pass; the lower manual order (id 2, order 1) wins over the lower id.",
+"steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{"C":"S0"},"outputs":{"r1":false,"r2":false}}},
+{"set_inputs":{"go":true},"expect":{"tick":2,"states":{"C":"X"},"outputs":{"r1":true,"r2":true}}},
+{"set_inputs":{},"expect":{"tick":3,"states":{"C":"X"},"outputs":{"r1":true,"r2":true}}}
+]}

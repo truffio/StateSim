@@ -1,0 +1,5 @@
+variable_name,type,default_value
+start,bool,False
+stop,bool,False
+fault,bool,False
+reset,bool,False

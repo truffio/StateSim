@@ -1,0 +1,9 @@
+{"description":"SM transition uses standalone equation result armed_cond (ordered before the SM); lamp equation (ordered after) uses it and the SM state.",
+"steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{"R":"OFF"},"outputs":{"armed_cond":false,"r1":false,"r2":true,"lamp":false}}},
+{"set_inputs":{"sw":true},"expect":{"tick":2,"states":{"R":"ON"},"outputs":{"armed_cond":true,"r1":true,"r2":false,"lamp":true}}},
+{"set_inputs":{"inhibit":true},"expect":{"tick":3,"states":{"R":"ON"},"outputs":{"armed_cond":false,"r1":false,"lamp":false}}},
+{"set_inputs":{"sw":false},"expect":{"tick":4,"states":{"R":"OFF"},"outputs":{"armed_cond":false,"r2":true,"lamp":false}}},
+{"set_inputs":{"sw":true},"expect":{"tick":5,"states":{"R":"OFF"},"outputs":{"armed_cond":false,"r1":false,"lamp":false}}},
+{"set_inputs":{"inhibit":false},"expect":{"tick":6,"states":{"R":"ON"},"outputs":{"armed_cond":true,"r1":true,"lamp":true}}}
+]}

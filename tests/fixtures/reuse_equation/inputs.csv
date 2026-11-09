@@ -1,0 +1,3 @@
+variable_name,type,default_value
+sw,bool,False
+inhibit,bool,False

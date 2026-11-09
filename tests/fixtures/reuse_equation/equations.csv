@@ -1,0 +1,3 @@
+equation,explanation,rationale,result_variable,band,order
+sw and not inhibit,Armed condition,Reused by R,armed_cond,10,1
+armed_cond and R == 'ON',Lamp,Uses SM state after SM runs,lamp,10,3

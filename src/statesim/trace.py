@@ -40,7 +40,11 @@ class TraceSink(Protocol):
 def format_value(value: object) -> str:
     """``repr()`` for str (so states show as 'ENGAGED'), ``f"{float(v):.6f}"``
     for Fraction, ``str()`` for everything else (True, 1000, 2.5)."""
-    raise NotImplementedError
+    if isinstance(value, str):
+        return repr(value)
+    if isinstance(value, Fraction):
+        return f"{float(value):.6f}"
+    return str(value)
 
 
 def format_event(event: TraceEvent) -> str:
@@ -50,7 +54,11 @@ def format_event(event: TraceEvent) -> str:
     ``event.values`` in the order given (already sorted). When values is
     empty the line ends after the action (no trailing `` | ``).
     """
-    raise NotImplementedError
+    head = f"tick={event.tick:06d} t={float(event.t):.6f} | {event.component} | {event.action}"
+    if not event.values:
+        return head
+    values = ", ".join(f"{name}={format_value(value)}" for name, value in event.values)
+    return f"{head} | {values}"
 
 
 class FileTraceWriter:
@@ -62,19 +70,20 @@ class FileTraceWriter:
     """
 
     def __init__(self, path: str | PathLike[str]) -> None:
-        raise NotImplementedError
+        self._file = open(path, "w", encoding="utf-8", newline="\n")
 
     def emit(self, event: TraceEvent) -> None:
-        raise NotImplementedError
+        self._file.write(format_event(event) + "\n")
+        self._file.flush()
 
     def close(self) -> None:
-        raise NotImplementedError
+        self._file.close()
 
     def __enter__(self) -> "FileTraceWriter":
-        raise NotImplementedError
+        return self
 
     def __exit__(self, *exc: object) -> None:
-        raise NotImplementedError
+        self.close()
 
 
 class ListTraceSink:
@@ -83,10 +92,10 @@ class ListTraceSink:
     """
 
     def __init__(self) -> None:
-        raise NotImplementedError
+        self.events: list[TraceEvent] = []
 
     def emit(self, event: TraceEvent) -> None:
-        raise NotImplementedError
+        self.events.append(event)
 
     def lines(self) -> list[str]:
-        raise NotImplementedError
+        return [format_event(e) for e in self.events]

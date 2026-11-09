@@ -1,0 +1,8 @@
+{"description":"CSV rows deliberately out of order; y (order 3) sees x (order 2) same pass; p (order 1) sees late (order 4) from the previous pass.",
+"steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{},"outputs":{"p":false,"x":false,"y":false,"late":false}}},
+{"set_inputs":{"go":true},"expect":{"tick":2,"states":{},"outputs":{"p":false,"x":true,"y":true,"late":true}}},
+{"set_inputs":{},"expect":{"tick":3,"states":{},"outputs":{"p":true,"x":true,"y":true,"late":true}}},
+{"set_inputs":{"go":false},"expect":{"tick":4,"states":{},"outputs":{"p":true,"x":false,"y":false,"late":false}}},
+{"set_inputs":{},"expect":{"tick":5,"states":{},"outputs":{"p":false,"x":false,"y":false,"late":false}}}
+]}
