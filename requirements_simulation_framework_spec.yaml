@@ -102,6 +102,11 @@ framework:
       type: >
         Kind of file: "state_machine", "equations" or "inputs". Lets the
         framework tell the formats apart.
+      order: >
+        For state_machine rows: the relative order of execution of that
+        state machine within its band, set manually. It is the same
+        mechanism, and shares the same ordering space within a band, as
+        the order of equations. Not used for equations or inputs rows.
 
   component_configuration:
     description: >
@@ -124,7 +129,9 @@ framework:
         The rate, in Hertz (Hz), at which the row is evaluated. All rows
         sharing a band are evaluated at the same rate. All rows of one
         state machine file must share a single band; a state machine is
-        never split across bands.
+        never split across bands. A band is an explicit frequency; bands
+        are not required to be integer multiples or factors of each other
+        (e.g. 20 Hz and 30 Hz may coexist).
       order: >
         The relative order of evaluation within the band. Set manually by
         the author.
@@ -282,9 +289,12 @@ framework:
       - Python only.
       - Fully synchronous and deterministic; no async, threads or
         wall-clock time, and no randomness.
-      - Simulation time is an integer tick count; bands are in Hz and the
-        base tick is derived from the fastest band. t and dt are derived
-        from the tick.
+      - Simulation time is an integer tick count; bands are explicit
+        frequencies in Hz with no required relationship to each other.
+        The tick rate is the least common multiple of all band
+        frequencies, so every band period is a whole number of ticks
+        (exact arithmetic, no floating-point accumulation). t and dt are
+        derived from the tick.
       - Execution order is the manual (band, order) schedule; never
         dependent on dict or set iteration order.
     design: >
