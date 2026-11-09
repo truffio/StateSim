@@ -93,21 +93,23 @@ framework:
     description: >
       A single master CSV file defines the overall simulation composition.
       Each row is the name of a file that defines something: one row per
-      state machine file, plus one row for the equations file. Execution
+      state machine file, plus one row for the equations file and one row
+      for the external inputs file. Execution
       rate and order are not set here; they are defined on each row of the
       individual definition files.
     columns:
       file_name: name (path) of a state machine or equations CSV file
       type: >
-        Kind of file: "state_machine" or "equations". Lets the framework
-        tell the two formats apart.
+        Kind of file: "state_machine", "equations" or "inputs". Lets the
+        framework tell the formats apart.
 
   component_configuration:
     description: >
       Logic is defined in CSV files: one CSV file per state machine, plus a
       single CSV file holding all Boolean equations that are not linked to
-      a state machine. With n state machines there are therefore n + 1
-      definition files. Every file includes band and order columns (see
+      a state machine, plus a single CSV file defining the external
+      inputs. With n state machines there are therefore n + 2 definition
+      files. Every file includes band and order columns (see
       csv_formats.common_columns).
     standalone_equation_reuse: >
       An equation defined in the standalone equations file can be used
@@ -179,6 +181,24 @@ framework:
         special precedence: if more than one transition is true in the
         same pass, the manually set order prevails (the one evaluated
         first, per its band and order, takes effect).
+
+    inputs_file:
+      description: >
+        A single CSV file defining the external inputs: variables whose
+        values come from outside the engine (set via set_input) rather
+        than from an equation or state machine. One variable per row.
+      columns:
+        variable_name: name of the input variable used in equations
+        type: >
+          Data type of the variable (e.g. bool, int, float). Not needed
+          by the engine itself for now; it will be used by a future front
+          end to present an appropriate control for stimulating the
+          variable.
+        default_value: >
+          Value the input has at start, until it is set externally.
+      note: >
+        The default_value column was added so that inputs can start at
+        defaults as required; the type column is kept for future GUI use.
 
     equations_file:
       description: >
@@ -292,8 +312,15 @@ framework:
         This interface is the seam a future front end will attach to.
     initial_values: >
       At start, every state machine is in its default_state and external
-      input values are set to their defaults. Where input defaults are
-      defined is TBD.
+      input values are set to their default_value from the inputs file.
+
+  outputs: >
+    The following are outputs of the engine, consumable by external
+    software to be defined at a later stage: (1) the current state of
+    every state machine, and (2) every variable assigned the result of an
+    equation or transition equation (result_variable). These are exposed
+    through the Engine.snapshot() interface. External inputs are the
+    only values written from outside.
 
   frontend_and_communication:
     status: deferred to a later phase (not part of the current scope)
