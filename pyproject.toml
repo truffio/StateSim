@@ -20,6 +20,7 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--strict-markers"
+junit_family = "xunit1"
 markers = [
     "req(*ids): links a test to one or more requirement IDs from docs/requirements.csv",
 ]
