@@ -4,21 +4,23 @@ abstract: >
   interactive rather than static text. Requirements are modeled as a
   collection of independent components, each representing a portion of the
   system (analogous to a Line Replaceable Unit or a software subsystem).
-  Each component may internally use a state machine, a rule-based system,
+  Each component may internally use state machines, Boolean equations,
   a simple timer, or a combination of these to define its behavior. There
   is no control-loop or real-time performance modeling involved; any effect
   that would normally result from a control loop is represented as a timer.
   Components communicate through periodically computed values passed via a
-  shared execution context, and through discrete events broadcast on a
-  shared event bus. Two conceptual layers exist in parallel: a command
-  layer that reacts to events and issues actions, and a monitoring layer
-  that continuously observes system state and raises events when it
-  detects undesirable conditions. The framework is deliberately minimal —
-  it is a short-lived internal tool for requirement exploration and
+  shared execution context. There is no event bus and no event mechanism:
+  the system is purely time based, and all logic is expressed as state
+  machines and Boolean equations that are evaluated periodically. Two
+  conceptual layers exist in parallel: a command layer that evaluates its
+  logic each cycle and issues actions, and a monitoring layer that
+  continuously observes system state and evaluates equations that
+  indicate undesirable conditions. The framework is
+  deliberately minimal — it is a short-lived internal tool for requirement exploration and
   maturation, not a production or public-facing system, and is not intended
   to be over-engineered with error handling, input validation, or sandboxing
   beyond what is described below. A Python backend orchestrates simulation
-  execution and exposes state, values, and events to a JavaScript/HTML/CSS
+  execution and exposes state and values to a JavaScript/HTML/CSS
   web front end (a mock cockpit with panels) over WebSockets, enabling
   requirements to be observed and manipulated dynamically rather than only
   read on paper.
@@ -30,78 +32,177 @@ framework:
       A component is the fundamental unit of the framework, representing a
       portion of the system (e.g. an LRU or software subsystem/function).
     composition:
-      - state_machine: optional
-      - rule_based_system: optional
-      - timer: optional
+      state_machine: optional
+      boolean_equations: optional
+      timer: optional
       note: >
         A component may be any single one of these, any combination, or
         none beyond simple pass-through logic. Internal variables and
         logic are private to the component; only designated outputs are
         exposed to the rest of the system.
     definition_source: >
-      Each component's state machine and/or rules are defined in a
-      dedicated JSON file, using an existing JSON schema (defined
-      separately/previously, not specified in this document) for state
-      machines and rule logic. The framework loads this JSON at start time.
+      All configuration and definition files are CSV, including the master
+      file; there are no YAML or JSON inputs. State machines and Boolean
+      equations are defined in CSV files that the framework loads at start
+      time. The column layouts are described under csv_formats.
     logic_evaluation: >
-      Rule and transition conditions are logical expressions written using
-      actual context variable names, evaluated directly via Python's eval
-      at runtime. No AST sanitization, sandboxing, or expression validation
-      is performed; the tool is internal-only and rule authors are trusted.
+      Equation and transition conditions are written using Python syntax
+      (e.g. "a and not b", "(x or y) and z"), with actual context variable
+      names, and are evaluated directly via Python's eval at runtime. No
+      AST sanitization, sandboxing, or expression validation is performed;
+      the tool is internal-only and equation authors are trusted.
     layers:
       command_layer: >
-        Reacts to events and periodic evaluations by issuing actions/
-        commands (represented abstractly; no real control output).
+        Periodically evaluates its state machines and Boolean equations
+        and issues actions/commands (represented abstractly;
+        no real control output).
       monitoring_layer: >
         Continuously observes command layer state/output and other
         context values; evaluates for undesirable combinations of
-        conditions ("situations") and raises events when detected.
+        conditions ("situations") using Boolean equations; the result is
+        simply another value in the shared context.
       note: >
         Both layers run concurrently within the same framework and use the
-        same underlying mechanisms (state machines, rules, timers, events).
+        same underlying mechanisms (state machines, Boolean equations, timers).
+
+  supported_logic:
+    description: >
+      The simulator supports two kinds of logic: state machines and simple
+      Boolean equations. A component may use any number of either, subject
+      to the tool constraints below.
+    state_machines: >
+      Supports multiple state machines (up to MAX_STATE_MACHINES).
+    transitions: >
+      A state machine transition may be conditioned on a single Boolean
+      equation or on multiple Boolean equations, allowing guards and
+      inhibits to be implemented where required. Equations used by
+      transitions count toward MAX_EQUATIONS.
+    boolean_equations: >
+      Supports multiple simple Boolean equations (up to MAX_EQUATIONS),
+      evaluated over context variables.
+    tool_constraints:
+      MAX_EQUATIONS: TBD  # "x"; expected to be a high value
+      MAX_STATE_MACHINES: TBD  # "y"; expected to be a high value
+      note: >
+        These limits are defined as tool constraints (named constants in
+        the tool), not per-component settings. Actual values are TBD and
+        are expected to be set high enough that they are not a practical
+        limitation when modeling requirements.
 
   master_configuration:
     description: >
-      A single master JSON file defines the overall simulation composition.
-    contents:
-      - component_name: identifier for each component
-      - component_file: path to that component's JSON definition file
-      - execution_rate: how often the component is scheduled to execute
-      - additional_parameters: anything else required to instantiate the
-          component (TBD as needed)
+      A single master CSV file defines the overall simulation composition.
+      Each row is the name of a file that defines something: one row per
+      state machine file, plus one row for the equations file. Execution
+      rate and order are not set here; they are defined on each row of the
+      individual definition files.
+    columns:
+      file_name: name (path) of a state machine or equations CSV file
+      type: >
+        Kind of file: "state_machine" or "equations". Lets the framework
+        tell the two formats apart.
 
   component_configuration:
     description: >
-      Each component has its own JSON file, following a common schema
-      across all components, containing:
-      - state machine definition (if applicable)
-      - rule definitions (if applicable)
-      - any initial values or parameters needed by the component
+      Logic is defined in CSV files: one CSV file per state machine, plus a
+      single CSV file holding all Boolean equations that are not linked to
+      a state machine. With n state machines there are therefore n + 1
+      definition files. Every file includes band and order columns (see
+      csv_formats.common_columns).
+    standalone_equation_reuse: >
+      An equation defined in the standalone equations file can be used
+      inside a state machine by referring to the Boolean variable assigned
+      to that equation's result.
     note: >
-      The specific JSON schema for state machines and rules is assumed to
-      already exist from prior work and is out of scope for this document.
+      Initial values or parameters needed by a component are TBD.
+
+  csv_formats:
+    common_columns:
+      band: >
+        The rate at which the row is evaluated. All rows sharing a band
+        are evaluated at the same rate.
+      order: >
+        The relative order of evaluation within the band. Set manually by
+        the author.
+      note: >
+        Present in every definition file (state machine files and the
+        standalone equations file).
+
+    state_machine_file:
+      description: >
+        One CSV file per state machine. Each row is one equation that
+        participates in a transition. A transition may have one or more
+        equations (rows); the number varies per transition.
+      columns:
+        transition_id: >
+          Unique identifier (e.g. a sequential number) of the transition.
+          All rows sharing a transition_id are the equations that govern
+          that one transition.
+        current_state: >
+          State the transition leaves. Left empty for a global transition
+          (see global_transitions).
+        next_state: state the transition enters
+        equation: >
+          Python-syntax Boolean expression for this row (see
+          components.logic_evaluation).
+        result_variable: >
+          Name of the Boolean variable that receives the result of this
+          row's equation each time it is evaluated.
+        rationale: >
+          String explaining why this transition / equation exists.
+        title: >
+          String giving the transition a short title.
+        band: see common_columns
+        order: see common_columns
+      multiple_equations: >
+        When a transition has more than one equation (row, grouped by
+        transition_id), the equations are ANDed together: the transition
+        occurs only when all of them are true. This is how a trigger and
+        guard(s) are combined; transitions may therefore have different
+        numbers of equations. There is no explicit negation or inhibit
+        mechanism for now: an equation that needs to be inverted simply
+        expresses its own negation (e.g. "not x"). This may be revisited.
+      global_transitions: >
+        A transition may be global: it has no current_state (empty) and
+        only a next_state. If all of its equations are true, the state
+        machine transitions to next_state regardless of which state it is
+        currently in. Global transitions are defined in the same state
+        machine file, using the same columns and grouping by
+        transition_id. Global and non-global transitions are not given
+        special precedence: if more than one transition is true in the
+        same pass, the manually set order prevails (the one evaluated
+        first, per its band and order, takes effect).
+
+    equations_file:
+      description: >
+        A single CSV file containing all Boolean equations that are not
+        linked to a state machine. One equation per row.
+      columns:
+        equation: Python-syntax Boolean expression.
+        explanation: String explaining what the equation does.
+        rationale: String explaining why the equation exists.
+        result_variable: >
+          Name of the Boolean variable assigned the result of the equation
+          each time it is evaluated.
+        band: see common_columns
+        order: see common_columns
 
   inter_component_communication:
-    event_bus:
-      purpose: >
-        Primary mechanism for inter-component communication. When a state
-        machine transitions or a rule fires, an event may be broadcast on
-        the shared event bus. Not all internal changes generate events —
-        only those meant to be visible/actionable to other components or
-        the outside world (including the web front end).
-      priority:
-        status: not implemented initially, but designed for
-        rationale: >
-          It is foreseeable that a priority scheme (e.g. monitoring/safety
-          events preempting command-layer processing) may be required once
-          real aircraft requirements are modeled. The event bus should be
-          architected to support prioritized events as a future feature,
-          even though the initial implementation may treat all events
-          uniformly.
+    no_events: >
+      There is no event bus and no event mechanism, implicit or explicit.
+      The only logic constructs are Boolean equations (and state machines
+      whose transitions are conditioned on them). Components interact
+      solely through values in the shared context. Only values designated
+      as outputs are visible to other components or the outside world
+      (including the web front end).
+    priority: >
+      Priority is deterministic and is expressed through execution order,
+      not through any dynamic prioritization scheme. See
+      timing_and_execution.execution_order.
     shared_context:
       purpose: >
         Periodically computed values are exposed by components and consumed
-        by others as inputs, avoiding a polling model.
+        by others as inputs.
       mechanism: >
         Rather than a fully global/shared context (simple but hard to
         control write-access to), each component is passed a reference to
@@ -118,10 +219,31 @@ framework:
       real wall-clock time). At the start of each iteration, simulation
       time is incremented and both the current time and the delta time
       since the last iteration are made available to all components.
+    time_based_execution: >
+      Execution is purely time based: components are evaluated on each
+      scheduled pass of the simulation loop, and their values are
+      recomputed every pass.
+    time_in_logic: >
+      Simulation time is not required to be a variable in logic equations,
+      but it may be used as one when a requirement calls for it.
     scheduling: >
-      Components are scheduled for execution at a configured rate (per the
-      master configuration), not strictly real-time, but ordered/paced by
-      the simulation loop.
+      Equations and state machines are scheduled for execution at a
+      configured rate, not strictly real-time, but ordered/paced by the
+      simulation loop.
+    execution_order:
+      definition: >
+        The definition of each equation and each state machine specifies
+        its execution rate and its relative order of execution within
+        that rate band (all items sharing the same rate form a band).
+        The order is set manually by the author in the definitions; the
+        framework does not derive or infer it (e.g. from dependencies).
+      determinism: >
+        Execution order is fully deterministic: within a band, items run
+        in their defined relative order every time the band is scheduled,
+        so a given set of inputs always yields the same results. This
+        manually set, deterministic ordering is the system's priority
+        mechanism, e.g. a monitoring equation that must see a command-layer
+        result in the same pass is simply ordered after it by the author.
 
   frontend_and_communication:
     architecture: >
@@ -129,7 +251,7 @@ framework:
       A web-based front end (JavaScript, HTML, CSS) presents a mock cockpit
       with panels representing the system under exploration.
     transport: >
-      WebSockets connect backend and client(s), allowing events and data
+      WebSockets connect backend and client(s), allowing values and state
       to flow bidirectionally in real time and making it straightforward
       to add additional components or clients to the platform later.
 
@@ -139,8 +261,8 @@ framework:
     contents:
       - timestamp
       - component name
-      - event or action description
-      - relevant variable values involved in triggering the event/action
+      - action or state change description
+      - relevant variable values involved in triggering the state change/action
     scope_note: >
       Exact logging content/format is to be determined as the framework
       matures; a basic flat-file approach is sufficient for now. Migration
@@ -150,8 +272,8 @@ framework:
   explicit_non_goals:
     - No error handling for component failures/invalid states (deferred).
     - No context validation before component execution (deferred).
-    - No sandboxing or AST inspection of rule expressions; eval is used
-      directly, trusting internal rule authors.
+    - No sandboxing or AST inspection of equation expressions; eval is used
+      directly, trusting internal equation authors.
     - No real-time / control-loop performance modeling; any such effect is
       represented as a timer.
     - No intent to generalize this into a long-lived or public tool; it is
