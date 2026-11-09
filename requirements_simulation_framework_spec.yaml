@@ -119,8 +119,10 @@ framework:
   csv_formats:
     common_columns:
       band: >
-        The rate at which the row is evaluated. All rows sharing a band
-        are evaluated at the same rate.
+        The rate, in Hertz (Hz), at which the row is evaluated. All rows
+        sharing a band are evaluated at the same rate. All rows of one
+        state machine file must share a single band; a state machine is
+        never split across bands.
       order: >
         The relative order of evaluation within the band. Set manually by
         the author.
@@ -142,6 +144,11 @@ framework:
           State the transition leaves. Left empty for a global transition
           (see global_transitions).
         next_state: state the transition enters
+        default_state: >
+          Identifies the state machine's default (initial) state. Exactly
+          one row in the file has this column filled in, containing the
+          name of the default state; it is empty on all other rows. The
+          state machine starts in this state.
         equation: >
           Python-syntax Boolean expression for this row (see
           components.logic_evaluation).
@@ -245,7 +252,51 @@ framework:
         mechanism, e.g. a monitoring equation that must see a command-layer
         result in the same pass is simply ordered after it by the author.
 
+  architecture:
+    scope: >
+      The current phase implements only the evaluation and execution of
+      equations and state machines. No front end, WebSocket server or
+      orchestration server is part of this phase; they are deferred to a
+      later step.
+    constraints:
+      - Python only.
+      - Fully synchronous and deterministic; no async, threads or
+        wall-clock time, and no randomness.
+      - Simulation time is an integer tick count; bands are in Hz and the
+        base tick is derived from the fastest band. t and dt are derived
+        from the tick.
+      - Execution order is the manual (band, order) schedule; never
+        dependent on dict or set iteration order.
+    design: >
+      Layered engine that compiles expressions at load time:
+      - Loader: reads the master CSV, state machine CSVs and equations
+        CSV into an immutable Model.
+      - Scheduler: builds the execution plan, ordered by (band, order),
+        once at load.
+      - Evaluator: runs expressions pre-compiled with Python's compile()
+        and evaluated against the context. Load-time checks (syntax,
+        duplicate transition_id, unknown states, single default state,
+        single band per state machine) are startup checks only, not
+        sandboxing.
+      - Runtime state: the context (variable values), the current state
+        of each state machine, and the tick.
+      - Trace hook: a logging callback recording each state change or
+        result with the variable values involved (see logging).
+    public_interface:
+      methods:
+        - Engine(model).step()
+        - Engine.run(ticks)
+        - Engine.snapshot()
+        - Engine.set_input(name, value)
+      note: >
+        This interface is the seam a future front end will attach to.
+    initial_values: >
+      At start, every state machine is in its default_state and external
+      input values are set to their defaults. Where input defaults are
+      defined is TBD.
+
   frontend_and_communication:
+    status: deferred to a later phase (not part of the current scope)
     architecture: >
       Python backend server hosts the orchestrator and all components.
       A web-based front end (JavaScript, HTML, CSS) presents a mock cockpit
