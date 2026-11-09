@@ -6,11 +6,11 @@ explicit_non_goals).
 
 from __future__ import annotations
 
-import builtins
 from types import CodeType
-from typing import Mapping
 
 from .errors import ModelError
+
+BUILTINS_KEY = "__builtins__"
 
 
 def compile_expr(src: str, source: str) -> CodeType:
@@ -30,13 +30,15 @@ def compile_expr(src: str, source: str) -> CodeType:
         raise ModelError(f"invalid expression {text!r}: {exc.msg}", source) from exc
 
 
-def eval_expr(code: CodeType, ctx: Mapping[str, object]) -> bool:
-    """Evaluate ``code`` as ``bool(eval(code, {"__builtins__": builtins}, ctx))``
-    where ``builtins`` is the ``builtins`` module. ``ctx`` is the engine's live
-    context dict (inputs, result variables, state machine states, tick, t,
-    dt). Exceptions from the expression (e.g. NameError) propagate unchanged.
+def eval_expr(code: CodeType, ctx: dict) -> bool:
+    """Evaluate ``code`` as ``bool(eval(code, ctx))``: ``ctx`` is used as the
+    eval GLOBALS (so comprehensions and lambdas see context names). ``ctx`` is
+    the engine's live context dict (inputs, result variables, state machine
+    states, tick, t, dt) and must be a dict; the engine stores ``__builtins__``
+    in it once (``BUILTINS_KEY``); if missing, Python inserts it. Exceptions
+    from the expression (e.g. NameError) propagate unchanged.
     """
-    return bool(eval(code, {"__builtins__": builtins}, ctx))
+    return bool(eval(code, ctx))
 
 
 def names_used(code: CodeType) -> tuple[str, ...]:

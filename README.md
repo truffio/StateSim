@@ -73,7 +73,51 @@ Recorded in `docs/decisions.md`. Highlights: at most one transition fires per
 state machine per pass; a state machine's state is a context variable named
 after it (e.g. `AP == "ENGAGED"`); results are visible immediately to later
 items in the same pass; result variables start `False`; reserved names `tick`,
-`t`, `dt`; limits `MAX_EQUATIONS` and `MAX_STATE_MACHINES` are 10,000 each.
+`t` (absolute simulation time, ms), `dt` (ms since the item last ran); limits `MAX_EQUATIONS` and `MAX_STATE_MACHINES` are 10,000 each.
+
+## Usage
+
+Install in editable mode (Python 3.11+, no runtime dependencies):
+
+```
+pip install -e ".[dev]"
+```
+
+```python
+from statesim import load_model, Engine, FileTraceWriter
+
+model = load_model("tests/fixtures/minimal/master.csv")   # master CSV
+with FileTraceWriter("run.log") as log:                   # plain-text trace
+    eng = Engine(model, trace=log)
+    eng.step()                       # first step is tick 1, t = 0 ms
+    eng.set_input("go", True)        # external input
+    eng.run(3)                       # run 3 more ticks
+    print(eng.snapshot())
+```
+
+`snapshot()` returns `{"tick", "t" (ms), "states", "outputs", "inputs"}`:
+state machine states are strings (use `AP == "ENGAGED"` in equations), outputs
+are every equation / transition result variable. Inputs are Python values; the
+inputs CSV `default_value` is parsed according to its `type` (`bool`, `int`,
+`float`, `str`). Time is absolute simulation time in milliseconds (`t`), and
+`dt` is the milliseconds since the item last ran.
+
+Known limitations (a load-time checker is a possible future feature): a default
+state with no outgoing transition, a global transition to the current state and
+undefined variable names are not detected at load. An undefined name raises
+`EvaluationError` at run time with the file, line, tick and item.
+
+## Tests and report
+
+```
+python -m pytest --junitxml=reports/junit.xml -q
+python tools/make_report.py          # writes reports/test_report.md
+```
+
+The report covers unit tests and requirement-based use-case tests, with a
+requirement -> test -> result traceability matrix.
 
 ## Status
-Implementation in progress on branch `feature/engine`.
+Engine, tests and the first test report are complete on branch
+`feature/engine`: 274 tests pass (179 unit, 95 requirement-based); of the 110
+requirements, 104 are verified by tests and 6 are review-only.

@@ -16,7 +16,7 @@ from statesim.trace import (
 
 def _event(
     tick: int = 12,
-    t: Fraction = Fraction(6, 25),
+    t: Fraction = Fraction(1100),
     component: str = "AP",
     action: str = 'T3 OFF->ARMED "title"',
     values: tuple[tuple[str, object], ...] = (("alt", 1000), ("ap_sw", True)),
@@ -53,12 +53,12 @@ def test_format_value_int_is_not_fraction_formatted() -> None:
 
 def test_format_event_matches_decisions_example() -> None:
     line = format_event(_event())
-    assert line == 'tick=000012 t=0.240000 | AP | T3 OFF->ARMED "title" | alt=1000, ap_sw=True'
+    assert line == 'tick=000012 t=1100.000 | AP | T3 OFF->ARMED "title" | alt=1000, ap_sw=True'
 
 
 def test_format_event_without_values_has_no_trailing_separator() -> None:
     line = format_event(_event(values=()))
-    assert line == 'tick=000012 t=0.240000 | AP | T3 OFF->ARMED "title"'
+    assert line == 'tick=000012 t=1100.000 | AP | T3 OFF->ARMED "title"'
     assert not line.endswith("|")
     assert not line.endswith(" ")
 
@@ -72,9 +72,9 @@ def test_format_event_tick_is_zero_padded_to_six() -> None:
     assert format_event(_event(tick=1234567, values=())).startswith("tick=1234567 ")
 
 
-def test_format_event_time_uses_six_decimals_exact_fraction() -> None:
-    line = format_event(_event(t=Fraction(1, 3), values=()))
-    assert " t=0.333333 " in line
+def test_format_event_time_uses_three_decimals_exact_fraction() -> None:
+    line = format_event(_event(t=Fraction(1000, 3), values=()))
+    assert " t=333.333 " in line
 
 
 def test_format_event_values_rendered_in_given_order_with_types() -> None:
@@ -88,12 +88,12 @@ def test_format_event_values_rendered_in_given_order_with_types() -> None:
 def test_format_event_input_action_line() -> None:
     event = _event(
         tick=5,
-        t=Fraction(1, 20),
+        t=Fraction(50),
         component="INPUT",
         action="set alt 0->1000",
         values=(("alt", 1000),),
     )
-    assert format_event(event) == "tick=000005 t=0.050000 | INPUT | set alt 0->1000 | alt=1000"
+    assert format_event(event) == "tick=000005 t=50.000 | INPUT | set alt 0->1000 | alt=1000"
 
 
 # --- ListTraceSink ----------------------------------------------------------

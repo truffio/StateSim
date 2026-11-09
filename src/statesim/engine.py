@@ -5,10 +5,13 @@ Behavior is defined by docs/decisions.md; summary of the contract below.
 
 from __future__ import annotations
 
+import builtins
+from copy import deepcopy
 from fractions import Fraction
 
 from . import constants
-from .evaluator import compile_expr, eval_expr, names_used
+from .errors import EvaluationError
+from .evaluator import BUILTINS_KEY, compile_expr, eval_expr, names_used
 from .model import Model
 from .scheduler import build_schedule, due_items
 from .trace import TraceEvent, TraceSink
@@ -28,10 +31,13 @@ class Engine:
       * Nothing is logged at construction.
 
     step():
-      1. tick += 1; ctx["tick"] = tick; ctx["t"] = Fraction(tick) / tick_hz
-         (exact, never accumulated).
+      1. tick += 1; ctx["tick"] = tick; ctx["t"] = Fraction(tick - 1) * 1000
+         / tick_hz: absolute simulation time in MILLISECONDS (exact, never
+         accumulated); the first step is t = 0.
       2. For each item in scheduler.due_items(schedule, tick), in order, set
-         ctx["dt"] = 1 / item.band_hz, then:
+         ctx["dt"] = 1000 / item.band_hz (milliseconds since the item's
+         previous run; on its first run the ideal delta as if it were the
+         second run, so dt is always the item's period in ms), then:
          * equation: value = eval_expr(code, ctx); if value != previous,
            store it and emit TraceEvent(component=constants.EQUATIONS_COMPONENT,
            action=f"{name} {old}->{new}", values=used names).
@@ -54,6 +60,11 @@ class Engine:
            names used by the expression(s) involved (all rows of the winning
            transition for a state change) that exist in the context.
 
+    Expressions are evaluated with the context dict as eval globals
+    (``__builtins__`` is stored in it once and excluded from snapshots and
+    trace values). A runtime error in an expression is raised as
+    EvaluationError (source, tick, item; original chained).
+
     set_input(name, value): KeyError if ``name`` is not a declared input.
     Sets ctx[name] = value (no type coercion) and always emits TraceEvent at
     the current tick/t with component = constants.INPUT_COMPONENT, action =
@@ -70,7 +81,7 @@ class Engine:
         self._eqs = {}
         for eq in model.equations:
             code = compile_expr(eq.equation, eq.source)
-            self._eqs[eq.result_variable] = (code, names_used(code))
+            self._eqs[eq.result_variable] = (code, names_used(code), eq.source)
         self._sms = {}
         for sm in model.state_machines:
             trans = []
@@ -78,8 +89,8 @@ class Engine:
                 rows = []
                 for r in tr.rows:
                     code = compile_expr(r.equation, r.source)
-                    rows.append((r.result_variable, code, names_used(code)))
-                used = tuple(sorted({n for _, _, ns in rows for n in ns}))
+                    rows.append((r.result_variable, code, names_used(code), r.source))
+                used = tuple(sorted({n for _, _, ns, _ in rows for n in ns}))
                 label = tr.id
                 if label[:1].isdigit():
                     label = "T" + label
@@ -103,6 +114,7 @@ class Engine:
         ctx["tick"] = 0
         ctx["t"] = Fraction(0)
         ctx["dt"] = Fraction(0)
+        ctx[BUILTINS_KEY] = builtins
         self._ctx = ctx
 
     @property
@@ -112,29 +124,36 @@ class Engine:
 
     @property
     def t(self) -> Fraction:
-        """Exact simulation time in seconds: Fraction(tick) / model.tick_hz."""
+        """Absolute simulation time in milliseconds of the latest step:
+        Fraction(tick - 1) * 1000 / model.tick_hz (0 before and at the first step)."""
         return self._t
 
     def _vals(self, names) -> tuple:
         ctx = self._ctx
-        return tuple((n, ctx[n]) for n in sorted(set(names)) if n in ctx)
+        return tuple((n, ctx[n]) for n in sorted(set(names)) if n in ctx and n != BUILTINS_KEY)
 
     def _emit(self, component: str, action: str, values: tuple) -> None:
         if self._trace is not None:
             self._trace.emit(TraceEvent(self._tick, self._t, component, action, values))
 
+    def _eval(self, code, source: str, item: str) -> bool:
+        try:
+            return eval_expr(code, self._ctx)
+        except Exception as exc:
+            raise EvaluationError(source, self._tick, item, exc) from exc
+
     def step(self) -> None:
         """Advance one tick and run every due item (see class docstring)."""
         ctx = self._ctx
         self._tick += 1
-        self._t = Fraction(self._tick) / self._tick_hz
+        self._t = Fraction(self._tick - 1) * 1000 / self._tick_hz
         ctx["tick"] = self._tick
         ctx["t"] = self._t
         for item in due_items(self._schedule, self._tick):
-            ctx["dt"] = 1 / item.band_hz
+            ctx["dt"] = 1000 / item.band_hz
             if item.kind == "equation":
-                code, used = self._eqs[item.name]
-                new = eval_expr(code, ctx)
+                code, used, src = self._eqs[item.name]
+                new = self._eval(code, src, item.name)
                 old = ctx[item.name]
                 if new != old:
                     ctx[item.name] = new
@@ -149,8 +168,8 @@ class Engine:
         results = []
         for tr, _label, rows, _used in trans:
             ok = True
-            for rv, code, used in rows:
-                new = eval_expr(code, ctx)
+            for rv, code, used, src in rows:
+                new = self._eval(code, src, name)
                 old = ctx[rv]
                 if new != old:
                     ctx[rv] = new
@@ -172,19 +191,21 @@ class Engine:
             return
 
     def run(self, ticks: int) -> None:
-        """Call step() ``ticks`` times (ticks >= 0; 0 is a no-op)."""
+        """Call step() ``ticks`` times (0 is a no-op); ValueError if negative."""
+        if ticks < 0:
+            raise ValueError(f"ticks must be >= 0, got {ticks}")
         for _ in range(ticks):
             self.step()
 
     def snapshot(self) -> dict:
-        """Return a fresh, independent dict (see class contract)."""
+        """Return a fresh, independent (deep-copied) dict; ``t`` is float ms."""
         ctx = self._ctx
         return {
             "tick": self._tick,
-            "t": float(self._t),
-            "states": {n: ctx[n] for n in self._sm_names},
-            "outputs": {n: ctx[n] for n in self._result_names},
-            "inputs": {n: ctx[n] for n in self._input_names},
+            "t": float(self._t),  # milliseconds
+            "states": deepcopy({n: ctx[n] for n in self._sm_names}),
+            "outputs": deepcopy({n: ctx[n] for n in self._result_names}),
+            "inputs": deepcopy({n: ctx[n] for n in self._input_names}),
         }
 
     def set_input(self, name: str, value: object) -> None:

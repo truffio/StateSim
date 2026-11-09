@@ -2,7 +2,7 @@
 
 import pytest
 
-from statesim import Engine, load_model
+from statesim import Engine, EvaluationError, ListTraceSink, load_model
 
 from .helpers import E, T, build, engine_for, outputs_over, states_over
 
@@ -231,8 +231,8 @@ def test_20hz_and_30hz_coexist(tmp_path):
 
 @R("REQ-058")
 def test_all_bands_run_on_first_step(tmp_path):
-    # Per docs/decisions.md the first step() is tick 1 and runs every band.
-    eng = _bands(tmp_path, "tick == 1")
+    # Per docs/decisions.md the first step() is tick 1 (t = 0 ms) and runs every band.
+    eng = _bands(tmp_path, "tick == 1 and t == 0")
     eng.step()
     assert eng.snapshot()["outputs"] == {"a": True, "b": True}
     eng.step()  # tick 2: neither band due, values retained
@@ -253,22 +253,111 @@ def test_non_multiple_and_fractional_bands(tmp_path):
 
 @R("REQ-062")
 def test_t_and_dt_available_in_equations(tmp_path):
-    eng = engine_for(tmp_path, equations=[E("dt20", "dt * 20 == 1", band=20),
-                                          E("dt30", "dt * 30 == 1", band=30),
-                                          E("late", "t >= 0.5", band=20)])
+    eng = engine_for(tmp_path, equations=[E("dt20", "dt * 20 == 1000", band=20),
+                                          E("dt30", "dt * 30 == 1000", band=30),
+                                          E("late", "t >= 500", band=20)])
     eng.step()
     o = eng.snapshot()["outputs"]
     assert o["dt20"] and o["dt30"] and not o["late"]
 
 
+@R("REQ-061", "REQ-062")
+def test_t_is_absolute_ms_and_dt_is_period_ms(tmp_path):
+    eng = engine_for(tmp_path, equations=[E("t_ok", "t * 30 == (tick - 1) * 1000", band=10),
+                                          E("dt_ok", "dt * 3 == 1000", band=3)])
+    for _ in range(7):
+        eng.step()
+        o = eng.snapshot()["outputs"]
+        assert o["t_ok"] is True
+        assert eng.snapshot()["t"] == pytest.approx((eng.tick - 1) * 1000 / 30)
+    # dt_ok is also true on the 3 Hz item's first run (ideal delta, not 0)
+    assert o["dt_ok"] is True
+
+
 @R("REQ-064")
 def test_timer_expressed_with_t(tmp_path):
-    rows = [T("1", "WAIT", "DONE", "t >= 0.5", "r1", default="WAIT")]
-    eng = engine_for(tmp_path, sms=[("S", rows)])  # 10 Hz: t = tick / 10
-    assert states_over(eng, 6, "S") == ["WAIT"] * 4 + ["DONE"] * 2
+    rows = [T("1", "WAIT", "DONE", "t >= 500", "r1", default="WAIT")]
+    eng = engine_for(tmp_path, sms=[("S", rows)])  # 10 Hz: t = (tick - 1) * 100 ms
+    assert states_over(eng, 7, "S") == ["WAIT"] * 5 + ["DONE"] * 2
+
+
+@R("REQ-064", "REQ-061")
+def test_timer_time_independent_of_other_bands(tmp_path):
+    """`t >= 2000` on a 1 Hz equation fires at the same simulation time whether
+    or not an unrelated 20 Hz band exists (t is absolute ms, not tick-derived
+    from the LCM rate)."""
+    def first_true_time(path, extra):
+        eqs = [E("timer", "t >= 2000", band=1)]
+        if extra:
+            eqs.append(E("noise", "True", band=20))
+        eng = engine_for(path, equations=eqs)
+        for _ in range(200):
+            eng.step()
+            if eng.snapshot()["outputs"]["timer"]:
+                return eng.t
+        raise AssertionError("timer never fired")
+
+    alone = first_true_time(sub(tmp_path, "a"), False)
+    with_20 = first_true_time(sub(tmp_path, "b"), True)
+    assert alone == with_20 == 2000
 
 
 # --------------------------------------------------------------- execution
+@R("REQ-013")
+def test_comprehension_sees_context_names(tmp_path):
+    eng = engine_for(tmp_path, equations=[E("big", "any(v > lim for v in [1, 2])"),
+                                          E("fn", "(lambda q: q > lim)(2)")],
+                     inputs=[("lim", "int", "1")])
+    eng.step()
+    assert eng.snapshot()["outputs"] == {"big": True, "fn": True}
+    eng.set_input("lim", 5)
+    eng.step()
+    assert eng.snapshot()["outputs"] == {"big": False, "fn": False}
+    assert "__builtins__" not in eng.snapshot()["inputs"]
+
+
+@R("REQ-013")
+def test_runtime_error_is_wrapped_with_location(tmp_path):
+    rows = [T("1", "A", "B", "missing_name > 1", "r1", default="A")]
+    eng = engine_for(tmp_path, sms=[("S", rows)])
+    with pytest.raises(EvaluationError) as ei:
+        eng.step()
+    e = ei.value
+    assert e.source == "S.csv:2" and e.tick == 1 and e.item == "S"
+    assert isinstance(e.__cause__, NameError)
+    assert "S.csv:2" in str(e) and "tick 1" in str(e)
+    d = tmp_path / "eq"
+    d.mkdir()
+    eng = engine_for(d, equations=[E("ok", "True"), E("bad", "1 / zero", order=2)],
+                     inputs=[("zero", "int", "0")])
+    with pytest.raises(EvaluationError) as ei:
+        eng.step()
+    assert ei.value.source == "equations.csv:3" and ei.value.item == "bad"
+    assert isinstance(ei.value.__cause__, ZeroDivisionError)
+
+
+@R("REQ-031")
+def test_global_self_transition_is_noop_that_wins_and_is_not_logged(tmp_path):
+    sink = ListTraceSink()
+    rows = [T("1", "", "A", "True", "g", default="A", order=1),     # global A -> A
+            T("2", "A", "B", "True", "r", order=2)]                  # later, also enabled
+    eng = engine_for(tmp_path, trace=sink, sms=[("S", rows)])
+    assert states_over(eng, 3, "S") == ["A", "A", "A"]   # no-op won each pass
+    assert eng.snapshot()["outputs"] == {"g": True, "r": True}
+    assert not [e for e in sink.events if "A->" in e.action]  # no transition logged
+    assert [e.action for e in sink.events] == ["g False->True", "r False->True"]
+
+
+@R("REQ-031")
+def test_non_global_self_transition_fires_and_is_logged(tmp_path):
+    sink = ListTraceSink()
+    rows = [T("1", "A", "A", "True", "r", default="A")]
+    eng = engine_for(tmp_path, trace=sink, sms=[("S", rows)])
+    eng.step()
+    assert eng.snapshot()["states"]["S"] == "A"
+    assert any(e.action.startswith("T1 A->A") for e in sink.events)
+
+
 @R("REQ-049", "REQ-050", "REQ-052")
 def test_later_item_sees_earlier_result_same_pass(tmp_path):
     # CSV lists the dependent first; the order column decides.
@@ -302,7 +391,7 @@ def test_command_and_monitoring_layers_same_pass(tmp_path):
 
 
 # ----------------------------------------------------------------- outputs
-@R("REQ-089", "REQ-090", "REQ-091")
+@R("REQ-085", "REQ-089", "REQ-090", "REQ-091")
 def test_snapshot_contents(tmp_path):
     eng = engine_for(tmp_path, sms=[("S", [T("1", "A", "B", "go", "sr", default="A")])],
                      equations=[E("e", "go")], inputs=GO)
@@ -310,6 +399,14 @@ def test_snapshot_contents(tmp_path):
     assert set(snap) >= {"tick", "t", "states", "outputs", "inputs"}
     assert snap["states"] == {"S": "A"}
     assert set(snap["outputs"]) == {"sr", "e"}
+    assert snap["inputs"] == {"go": False} and snap["tick"] == 0 and snap["t"] == 0.0
+    eng.set_input("go", True)
+    eng.step()
+    snap = eng.snapshot()
+    assert snap["outputs"] == {"sr": True, "e": True} and snap["states"] == {"S": "B"}
+    assert snap["tick"] == 1 and snap["t"] == 0.0
+    eng.step()
+    assert eng.snapshot()["t"] == 100.0  # float milliseconds
 
 
 @R("REQ-092")
@@ -324,6 +421,12 @@ def test_snapshot_is_a_copy(tmp_path):
     assert again["states"]["S"] == "A" and again["outputs"]["sr"] is False
     assert again["inputs"]["go"] is False and again["tick"] == 0
     assert again["states"] is not snap["states"]
+    # values are deep-copied: mutating a mutable input value in a snapshot is harmless
+    eng.set_input("go", [1, 2])
+    s1 = eng.snapshot()
+    s1["inputs"]["go"].append(3)
+    assert eng.snapshot()["inputs"]["go"] == [1, 2]
+    eng.set_input("go", True)
     eng.set_input("go", True)
     eng.step()
     assert eng.snapshot()["states"]["S"] == "B"

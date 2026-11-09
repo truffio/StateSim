@@ -84,7 +84,7 @@ def _child(name, seed):
 
 
 @pytest.mark.parametrize("name", ["ap_engage", "multirate", "reuse_equation"])
-@R("REQ-101", "REQ-102")
+@R("REQ-054", "REQ-101", "REQ-102")
 def test_hash_seed_independent(name):
     outs = {seed: _child(name, seed) for seed in (0, 1, 12345)}
     assert len(outs[0].splitlines()) > 3

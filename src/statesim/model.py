@@ -21,9 +21,9 @@ from typing import Iterable
 class InputDef:
     """One row of the inputs CSV.
 
-    ``default`` is ``ast.literal_eval(default_value)``, falling back to the raw
-    (stripped) string when literal_eval fails. ``type_name`` is the raw
-    ``type`` column, unused by the engine.
+    ``default`` is the ``default_value`` column converted to a Python native
+    value according to ``type_name`` (bool, int, float or str; anything else
+    is a load error). ``type_name`` is the raw ``type`` column.
     """
 
     name: str

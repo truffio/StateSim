@@ -19,3 +19,23 @@ class ModelError(Exception):
         self.msg = msg
         self.source = source
         super().__init__(f"{source}: {msg}" if source else msg)
+
+
+class EvaluationError(Exception):
+    """Raised by ``Engine.step()`` when an expression fails at run time.
+
+    Wraps the original exception (available as ``__cause__``). ``source`` is
+    the ``"file:line"`` of the equation or transition row, ``tick`` the tick
+    being run and ``item`` the schedule item (state machine name or standalone
+    equation result variable). ``str(err)`` is
+    ``"<source>: tick <tick>, <item>: <ExcType>: <text>"``.
+    """
+
+    def __init__(self, source: str, tick: int, item: str, original: BaseException) -> None:
+        self.source = source
+        self.tick = tick
+        self.item = item
+        self.original = original
+        super().__init__(
+            f"{source}: tick {tick}, {item}: {type(original).__name__}: {original}"
+        )

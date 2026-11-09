@@ -48,7 +48,7 @@ def test_band_comes_from_definition_files(tmp_path):
     assert model.state_machines[0].band_hz == Fraction(25)
 
 
-@R("REQ-025", "REQ-030", "REQ-031")
+@R("REQ-025", "REQ-030")
 def test_global_default_and_self_transition(tmp_path):
     rows = [T("1", "ON", "ON", "go", "r1", default="ON"), T("2", "", "ON", "False", "r2")]
     model = load_model(build(tmp_path, sms=[("S", rows)], inputs=GO))
@@ -75,19 +75,51 @@ def test_multiple_state_machines(tmp_path):
 
 
 @R("REQ-037")
-def test_result_variable_cannot_shadow_input(tmp_path):
-    with pytest.raises(ModelError):
+def test_result_variables_cannot_shadow_inputs(tmp_path):
+    # Real guarantee: a result_variable (standalone or transition row) may not
+    # reuse an input name, so only set_input writes inputs. Assignment inside
+    # expressions is NOT checked (known limitation, docs/decisions.md).
+    with pytest.raises(ModelError, match="go"):
         load_model(build(tmp_path, equations=[E("go", "True")], inputs=GO))
+    d = tmp_path / "sm"
+    d.mkdir()
+    with pytest.raises(ModelError, match="go"):
+        load_model(build(d, sms=[("S", [T("1", "A", "B", "True", "go", default="A")])],
+                         inputs=GO))
+    d = tmp_path / "ok"
+    d.mkdir()
+    eng = engine_for(d, equations=[E("e", "go or not go")], inputs=GO)
+    eng.run(5)
+    assert eng.snapshot()["inputs"] == {"go": False}  # engine never writes inputs
+    eng.set_input("go", True)
+    assert eng.snapshot()["inputs"] == {"go": True}
 
 
 @R("REQ-039")
 def test_input_defaults_converted(tmp_path):
     model = load_model(build(tmp_path, equations=[E("e", "True")],
                              inputs=[("a", "bool", "True"), ("b", "int", "7"),
-                                     ("c", "float", "1.5")]))
+                                     ("c", "float", "1.5"), ("flag", "bool", "false"),
+                                     ("one", "bool", "1"), ("s", "str", "hi there")]))
     d = {i.name: i.default for i in model.inputs}
-    assert d == {"a": True, "b": 7, "c": 1.5}
-    assert [type(d[k]) for k in "abc"] == [bool, int, float]
+    assert d == {"a": True, "b": 7, "c": 1.5, "flag": False, "one": True, "s": "hi there"}
+    assert [type(d[k]) for k in ("a", "b", "c", "flag", "one", "s")] ==         [bool, int, float, bool, bool, str]
+    # the equation sees the converted value (lowercase "false" is a real False)
+    d2 = tmp_path / "run"
+    d2.mkdir()
+    eng = engine_for(d2, equations=[E("neg", "flag is False and one is True")],
+                     inputs=[("flag", "bool", "false"), ("one", "bool", "1")])
+    eng.step()
+    assert eng.snapshot()["outputs"]["neg"] is True
+    assert eng.snapshot()["inputs"]["flag"] is False
+
+
+@R("REQ-039")
+@pytest.mark.parametrize("typ,val", [("bool", "maybe"), ("int", "1.5"), ("float", "x"),
+                                      ("list", "[1]"), ("", "1")])
+def test_input_default_conversion_failure_rejected(tmp_path, typ, val):
+    with pytest.raises(ModelError, match="inputs.csv:2"):
+        load_model(build(tmp_path, equations=[E("e", "True")], inputs=[("v", typ, val)]))
 
 
 @R("REQ-045", "REQ-046")
@@ -111,15 +143,15 @@ def test_schedule_sorted_by_band_then_order(tmp_path):
 # -------------------------------------------------------------------- time
 @R("REQ-059", "REQ-060", "REQ-061")
 def test_tick_is_integer_and_increments_at_step_start(tmp_path):
-    eng = engine_for(tmp_path, equations=[E("first", "tick == 1"), E("slow", "t >= 0.2", band=5),
+    eng = engine_for(tmp_path, equations=[E("first", "tick == 1"), E("slow", "t >= 200", band=5),
                                           E("fast", "True", band=10)])
     assert eng.tick == 0 and isinstance(eng.tick, int)
     eng.step()
     assert eng.tick == 1 and eng.snapshot()["outputs"]["first"] is True
-    assert eng.t == Fraction(1, 10)  # tick_hz = 10
+    assert eng.t == 0  # first step is t = 0 ms (tick_hz = 10, 100 ms per tick)
     eng.run(3)
-    assert eng.tick == 4 and eng.t == Fraction(4, 10)
-    assert eng.snapshot()["t"] == pytest.approx(0.4)
+    assert eng.tick == 4 and eng.t == Fraction(300)
+    assert eng.snapshot()["t"] == pytest.approx(300.0)
 
 
 # --------------------------------------------------------------- loadcheck
@@ -129,27 +161,59 @@ def test_syntax_error_rejected(tmp_path):
         load_model(build(tmp_path, equations=[E("e", "a and (")]))
 
 
-@R("REQ-066", "REQ-071")
-def test_transition_id_rows_must_agree(tmp_path):
-    rows = [T("1", "A", "B", "x", "r1", default="A"), T("1", "A", "C", "y", "r2")]
-    with pytest.raises(ModelError, match="S.csv"):
+@R("REQ-066")
+def test_non_contiguous_rows_with_same_id_are_one_anded_transition(tmp_path):
+    rows = [T("1", "A", "B", "x", "r1", default="A", order=1),
+            T("2", "A", "C", "z", "r2", order=2),
+            T("1", "A", "B", "y", "r3", order=3)]  # id 1 split around id 2
+    model = load_model(build(tmp_path, sms=[("S", rows)],
+                             inputs=[(n, "bool", "False") for n in "xyz"]))
+    trs = {t.id: t for t in model.state_machines[0].transitions}
+    assert set(trs) == {"1", "2"}
+    assert [r.result_variable for r in trs["1"].rows] == ["r1", "r3"]
+    eng = Engine(model)
+    eng.set_input("x", True)
+    eng.step()
+    assert eng.snapshot()["states"]["S"] == "A"      # only one of the two rows true
+    eng.set_input("y", True)
+    eng.step()
+    assert eng.snapshot()["states"]["S"] == "B"      # both rows true: ANDed
+
+
+@R("REQ-071")
+@pytest.mark.parametrize("second", [T("1", "A", "C", "y", "r2"),    # next_state differs
+                                    T("1", "B", "B", "y", "r2")])   # current_state differs
+def test_rows_of_one_transition_must_agree(tmp_path, second):
+    rows = [T("1", "A", "B", "x", "r1", default="A"), second]
+    with pytest.raises(ModelError, match="transition_id") as ei:
         load_model(build(tmp_path, sms=[("S", rows)]))
-    rows = [T("1", "A", "B", "x", "r1", default="A"), T("1", "B", "B", "y", "r2")]
-    d = tmp_path / "x"
-    d.mkdir()
-    with pytest.raises(ModelError):
-        load_model(build(d, sms=[("S", rows)]))
+    assert ei.value.source == "S.csv:3"
 
 
-@R("REQ-067", "REQ-072")
+@R("REQ-067")
 def test_unknown_state_rejected(tmp_path):
     rows = [T("1", "A", "B", "x", "r1", default="A"), T("2", "GHOST", "A", "x", "r2")]
-    with pytest.raises(ModelError):
+    with pytest.raises(ModelError, match="GHOST") as ei:
         load_model(build(tmp_path, sms=[("S", rows)]))
-    d = tmp_path / "d"
+    assert ei.value.source == "S.csv:3"
+
+
+@R("REQ-072")
+def test_current_state_that_can_never_be_entered_rejected(tmp_path):
+    # Only defect: Z is a non-empty current_state that is neither the default
+    # state nor any transition's next_state.
+    ok = [T("1", "A", "B", "x", "r1", default="A"), T("2", "B", "A", "x", "r2")]
+    load_model(build(tmp_path, sms=[("S", ok)]))
+    d = tmp_path / "bad"
     d.mkdir()
-    with pytest.raises(ModelError):  # default state not used by any transition
-        load_model(build(d, sms=[("S", [T("1", "A", "B", "x", "r1", default="Z")])]))
+    bad = ok + [T("3", "Z", "A", "x", "r3")]
+    with pytest.raises(ModelError, match="'Z'") as ei:
+        load_model(build(d, sms=[("S", bad)]))
+    assert ei.value.source == "S.csv:4"
+    # the default state is always enterable, even if no transition returns to it
+    d = tmp_path / "default_only"
+    d.mkdir()
+    load_model(build(d, sms=[("S", [T("1", "A", "B", "x", "r1", default="A")])]))
 
 
 @R("REQ-068", "REQ-069", "REQ-070")
@@ -226,7 +290,7 @@ def test_expressions_compiled_once(tmp_path, monkeypatch):
 
 
 # --------------------------------------------------------------------- api
-@R("REQ-082", "REQ-083", "REQ-084", "REQ-085", "REQ-086")
+@R("REQ-082", "REQ-083", "REQ-084", "REQ-086")
 def test_public_api(tmp_path):
     eng = Engine(load_model(build(tmp_path, sms=[ONE], inputs=GO)))
     eng.step()
@@ -237,3 +301,6 @@ def test_public_api(tmp_path):
     assert eng.tick == 5
     eng.set_input("go", True)
     assert eng.snapshot()["inputs"]["go"] is True
+    with pytest.raises(ValueError):
+        eng.run(-1)
+    assert eng.tick == 5

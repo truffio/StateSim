@@ -40,13 +40,13 @@ def test_state_change_logged_with_context(tmp_path):
                and e.action.startswith("T")]
     assert [c.action.split(" ")[1] for c in changes] == ["OFF->ARMED", "ARMED->OFF"]
     first = changes[0]
-    assert first.tick == 2 and first.t == Fraction(2, 10)          # timestamp
+    assert first.tick == 2 and first.t == Fraction(100)          # timestamp
     assert first.component == "AP"                                  # component name
     assert first.action == 'T3 OFF->ARMED "Arm"'                    # description
     assert dict(first.values) == {"alt": 1000, "ap_sw": True}       # triggering values
     assert list(first.values) == sorted(first.values)
     line = sink.lines()[sink.events.index(first)]
-    assert line == 'tick=000002 t=0.200000 | AP | T3 OFF->ARMED "Arm" | alt=1000, ap_sw=True'
+    assert line == 'tick=000002 t=100.000 | AP | T3 OFF->ARMED "Arm" | alt=1000, ap_sw=True'
 
 
 @R("REQ-094", "REQ-097")

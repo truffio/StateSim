@@ -16,20 +16,20 @@ def test_tick_t_dt_math(tmp_path):
     e = eng(
         tmp_path,
         equations=[E("a", "tick >= 1", band=10),
-                   E("b", "dt == 1/3 or True", band=3)],
+                   E("b", "dt * 3 == 1000", band=3)],
     )
     assert e.tick == 0 and e.t == 0
     e.step()
-    assert e.tick == 1 and e.t == Fraction(1, 30)
+    assert e.tick == 1 and e.t == 0
     e.run(2)
-    assert e.tick == 3 and e.t == Fraction(1, 10)
-    assert e.snapshot()["t"] == float(Fraction(1, 10))
+    assert e.tick == 3 and e.t == Fraction(200, 3)
+    assert e.snapshot()["t"] == float(Fraction(200, 3))
     e.run(0)
     assert e.tick == 3
 
 
 def test_reserved_names_in_context(tmp_path):
-    e = eng(tmp_path, equations=[E("ok", "tick == 2 and t * 5 == 1 and dt * 10 == 1")])
+    e = eng(tmp_path, equations=[E("ok", "tick == 2 and t == 100 and dt == 100")])
     e.run(2)
     assert e.snapshot()["outputs"]["ok"] is True
 
@@ -50,7 +50,7 @@ def test_set_input_and_unknown(tmp_path):
     with pytest.raises(KeyError):
         e.set_input("nope", 1)
     e.set_input("go", True)
-    assert sink.lines() == ["tick=000000 t=0.000000 | INPUT | set go False->True | go=True"]
+    assert sink.lines() == ["tick=000000 t=0.000 | INPUT | set go False->True | go=True"]
     e.step()
     assert e.snapshot()["states"]["S"] == "ON"
 
@@ -69,8 +69,8 @@ def test_trace_emission(tmp_path):
             inputs=[("go", "bool", "True"), ("alt", "int", "5")])
     e.step()
     assert sink.lines() == [
-        "tick=000001 t=0.100000 | S | r False->True | alt=5, go=True",
-        'tick=000001 t=0.100000 | S | T3 OFF->ON "Arm" | alt=5, go=True',
+        "tick=000001 t=0.000 | S | r False->True | alt=5, go=True",
+        'tick=000001 t=0.000 | S | T3 OFF->ON "Arm" | alt=5, go=True',
     ]
     e.step()
     assert len(sink.events) == 2  # no change, no event

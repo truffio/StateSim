@@ -2,7 +2,7 @@
 
 Line format (docs/decisions.md item 9)::
 
-    tick=000012 t=0.240000 | AP | T3 OFF->ARMED "Arm" | alt=1000, ap_sw=True
+    tick=000012 t=1100.000 | AP | T3 OFF->ARMED "Arm" | alt=1000, ap_sw=True
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Protocol
 class TraceEvent:
     """One logged event.
 
-    ``t`` is the exact simulation time (Fraction seconds). ``component`` is
+    ``t`` is the exact absolute simulation time (Fraction milliseconds). ``component`` is
     the state machine name, constants.EQUATIONS_COMPONENT for standalone
     equations, or constants.INPUT_COMPONENT for set_input. ``action`` is the
     description text (see Engine for the exact forms). ``values`` are
@@ -49,12 +49,12 @@ def format_value(value: object) -> str:
 
 def format_event(event: TraceEvent) -> str:
     """One log line, no trailing newline:
-    ``f"tick={tick:06d} t={float(t):.6f} | {component} | {action} | {values}"``
+    ``f"tick={tick:06d} t={float(t):.3f} | {component} | {action} | {values}"``
     where values is ``", ".join(f"{n}={format_value(v)}")`` over
     ``event.values`` in the order given (already sorted). When values is
     empty the line ends after the action (no trailing `` | ``).
     """
-    head = f"tick={event.tick:06d} t={float(event.t):.6f} | {event.component} | {event.action}"
+    head = f"tick={event.tick:06d} t={float(event.t):.3f} | {event.component} | {event.action}"
     if not event.values:
         return head
     values = ", ".join(f"{name}={format_value(value)}" for name, value in event.values)

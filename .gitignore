@@ -4,4 +4,4 @@
 .coverage
 htmlcov/
 *.egg-info/
-reports/
+reports/junit.xml

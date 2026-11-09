@@ -9,7 +9,7 @@ One SM `M` (A->B on input `go`) and one equation ordered after it, all at 10 Hz.
 Autopilot SM `AP` (OFF/ARMED/ENGAGED) with a two-row guard transition (ARMED->ENGAGED needs `ap_sw` and `alt_cap`), a global disconnect to OFF, and a monitoring equation ordered after the SM that sees the new state in the same pass. Also exercises a conflict at tick 7 (OFF->ARMED, order 1, beats the enabled global disconnect, order 4), after which the global fires at tick 8. REQ-020, 021, 023, 024, 026, 027, 028, 034, 049, 050, 056, 109, 110.
 
 ## multirate
-Equations only: 30 Hz and 20 Hz bands (tick_hz 60; 30 Hz runs on ticks 1,3,5,7,9; 20 Hz on 1,4,7,10; period_ticks 2 and 3). Thresholds on `tick` show each band recomputes only on its own ticks; `s_copy` copies a 30 Hz result and at the coincident tick 7 proves the higher frequency band runs first. `dt` equals 1/band_hz per item. REQ-040, 041, 042, 043, 044, 045, 046, 055, 057, 058, 061, 062.
+Equations only: 30 Hz and 20 Hz bands (tick_hz 60; 30 Hz runs on ticks 1,3,5,7,9; 20 Hz on 1,4,7,10; period_ticks 2 and 3). Thresholds on `tick` show each band recomputes only on its own ticks; `s_copy` copies a 30 Hz result and at the coincident tick 7 proves the higher frequency band runs first. `dt` equals 1000/band_hz ms per item (`dt * 30 == 1000`, `dt * 20 == 1000`). REQ-040, 041, 042, 043, 044, 045, 046, 055, 057, 058, 061, 062.
 
 ## conflict
 Two transitions from S0 enabled by the same input in one pass. The id 2 transition has order 1 and the id 1 transition has order 2; the manual order wins (state X, not Y), and all row results are still written. REQ-028, 049, 056, 018, 019.

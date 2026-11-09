@@ -47,7 +47,7 @@ def sm_model(tmp_path, sm_text, name="AP.csv"):
 def test_full_model(tmp_path):
     write(tmp_path, "AP.csv", GOOD_SM)
     write(tmp_path, "eq.csv", EQ_HDR + "a and b,expl,rat,x,30,1\n,,,,,\ny > 1,,,z,0.5,3/2\n")
-    write(tmp_path, "in.csv", IN_HDR + "alt,int,1000\nap_sw,bool,True\nname,str,hello\nf,float,\n")
+    write(tmp_path, "in.csv", IN_HDR + "alt,int,1000\nap_sw,bool,True\nname,str,hello\nf,str,\n")
     m = master(tmp_path, ["AP.csv,state_machine,2", "eq.csv,equations,", "in.csv,inputs,"])
     model = load_model(m)
     assert model.master_path == str(m)
@@ -125,10 +125,25 @@ def test_paths_relative_to_master_dir(tmp_path):
 
 
 def test_input_default_parsing(tmp_path):
-    write(tmp_path, "in.csv", IN_HDR + "a,x,1.5\nb,x,'q'\nc,x,[1; 2]\nd,x,None\ne,x,abc\n")
+    lines = ["a,float,1.5", "b,str,'q'", "c,str,[1; 2]", "d,int,-3", "e,str,abc",
+             "f,bool,false", "g,bool,TRUE", "h,bool,1", "i,bool,0", "j,bool,False", "k,str,"]
+    write(tmp_path, "in.csv", IN_HDR + "\n".join(lines) + "\n")
     m = master(tmp_path, ["in.csv,inputs,"])
     d = {i.name: i.default for i in load_model(m).inputs}
-    assert d == {"a": 1.5, "b": "q", "c": "[1; 2]", "d": None, "e": "abc"}
+    assert d == {"a": 1.5, "b": "'q'", "c": "[1; 2]", "d": -3, "e": "abc", "f": False,
+                 "g": True, "h": True, "i": False, "j": False, "k": ""}
+    assert type(d["f"]) is bool and type(d["d"]) is int and type(d["a"]) is float
+
+
+@pytest.mark.parametrize("row", [
+    "a,bool,maybe", "a,bool,", "a,int,1.5", "a,int,x", "a,float,abc", "a,float,",
+    "a,list,[1]", "a,,1", "a,Int,1",
+])
+def test_input_default_bad_value_or_type(tmp_path, row):
+    write(tmp_path, "in.csv", IN_HDR + "ok,int,1" + chr(10) + row + chr(10))
+    m = master(tmp_path, ["in.csv,inputs,"])
+    e = err(tmp_path, m)
+    assert e.source == "in.csv:3"
 
 
 # ---------------------------------------------------------------- errors

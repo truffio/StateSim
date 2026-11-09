@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import csv
 from fractions import Fraction
 from os import PathLike
@@ -105,13 +104,28 @@ class _Names:
         self.seen[name] = source
 
 
-def _parse_default(text: str) -> object:
-    if text == "":
-        return ""
+_BOOLS = {"true": True, "false": False, "1": True, "0": False}
+
+
+def _parse_default(text: str, type_name: str, source: str) -> object:
+    """Convert an inputs-CSV default_value according to its type column."""
+    kind = type_name.strip()
     try:
-        return ast.literal_eval(text)
-    except (ValueError, SyntaxError, MemoryError, RecursionError):
-        return text
+        if kind == "bool":
+            return _BOOLS[text.lower()]
+        if kind == "int":
+            return int(text)
+        if kind == "float":
+            return float(text)
+        if kind == "str":
+            return text
+    except (KeyError, ValueError):
+        raise ModelError(
+            f"cannot convert default_value {text!r} to {kind}", source
+        ) from None
+    raise ModelError(
+        f"unknown input type {type_name!r} (expected bool, int, float or str)", source
+    )
 
 
 def _load_state_machine(
@@ -310,7 +324,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
                     InputDef(
                         name=r["variable_name"],
                         type_name=r["type"],
-                        default=_parse_default(r["default_value"]),
+                        default=_parse_default(r["default_value"], r["type"], rsrc),
                         source=rsrc,
                     )
                 )

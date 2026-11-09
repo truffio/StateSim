@@ -66,7 +66,8 @@ def test_python_only():
 @R("REQ-081")
 def test_importable_package():
     assert statesim.__path__
-    for name in ("Engine", "load_model", "Model", "ModelError", "ListTraceSink"):
+    for name in ("Engine", "load_model", "Model", "ModelError", "ListTraceSink",
+                 "EvaluationError", "TraceSink", "format_event"):
         assert hasattr(statesim, name)
 
 
