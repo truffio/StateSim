@@ -37,29 +37,39 @@ def build_schedule(model: Model) -> tuple[ScheduleItem, ...]:
     then ascending ``order``, then declaration ``seq``. Never depends on dict
     or set iteration order. Pure function of the model.
     """
-    items: list[ScheduleItem] = []
+    # (master_row, csv_index, kind, source object); master row order decides ties.
+    units: list[tuple[int, int, str, object]] = []
     for sm in model.state_machines:
-        items.append(
-            ScheduleItem(
-                kind="state_machine",
-                name=sm.name,
-                band_hz=sm.band_hz,
-                order=sm.master_order,
-                period_ticks=_period_ticks(model.tick_hz, sm.band_hz, sm.name),
-                seq=len(items),
+        units.append((sm.master_row, 0, "state_machine", sm))
+    for i, eq in enumerate(model.equations):
+        units.append((model.equations_master_row, i, "equation", eq))
+    units.sort(key=lambda u: (u[0], u[1]))
+    items: list[ScheduleItem] = []
+    for _row, _i, kind, obj in units:
+        if kind == "state_machine":
+            items.append(
+                ScheduleItem(
+                    kind="state_machine",
+                    name=obj.name,
+                    band_hz=obj.band_hz,
+                    order=obj.master_order,
+                    period_ticks=_period_ticks(model.tick_hz, obj.band_hz, obj.name),
+                    seq=len(items),
+                )
             )
-        )
-    for eq in model.equations:
-        items.append(
-            ScheduleItem(
-                kind="equation",
-                name=eq.result_variable,
-                band_hz=eq.band_hz,
-                order=eq.order,
-                period_ticks=_period_ticks(model.tick_hz, eq.band_hz, eq.result_variable),
-                seq=len(items),
+        else:
+            items.append(
+                ScheduleItem(
+                    kind="equation",
+                    name=obj.result_variable,
+                    band_hz=obj.band_hz,
+                    order=obj.order,
+                    period_ticks=_period_ticks(
+                        model.tick_hz, obj.band_hz, obj.result_variable
+                    ),
+                    seq=len(items),
+                )
             )
-        )
     items.sort(key=lambda it: (-it.band_hz, it.order, it.seq))
     return tuple(items)
 

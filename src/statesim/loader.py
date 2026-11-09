@@ -115,7 +115,8 @@ def _parse_default(text: str) -> object:
 
 
 def _load_state_machine(
-    path: Path, display: str, master_order: Fraction, master_source: str, names: _Names
+    path: Path, display: str, master_order: Fraction, master_source: str, names: _Names,
+    master_row: int = 0,
 ) -> tuple[StateMachine, int]:
     stem = Path(display).stem
     rows = _read_csv(path, display, constants.STATE_MACHINE_COLUMNS)
@@ -211,6 +212,7 @@ def _load_state_machine(
         states=tuple(states),
         transitions=tuple(transitions),
         source=master_source,
+        master_row=master_row,
     )
     return sm, len(rows)
 
@@ -227,6 +229,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     mrows = _read_csv(master_path, master_name, ("file_name", "type"))
 
     entries: list[tuple[str, str, Fraction | None, str]] = []
+    row_of: dict[str, int] = {}
     seen_single: dict[str, str] = {}
     for line, r in mrows:
         src = f"{master_name}:{line}"
@@ -249,6 +252,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
                 )
             seen_single[ftype] = src
         entries.append((fname, ftype, order, src))
+        row_of[src] = line
 
     n_sm = sum(1 for e in entries if e[1] == constants.TYPE_STATE_MACHINE)
     if n_sm > constants.MAX_STATE_MACHINES:
@@ -271,16 +275,18 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     inputs: list[InputDef] = []
     sm_rows = 0
 
+    eq_row = 1 << 60
     for fname, ftype, order, src in entries:
         path = base / fname
         if not path.is_file():
             raise ModelError(f"file not found: {fname}", src)
         if ftype == constants.TYPE_STATE_MACHINE:
             assert order is not None
-            sm, n = _load_state_machine(path, fname, order, src, names)
+            sm, n = _load_state_machine(path, fname, order, src, names, row_of[src])
             state_machines.append(sm)
             sm_rows += n
         elif ftype == constants.TYPE_EQUATIONS:
+            eq_row = row_of[src]
             for line, r in _read_csv(path, fname, constants.EQUATIONS_COLUMNS):
                 rsrc = f"{fname}:{line}"
                 _check_expr(r["equation"], rsrc)
@@ -322,4 +328,5 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         inputs=tuple(inputs),
         tick_hz=tick_hz,
         master_path=str(master_csv),
+        equations_master_row=eq_row,
     )

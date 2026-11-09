@@ -104,6 +104,7 @@ class StateMachine:
     states: tuple[str, ...]
     transitions: tuple[Transition, ...]
     source: str
+    master_row: int = 0
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,9 @@ class Model:
     ``inputs`` in CSV row order. ``tick_hz`` = compute_tick_hz(all band
     frequencies of equations and state machines); Fraction(1) if there are
     none. ``master_path`` is the master CSV path as passed to load_model.
+    ``StateMachine.master_row`` and ``equations_master_row`` are the master
+    file line numbers of those rows; the scheduler uses them to break
+    (band, order) ties. (Defaults: SM 0, equations after everything.)
     """
 
     state_machines: tuple[StateMachine, ...]
@@ -121,6 +125,7 @@ class Model:
     inputs: tuple[InputDef, ...]
     tick_hz: Fraction
     master_path: str
+    equations_master_row: int = 1 << 60
 
 
 def transition_sort_key(transition_id: str) -> tuple[int, int | str]:
