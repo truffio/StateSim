@@ -1,5 +1,12 @@
 transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
-1,OFF,ARMED,OFF,ap_sw,t1_sw,Pilot arms,Arm,20,1
-2,ARMED,ENGAGED,,ap_sw,t2_sw,Switch still on,Engage,20,2
-2,ARMED,ENGAGED,,alt_cap,t2_cap,Altitude captured guard,Engage,20,3
-3,,OFF,,disc,t3_disc,Disconnect from any state,Disconnect,20,4
+DISC,,DISC_WARN,,ap_disc_cond,disc_cond,Pilot disconnect or hydraulic loss,Disconnect,20,1
+DISC,,DISC_WARN,,ap_engaged,disc_engaged,Only when engaged (global transition guard),Disconnect,20,2
+ENG,OFF,VS,OFF,ap_engage_pb,eng_pb,Pilot presses AP engage,Engage,20,3
+ENG,OFF,VS,,ap_engage_ok,eng_ok,Engagement interlock,Engage,20,4
+ENG,OFF,VS,,not ap_disc_cond,eng_no_disc,Inhibit: no disconnect condition,Engage,20,5
+ARM,VS,ALT_ARMED,,alt_arm_pb,arm_pb,Pilot arms altitude capture,Arm ALT,20,6
+ARM,VS,ALT_ARMED,,not at_sel_alt,arm_away,Inhibit: already at the selected altitude,Arm ALT,20,7
+CAP,ALT_ARMED,ALT_CAP,,in_capture_zone,cap_zone,Capture zone reached,Capture,20,8
+HOLD,ALT_CAP,ALT_HOLD,,at_sel_alt,hold_at_alt,Capture complete,Hold,20,9
+VSEL,ALT_HOLD,VS,,vs_pb,vsel_pb,Pilot selects VS,Select VS,20,10
+ACK,DISC_WARN,OFF,,warn_ack_pb,ack_pb,Pilot acknowledges the warning,Acknowledge,20,11

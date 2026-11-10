@@ -108,7 +108,7 @@ undefined variable names are not detected at load. An undefined name raises
 `EvaluationError` at run time with the file, line, tick and item.
 
 Cheat sheet: `docs/cheatsheet.md`. Jupyter demos: `notebooks/` (quickstart,
-autopilot state machine, bands/timers/errors), with example CSV sets in `examples/`.
+closed-loop 6-state autopilot, bands/computation rate/timers/errors), with example CSV sets in `examples/`.
 
 ## Tests and report
 
@@ -121,6 +121,7 @@ The report covers unit tests and requirement-based use-case tests, with a
 requirement -> test -> result traceability matrix.
 
 ## Status
-Engine, tests and the first test report are complete on branch
-`feature/engine`: 274 tests pass (179 unit, 95 requirement-based); of the 110
-requirements, 104 are verified by tests and 6 are review-only.
+Engine, tests and the test report are complete: 282 tests pass (179 unit,
+103 requirement-based, including long-run computation-rate tests and tests of
+the `examples/` models); of the 113 requirements, 107 are verified by tests and
+6 are review-only.
