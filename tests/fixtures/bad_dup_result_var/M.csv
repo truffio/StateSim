@@ -1,0 +1,2 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
+1,A,B,A,go,r1,Why,Go,10,1

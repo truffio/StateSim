@@ -1,0 +1,5 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
+1,OFF,ON,OFF,a,ra,First row,Turn on,10,1
+1,OFF,ON,,b,rb,Second row,Turn on,10,2
+1,OFF,ON,,c,rc,Third row,Turn on,10,3
+2,ON,OFF,,not a,rn,Turn off when a drops,Turn off,10,4

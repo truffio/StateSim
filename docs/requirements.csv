@@ -1,0 +1,111 @@
+req_id,area,requirement,spec_path,verification
+REQ-001,master,"The engine shall load a master CSV whose rows list definition files with columns file_name, type and order",framework.master_configuration.columns,unit_test
+REQ-002,master,"The engine shall accept master CSV type values state_machine, equations and inputs",framework.master_configuration.columns.type,unit_test
+REQ-003,master,The engine shall load one state machine per state_machine file in the master CSV,framework.component_configuration.description,unit_test
+REQ-004,master,The engine shall use the master CSV order column to order state machines within their band,framework.master_configuration.columns.order,use_case_test
+REQ-005,master,The engine shall share one ordering space within a band between state machines and equations,framework.master_configuration.columns.order,use_case_test
+REQ-006,master,The engine shall ignore the master CSV order column for equations and inputs rows,framework.master_configuration.columns.order,unit_test
+REQ-007,master,The engine shall take execution rate from the band column of the definition files and not from the master CSV,framework.master_configuration.description,unit_test
+REQ-008,loader,The engine shall read all definition files including the master file as CSV with no YAML or JSON inputs,framework.components.definition_source,review
+REQ-009,loader,The engine shall build an immutable Model from the master CSV and the files it references,framework.architecture.design,unit_test
+REQ-010,loader,"The engine shall read state machine CSV columns transition_id, current_state, next_state, default_state, equation, result_variable, rationale, title, band and order",framework.csv_formats.state_machine_file.columns,unit_test
+REQ-011,loader,"The engine shall read equations CSV columns equation, explanation, rationale, result_variable, band and order",framework.csv_formats.equations_file.columns,unit_test
+REQ-012,loader,"The engine shall read inputs CSV columns variable_name, type and default_value",framework.csv_formats.inputs_file.columns,unit_test
+REQ-013,equations,The engine shall evaluate equations as Python-syntax Boolean expressions over context variable names,framework.components.logic_evaluation,use_case_test
+REQ-014,equations,The engine shall assign the result of each standalone equation to its result_variable on every evaluation,framework.csv_formats.equations_file.columns.result_variable,use_case_test
+REQ-015,equations,The engine shall make a standalone equation result variable usable by name in state machine equations,framework.component_configuration.standalone_equation_reuse,use_case_test
+REQ-016,equations,The engine shall make a standalone equation result variable usable by name in other standalone equations,framework.component_configuration.standalone_equation_reuse,use_case_test
+REQ-017,equations,The engine shall not perform sandboxing or AST sanitization of expressions,framework.components.logic_evaluation,review
+REQ-018,state_machine,The engine shall assign the result of each state machine row equation to its result_variable on every evaluation,framework.csv_formats.state_machine_file.columns.result_variable,use_case_test
+REQ-019,state_machine,The engine shall evaluate every row of every transition on every evaluation of its state machine so that result variables are always updated,framework.csv_formats.state_machine_file.columns.result_variable,unit_test
+REQ-020,state_machine,The engine shall treat all rows sharing a transition_id as one transition,framework.csv_formats.state_machine_file.columns.transition_id,unit_test
+REQ-021,state_machine,The engine shall AND the equations of a transition so that it is enabled only when all of them are true,framework.csv_formats.state_machine_file.multiple_equations,use_case_test
+REQ-022,state_machine,The engine shall support transitions with differing numbers of equations within one state machine,framework.csv_formats.state_machine_file.multiple_equations,unit_test
+REQ-023,state_machine,The engine shall fire a non-global transition only when the state machine is in the transition current_state,framework.csv_formats.state_machine_file.columns.current_state,use_case_test
+REQ-024,state_machine,The engine shall not fire a non-global transition whose equations are true when the state machine is not in its current_state,framework.csv_formats.state_machine_file.columns.current_state,use_case_test
+REQ-025,state_machine,The engine shall treat a transition with empty current_state as global,framework.csv_formats.state_machine_file.global_transitions,unit_test
+REQ-026,state_machine,The engine shall fire an enabled global transition from any state,framework.csv_formats.state_machine_file.global_transitions,use_case_test
+REQ-027,state_machine,The engine shall give global and non-global transitions no special precedence,framework.csv_formats.state_machine_file.global_transitions,use_case_test
+REQ-028,state_machine,The engine shall apply the first enabled transition in manual (band and order) sequence when several transitions are enabled in the same pass,framework.csv_formats.state_machine_file.global_transitions,use_case_test
+REQ-029,state_machine,The engine shall start each state machine in its default_state,framework.architecture.initial_values,use_case_test
+REQ-030,state_machine,The engine shall take the default state from the single row of the file that has default_state filled,framework.csv_formats.state_machine_file.columns.default_state,unit_test
+REQ-031,state_machine,The engine shall accept a transition whose next_state equals its current_state; a global transition to the current state is a no-op that still wins the pass and is not logged,framework.csv_formats.state_machine_file.columns.next_state,unit_test
+REQ-032,state_machine,The engine shall use each transition expression as written with no implicit negation or inhibit,framework.csv_formats.state_machine_file.multiple_equations,unit_test
+REQ-033,state_machine,The engine shall support multiple state machines up to MAX_STATE_MACHINES,framework.supported_logic.state_machines,unit_test
+REQ-034,state_machine,The engine shall allow transition equations to reference result variables of other state machines through the shared context,framework.inter_component_communication.shared_context,use_case_test
+REQ-035,inputs,The engine shall initialize every external input to its default_value from the inputs file at start,framework.architecture.initial_values,use_case_test
+REQ-036,inputs,The engine shall make an input value set with set_input visible to equations at the next evaluation,framework.architecture.public_interface,use_case_test
+REQ-037,inputs,The engine shall reject a result_variable (equation or transition row) named like an input so that only set_input writes inputs (assignment inside expressions is not checked: known limitation),framework.outputs,unit_test
+REQ-038,inputs,The engine shall make input variables usable by name in equations,framework.csv_formats.inputs_file.columns.variable_name,use_case_test
+REQ-039,inputs,The engine shall convert input default_value at load according to the type column (bool accepts true/false/1/0 case-insensitively; int; float; str) and reject an unknown type or a value that fails to convert,framework.csv_formats.inputs_file.columns.type,unit_test
+REQ-040,bands,The engine shall treat each band as an explicit frequency in Hz,framework.csv_formats.common_columns.band,unit_test
+REQ-041,bands,The engine shall not require any integer multiple or factor relationship between bands,framework.csv_formats.common_columns.band,use_case_test
+REQ-042,bands,The engine shall support bands such as 20 Hz and 30 Hz coexisting,framework.csv_formats.common_columns.band,use_case_test
+REQ-043,bands,The engine shall evaluate each item at the rate of its band,framework.csv_formats.common_columns.band,use_case_test
+REQ-044,bands,The engine shall evaluate all items sharing a band at the same rate,framework.csv_formats.common_columns.band,use_case_test
+REQ-045,bands,The engine shall use a tick rate equal to the least common multiple of all band frequencies,framework.architecture.constraints,unit_test
+REQ-046,bands,The engine shall make every band period a whole number of ticks,framework.architecture.constraints,unit_test
+REQ-047,bands,The engine shall use exact integer arithmetic for scheduling with no floating-point accumulation,framework.architecture.constraints,static_check
+REQ-048,bands,The engine shall support band and order columns in every state machine file and the equations file,framework.csv_formats.common_columns.note,unit_test
+REQ-049,execution,The engine shall run items within a band in their manual order each time the band is scheduled,framework.timing_and_execution.execution_order.determinism,use_case_test
+REQ-050,execution,The engine shall let a later item see the result of an earlier item in the same pass,framework.timing_and_execution.execution_order.determinism,use_case_test
+REQ-051,execution,The engine shall let an earlier item see the previous pass value of a later item result,framework.timing_and_execution.execution_order.determinism,use_case_test
+REQ-052,execution,The engine shall not derive or infer execution order from dependencies,framework.timing_and_execution.execution_order.definition,use_case_test
+REQ-053,execution,"The engine shall build the execution plan ordered by (band, order) once at load",framework.architecture.design,unit_test
+REQ-054,execution,The engine shall never depend on dict or set iteration order for execution order,framework.architecture.constraints,static_check
+REQ-055,execution,The engine shall recompute item values on every scheduled pass of their band,framework.timing_and_execution.time_based_execution,use_case_test
+REQ-056,execution,The engine shall apply at most one state change per state machine per pass,framework.csv_formats.state_machine_file.global_transitions,use_case_test
+REQ-057,execution,The engine shall evaluate an item only on ticks that are multiples of its band period,framework.timing_and_execution.scheduling,use_case_test
+REQ-058,execution,"The engine shall evaluate all bands on the first step (tick 1, t = 0 ms)",framework.timing_and_execution.scheduling,use_case_test
+REQ-059,time,The engine shall represent simulation time as an integer tick count,framework.architecture.constraints,unit_test
+REQ-060,time,The engine shall increment simulation time at the start of each step,framework.timing_and_execution.execution_model,unit_test
+REQ-061,time,"The engine shall derive t (absolute simulation time in milliseconds, (tick-1)*1000/tick_hz as an exact fraction) and dt (the item period in milliseconds) from the tick",framework.architecture.constraints,unit_test
+REQ-062,time,The engine shall make t and dt (both in milliseconds) available to equations as context names,framework.timing_and_execution.time_in_logic,use_case_test
+REQ-063,time,The engine shall run as fast as possible and not be synchronized to wall-clock time,framework.timing_and_execution.execution_model,static_check
+REQ-064,time,The engine shall allow timer behavior to be expressed using t (absolute milliseconds) in equations independent of other bands,framework.components.composition,use_case_test
+REQ-065,loadcheck,The engine shall reject an equation with a syntax error at load,framework.architecture.design,unit_test
+REQ-066,loadcheck,The engine shall treat rows sharing a transition_id as one transition whether or not they are contiguous and AND their equations,framework.architecture.design,unit_test
+REQ-067,loadcheck,The engine shall reject a transition referencing an unknown state at load,framework.architecture.design,unit_test
+REQ-068,loadcheck,The engine shall reject a state machine file with zero default_state rows at load,framework.csv_formats.state_machine_file.columns.default_state,unit_test
+REQ-069,loadcheck,The engine shall reject a state machine file with more than one default_state row at load,framework.csv_formats.state_machine_file.columns.default_state,unit_test
+REQ-070,loadcheck,The engine shall reject a state machine file whose rows use more than one band at load,framework.csv_formats.common_columns.band,unit_test
+REQ-071,loadcheck,The engine shall reject at load rows sharing a transition_id that disagree on current_state or next_state,framework.csv_formats.state_machine_file.columns.transition_id,unit_test
+REQ-072,loadcheck,The engine shall reject at load a non-empty current_state that can never be entered (neither the default_state nor any transition next_state),framework.architecture.design,unit_test
+REQ-073,loadcheck,The engine shall reject a total equation count above MAX_EQUATIONS at load,framework.supported_logic.tool_constraints,unit_test
+REQ-074,loadcheck,The engine shall reject a state machine count above MAX_STATE_MACHINES at load,framework.supported_logic.tool_constraints,unit_test
+REQ-075,loadcheck,The engine shall count transition equations toward MAX_EQUATIONS,framework.supported_logic.transitions,unit_test
+REQ-076,loadcheck,The engine shall define MAX_EQUATIONS and MAX_STATE_MACHINES as named constants and not per-component settings,framework.supported_logic.tool_constraints,static_check
+REQ-077,loadcheck,The engine shall reject a non-positive or non-numeric band at load,framework.csv_formats.common_columns.band,unit_test
+REQ-078,loadcheck,The engine shall treat load-time checks as startup checks only and not as sandboxing,framework.architecture.design,review
+REQ-079,compile,The engine shall compile each expression once at load using Python compile(),framework.architecture.design,unit_test
+REQ-080,compile,The engine shall evaluate pre-compiled code objects against the context at runtime without recompiling,framework.architecture.design,unit_test
+REQ-081,api,The engine shall be an importable Python package,framework.architecture.constraints,static_check
+REQ-082,api,The engine shall provide Engine(model) as its constructor,framework.architecture.public_interface.methods,unit_test
+REQ-083,api,The engine shall provide Engine.step() advancing simulation by one tick,framework.architecture.public_interface.methods,unit_test
+REQ-084,api,The engine shall provide Engine.run(ticks) executing the given number of steps,framework.architecture.public_interface.methods,unit_test
+REQ-085,api,"The engine shall provide Engine.snapshot() returning tick, t (float milliseconds), states, outputs and inputs as an independent deep copy",framework.architecture.public_interface.methods,unit_test
+REQ-086,api,"The engine shall provide Engine.set_input(name, value) writing an external input",framework.architecture.public_interface.methods,unit_test
+REQ-087,api,"The engine shall implement the layered Loader, Scheduler, Evaluator, runtime state and trace hook design",framework.architecture.design,review
+REQ-088,api,"The engine shall keep runtime state consisting of the context, the current state of each state machine and the tick",framework.architecture.design,review
+REQ-089,outputs,The engine shall expose the current state of every state machine in the snapshot,framework.outputs,use_case_test
+REQ-090,outputs,The engine shall expose every result_variable value in the snapshot,framework.outputs,use_case_test
+REQ-091,outputs,The engine shall expose both state machine row and standalone equation result variables in the snapshot,framework.outputs,use_case_test
+REQ-092,outputs,The engine shall return a snapshot that is a copy so that mutating it does not alter engine state,framework.architecture.public_interface,unit_test
+REQ-093,outputs,The engine shall reject set_input for a name not defined in the inputs file,framework.csv_formats.inputs_file.description,unit_test
+REQ-094,logging,The engine shall provide a trace hook callback recording each state change or result,framework.architecture.design,unit_test
+REQ-095,logging,The engine shall record a timestamp in each log entry,framework.logging.contents,unit_test
+REQ-096,logging,The engine shall record the component name in each log entry,framework.logging.contents,unit_test
+REQ-097,logging,The engine shall record an action or state change description in each log entry,framework.logging.contents,unit_test
+REQ-098,logging,The engine shall record the variable values involved in triggering the state change or action in each log entry,framework.logging.contents,use_case_test
+REQ-099,logging,The engine shall support plain text log file output,framework.logging.minimum_implementation,unit_test
+REQ-100,logging,The engine shall record a log entry for every state machine state change,framework.logging.contents,use_case_test
+REQ-101,determinism,The engine shall produce identical snapshots for identical runs with identical inputs,framework.timing_and_execution.execution_order.determinism,use_case_test
+REQ-102,determinism,The engine shall produce identical logs for identical runs with identical inputs,framework.timing_and_execution.execution_order.determinism,use_case_test
+REQ-103,determinism,The engine shall not use async or threads,framework.architecture.constraints,static_check
+REQ-104,determinism,The engine shall not use wall-clock time,framework.architecture.constraints,static_check
+REQ-105,determinism,The engine shall not use randomness,framework.architecture.constraints,static_check
+REQ-106,determinism,The engine shall be implemented in Python only,framework.architecture.constraints,static_check
+REQ-107,scope,"The engine shall exclude the front end, WebSocket server and orchestration server from the current phase",framework.architecture.scope,review
+REQ-108,scope,The engine shall not provide an event bus or event mechanism,framework.inter_component_communication.no_events,static_check
+REQ-109,scope,The engine shall support command layer and monitoring layer logic using the same equation and state machine mechanisms,framework.components.layers,use_case_test
+REQ-110,scope,The engine shall allow a monitoring equation ordered after a command layer item to see its result in the same pass,framework.timing_and_execution.execution_order.determinism,use_case_test

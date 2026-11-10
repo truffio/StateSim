@@ -1,0 +1,4 @@
+variable_name,type,default_value
+ap_sw,bool,False
+alt_cap,bool,False
+disc,bool,False
