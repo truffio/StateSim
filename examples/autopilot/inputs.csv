@@ -1,4 +1,11 @@
 variable_name,type,default_value
-ap_sw,bool,False
-alt_cap,bool,False
-disc,bool,False
+ap_engage_pb,bool,false
+ap_disc_pb,bool,false
+alt_arm_pb,bool,false
+vs_pb,bool,false
+warn_ack_pb,bool,false
+on_ground,bool,false
+hyd_ok,bool,true
+alt,float,9000
+sel_alt,float,10000
+vs,float,0

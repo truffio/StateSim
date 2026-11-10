@@ -79,8 +79,21 @@ one standalone Boolean equation per row. The result is assigned to
 * A state machine evaluates all rows of all its transitions each pass, then fires
   the **first** enabled transition (at most one per pass). A transition is evaluated
   when its smallest row `order` is due; its rows have no order among themselves.
+* Every item is evaluated continuously at its band rate for the whole run, and
+  only then: between two passes it holds its value. An input change reverted
+  between two passes of a slow band is never seen by that band.
 * `t` = absolute ms (exact; first run is 0). `dt` = ms since the item last ran
   (first run: its period). Result variables start `False`.
+
+## Closed loop with external software
+```python
+for _ in range(n):                             # one iteration = one tick
+    s = eng.snapshot()                         # read modes / outputs
+    eng.set_input("alt", model_of_aircraft(s)) # write the response back
+    eng.step()
+```
+See `examples/autopilot/plant.py` and notebook 2 (6-state autopilot, equations
+used as guards, global disconnect, 10 Hz monitor).
 
 ## Trace line
 ```

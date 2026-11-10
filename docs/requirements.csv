@@ -109,3 +109,6 @@ REQ-107,scope,"The engine shall exclude the front end, WebSocket server and orch
 REQ-108,scope,The engine shall not provide an event bus or event mechanism,framework.inter_component_communication.no_events,static_check
 REQ-109,scope,The engine shall support command layer and monitoring layer logic using the same equation and state machine mechanisms,framework.components.layers,use_case_test
 REQ-110,scope,The engine shall allow a monitoring equation ordered after a command layer item to see its result in the same pass,framework.timing_and_execution.execution_order.determinism,use_case_test
+REQ-111,bands,"The engine shall evaluate each state machine at the rate of its band, so a state change can occur only on a pass of that band",framework.csv_formats.common_columns.band,use_case_test
+REQ-112,bands,An item shall see an input only when its band runs; an input change that is reverted between two passes of the band is not seen by that item,framework.timing_and_execution.time_based_execution,use_case_test
+REQ-113,execution,"The engine shall keep evaluating every item at its band rate for the whole run, with no drift in evaluation times over long runs",framework.timing_and_execution.time_based_execution,use_case_test
