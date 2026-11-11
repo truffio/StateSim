@@ -4,7 +4,8 @@ Working notes for writing the front end requirements. Sources:
 `docs/StateSim_FrontEnd_Spec.md` (the front end of a **previous** tool: a
 JavaScript, event-driven engine in one HTML page, used only as a source of UI
 ideas), `requirements_simulation_framework_spec.yaml`, and design discussions.
-No front end code is written until the requirements are agreed.
+No front end code is written until the requirements are agreed. The screen
+itself is specified in `docs/frontend_ui_spec.md`.
 
 ## Decided
 
