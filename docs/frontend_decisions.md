@@ -29,14 +29,15 @@ No front end code is written until the requirements are agreed.
 | D17 | `var` type | Dropped. Logic never writes inputs; equation and transition results take that role. |
 | D18 | Condition display | No equations or conditions on screen, so no green/red colouring of rows or terms. |
 | D19 | Machine layout order | State machines appear on screen in the order of their rows in the master CSV. |
+| D20 | State order in a machine | Inside a machine's area, states appear in the order they appear in that machine's CSV file. |
+| D21 | Transitions on screen | Nothing about transitions is shown. The current state is strongly highlighted. Hovering the mouse over the active state highlights its possible next states. |
 
 ## Open
 
 | # | Topic | Question |
 |---|---|---|
 | O1 | Button pulse | Pulse duration rule (fixed ms, the slowest band period reading the input, or per button), or buffering until read. |
-| O4 | State display order | Order of the state boxes inside one machine card (a new column, or first appearance in the file). |
-| O12 | Transition cards | With no conditions shown, does a machine card show anything about its transitions (e.g. the possible next states), or only its states with the active one highlighted? |
+| O12 | Hover next states | Do the possible next states include the targets of global transitions (reachable from any state), or only transitions leaving the active state? |
 | O5 | Aircraft panel definition | File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
 | O6 | Inputs CSV columns | Exact new columns for D3 and D4. |
 | O7 | Real-time pacing | Overrun behaviour (a tick takes longer than its period), and pause, step and speed controls. |
