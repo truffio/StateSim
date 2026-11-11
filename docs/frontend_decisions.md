@@ -45,3 +45,5 @@ No front end code is written until the requirements are agreed.
 | O9 | Error reporting | Report every load error at once instead of the first. |
 | O10 | Clients | One browser client, or several at once. |
 | O11 | Front end test approach | Browser tests (e.g. Playwright) and server API tests. |
+| O13 | Screen update rate | How often the screen updates while running (every tick, or capped at the display refresh rate). |
+| O14 | Splitter position | Whether the split between the panes is remembered between sessions. |

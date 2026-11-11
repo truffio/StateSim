@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StateSim UI mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #005c99; --blue-dark: #003d66; --blue-tint: #dcf0fa;
+    --ink: #1c2430; --muted: #4a5565; --line: #d9dee5; --line-strong: #c3cad4;
+    --bg: #eef1f5; --card: #ffffff; --state-bg: #f6f8fa;
+    --green: #00a37d; --green-dark: #007a5e; --red: #c62a3a;
+    --global: #b35c00; --global-tint: #fff1de; --global-ink: #6b3600;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+  html, body { height: 100%; }
+  .layout { height: 100vh; display: flex; }
+  .left { flex: 0 0 auto; width: 440px; min-width: 280px; overflow: auto; padding: 16px;
+          display: flex; flex-direction: column; gap: 12px; }
+  .right { flex: 1 1 0; min-width: 0; overflow: auto; padding: 16px; }
+  .splitter { flex: 0 0 8px; cursor: col-resize; background: var(--bg); border-left: 1px solid var(--line-strong);
+              border-right: 1px solid var(--line-strong); position: relative; touch-action: none; }
+  .splitter::after { content: ""; position: absolute; top: 50%; left: 2px; width: 2px; height: 40px; margin-top: -20px;
+                     border-left: 1px solid #8b96a5; border-right: 1px solid #8b96a5; }
+  .splitter:hover, .splitter:focus-visible, .splitter.dragging { background: var(--blue-tint); outline: none; }
+  body.resizing { cursor: col-resize; user-select: none; }
+
+  /* top bar: run controls only */
+  .topbar { margin-top: auto; display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 8px;
+            background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+  .seg { display: flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 13px; border: 0; padding: 8px 12px; background: var(--card); color: var(--ink); }
+  .seg button.on { background: var(--blue); color: #fff; font-weight: 600; }
+  .btn { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--line-strong); border-radius: 6px;
+         padding: 8px 14px; background: var(--card); color: var(--ink); }
+
+
+  /* inputs */
+  .inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+          display: flex; flex-direction: column; gap: 10px; }
+  .card.wide { grid-column: 1 / -1; }
+  .card h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--blue); }
+  .lit, .unlit, .momentary { font: inherit; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 10px; }
+  .lit { border: 2px solid var(--green-dark); background: var(--green); color: #fff; }
+  .unlit { border: 2px solid var(--ink); background: var(--card); color: var(--ink); }
+  .momentary { border: 0; background: var(--red); color: #fff; padding: 12px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+  .val { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--blue); }
+  input[type=range] { width: 100%; accent-color: var(--blue); }
+  select { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); }
+
+  /* two-state sliding switch */
+  .switch { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .track { position: relative; flex: 0 0 auto; width: 42px; height: 24px; border-radius: 12px; background: #b9c1cc; transition: background .15s; }
+  .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+                  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+  .switch input:checked + .track { background: var(--blue); }
+  .switch input:checked + .track::after { transform: translateX(18px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+
+  /* aircraft panel: explicit width and height, example content only */
+  .acpanel { flex: 0 0 auto; width: 360px; max-width: 100%; height: 64px; background: #10151c; border-radius: 8px; padding: 6px;
+             display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; }
+  .acpanel div { background: #10151c; display: flex; align-items: center; justify-content: center;
+                 font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; border-right: 1px solid #3a4552; }
+  .acpanel div:last-child { border-right: 0; }
+
+  .acplaceholder { height: 64px; border: 2px dashed var(--line-strong); border-radius: 8px; display: flex;
+                   align-items: center; justify-content: center; font-size: 13px; color: var(--muted); }
+
+  /* state machines: multi-row grid */
+  .machines { display: grid; grid-template-columns: repeat(auto-fill, 200px); gap: 10px; }
+  .sm { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+        display: flex; flex-direction: column; gap: 8px; }
+  .sm h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--blue); }
+  .states { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .st { min-height: 34px; display: flex; align-items: center; justify-content: center; text-align: center;
+        font: inherit; font-size: 12px; font-weight: 600; line-height: 1.2; padding: 4px 6px;
+        border: 2px solid var(--line); border-radius: 6px; background: var(--state-bg); color: var(--muted);
+        overflow-wrap: anywhere; cursor: default; }
+  .st.active { border-color: var(--blue); background: var(--blue); color: #fff; font-weight: 700; }
+  .st.next { border-color: var(--blue); background: var(--blue-tint); color: var(--blue-dark); }
+  .st.next-global { border-style: dashed; border-color: var(--global); background: var(--global-tint); color: var(--global-ink); }
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="left" id="left">
+    <div class="acplaceholder">Aircraft panels (to be defined)</div>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-label="Resize panes"
+       aria-valuemin="280" aria-valuenow="440" tabindex="0"></div>
+
+  <div class="right">
+    <section class="machines" id="machines" aria-label="State machines"></section>
+  </div>
+</div>
+
+<script>
+// Example machines (illustrative). states: CSV order; next: targets from the
+// active state; global: targets of global transitions.
+const MACHINES = [
+  { name: "Flight phase", states: ["GROUND", "TAKEOFF", "CLIMB", "CRUISE", "DESCENT", "APPROACH", "LANDING"], active: "CLIMB", next: ["CRUISE", "DESCENT"] },
+  { name: "FD", states: ["OFF", "ON"], active: "ON", next: ["OFF"] },
+  { name: "AP", states: ["DISC_WARN", "OFF", "VS", "ALT_ARMED", "ALT_CAP", "ALT_HOLD"], active: "ALT_ARMED", next: ["ALT_CAP"], global: ["DISC_WARN"] },
+  { name: "Autothrottle", states: ["OFF", "ARMED", "SPD", "THR", "RETARD", "HOLD"], active: "SPD", next: ["THR", "RETARD"], global: ["OFF"] },
+  { name: "Lateral modes", states: ["ROLL", "HDG", "LNAV_ARMED", "LNAV", "LOC_ARMED", "LOC"], active: "HDG", next: ["LNAV_ARMED", "LOC_ARMED", "ROLL"] },
+  { name: "Approach", states: ["NONE", "APPR_ARMED", "LOC_GS", "LAND2", "LAND3", "ROLLOUT"], active: "NONE", next: ["APPR_ARMED"] },
+  { name: "Flare", states: ["IDLE", "ARMED", "FLARE", "TOUCHDOWN"], active: "IDLE", next: ["ARMED"] },
+  { name: "Guidance source", states: ["FMS1", "FMS2", "NAV1", "NAV2"], active: "FMS1", next: ["FMS2", "NAV1"] },
+  { name: "TOGA", states: ["INACTIVE", "TOGA_TAKEOFF", "TOGA_GO_AROUND"], active: "INACTIVE", next: ["TOGA_TAKEOFF", "TOGA_GO_AROUND"] },
+  { name: "Speed protection", states: ["NORMAL", "ALPHA_PROT", "ALPHA_FLOOR"], active: "NORMAL", next: ["ALPHA_PROT"] },
+  { name: "Altitude alert", states: ["NORMAL", "APPROACHING", "DEVIATION"], active: "APPROACHING", next: ["NORMAL", "DEVIATION"] },
+  { name: "Autoland warning", states: ["OFF", "ALERT"], active: "OFF", next: ["ALERT"] },
+];
+
+const root = document.getElementById("machines");
+for (const m of MACHINES) {
+  const card = document.createElement("div");
+  card.className = "sm";
+  const h = document.createElement("h3");
+  h.textContent = m.name;
+  const grid = document.createElement("div");
+  grid.className = "states";
+  const boxes = {};
+  for (const s of m.states) {
+    const el = document.createElement(s === m.active ? "button" : "div");
+    el.className = "st" + (s === m.active ? " active" : "");
+    el.textContent = s;
+    if (s === m.active) el.type = "button";
+    boxes[s] = el;
+    grid.appendChild(el);
+  }
+  const act = boxes[m.active];
+  const set = (on) => {
+    for (const s of m.next || []) boxes[s].classList.toggle("next", on);
+    for (const s of m.global || []) if (s !== m.active) boxes[s].classList.toggle("next-global", on);
+  };
+  act.addEventListener("mouseenter", () => set(true));
+  act.addEventListener("mouseleave", () => set(false));
+  act.addEventListener("focus", () => set(true));
+  act.addEventListener("blur", () => set(false));
+  card.append(h, grid);
+  root.appendChild(card);
+}
+
+// Resizable split: drag the bar, or focus it and use the arrow keys.
+const left = document.getElementById("left"), bar = document.getElementById("splitter");
+const MIN = 280;
+const maxW = () => Math.max(MIN, window.innerWidth - 240);
+function setW(w) {
+  w = Math.round(Math.min(maxW(), Math.max(MIN, w)));
+  left.style.width = w + "px";
+  bar.setAttribute("aria-valuenow", w);
+  bar.setAttribute("aria-valuemax", maxW());
+}
+bar.addEventListener("pointerdown", (e) => {
+  bar.setPointerCapture(e.pointerId);
+  bar.classList.add("dragging"); document.body.classList.add("resizing");
+  const startX = e.clientX, startW = left.getBoundingClientRect().width;
+  const move = (ev) => setW(startW + ev.clientX - startX);
+  const up = () => {
+    bar.removeEventListener("pointermove", move); bar.removeEventListener("pointerup", up);
+    bar.classList.remove("dragging"); document.body.classList.remove("resizing");
+  };
+  bar.addEventListener("pointermove", move); bar.addEventListener("pointerup", up);
+});
+bar.addEventListener("keydown", (e) => {
+  const w = left.getBoundingClientRect().width;
+  if (e.key === "ArrowLeft") { setW(w - 20); e.preventDefault(); }
+  if (e.key === "ArrowRight") { setW(w + 20); e.preventDefault(); }
+});
+window.addEventListener("resize", () => setW(left.getBoundingClientRect().width));
+setW(440);
+</script>
+</body>
+</html>
