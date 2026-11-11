@@ -26,15 +26,17 @@ No front end code is written until the requirements are agreed.
 | D14 | Aircraft panels | In scope. Aircraft panels will be defined (replacing the previous tool's FMA strip). |
 | D15 | Testing | The front end and the back end are both tested. |
 | D16 | System log panel | Dropped from the screen (from the previous spec). The engine trace still exists. |
+| D17 | `var` type | Dropped. Logic never writes inputs; equation and transition results take that role. |
+| D18 | Condition display | No equations or conditions on screen, so no green/red colouring of rows or terms. |
+| D19 | Machine layout order | State machines appear on screen in the order of their rows in the master CSV. |
 
 ## Open
 
 | # | Topic | Question |
 |---|---|---|
 | O1 | Button pulse | Pulse duration rule (fixed ms, the slowest band period reading the input, or per button), or buffering until read. |
-| O2 | `var` type | The previous tool had hidden variables written by the logic. Here logic never writes inputs; equation and transition results take that role. Drop `var`? |
-| O3 | Condition colouring | Colour each transition row green or red only, or also each part inside a row expression (needs a new engine feature)? |
-| O4 | State display order | Order of the state boxes inside a machine card (a new column, or first appearance in the file). |
+| O4 | State display order | Order of the state boxes inside one machine card (a new column, or first appearance in the file). |
+| O12 | Transition cards | With no conditions shown, does a machine card show anything about its transitions (e.g. the possible next states), or only its states with the active one highlighted? |
 | O5 | Aircraft panel definition | File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
 | O6 | Inputs CSV columns | Exact new columns for D3 and D4. |
 | O7 | Real-time pacing | Overrun behaviour (a tick takes longer than its period), and pause, step and speed controls. |
