@@ -32,8 +32,14 @@ def test_describe_model_layout(ap2):
     assert ac["next"]["Descent"] == ["Approach", "Go Around"]
     assert ac["global"] == ["Touchdown", "EDM"]
     assert [g["name"] for g in d["groups"]] == \
-        ["Aircraft", "Flight Control Panel", "Stick and Throttle", "DMC and CLAWS requests",
-         "CLAWS availability"]
+        ["Aircraft", "Stick and Throttle", "DMC and CLAWS requests", "CLAWS availability"]
+    panel_inputs = {i["name"] for g in d["groups"] for i in g["inputs"]}
+    assert not panel_inputs & {"fd_on", "ap_on", "appr_selected", "EDM", "spd_sel"}  # on the panel
+    (fcp,) = d["panels"]
+    assert fcp["name"] == "fcp" and "<button" in fcp["html"]
+    assert fcp["inputs"]["fd_on"]["widget"] == "toggle"
+    assert fcp["inputs"]["hdg_sel"] == {"widget": "knob", "label": "HDG", "min": 0, "max": 359,
+                                        "step": 1}
     capa = d["groups"][0]["inputs"][2]
     assert capa["widget"] == "dropdown" and capa["choices"][-1] == "LAND3"
     assert d["groups"][0]["wide"] is True                 # holds sliders
@@ -141,3 +147,27 @@ def test_reset_keeps_model_mode_and_pause(ap2):
 def test_server_listens_on_localhost_by_default():
     args = parser().parse_args(["m.csv"])
     assert args.host == "127.0.0.1" and args.port == 8765
+
+
+
+@R("REQ-142")
+def test_toggle_flips_its_input(ap2):
+    assert ap2.state()["inputs"]["fd_on"] is False
+    assert ap2.handle({"type": "toggle", "name": "fd_on"}) is None
+    assert ap2.state()["inputs"]["fd_on"] is True
+    ap2.step(); ap2.step()
+    assert ap2.state()["inputs"]["fd_on"] is True              # stays on (not a pulse)
+    assert ap2.handle({"type": "toggle", "name": "fd_on"}) is None
+    assert ap2.state()["inputs"]["fd_on"] is False
+    assert ap2.handle({"type": "toggle", "name": "EDM"})       # momentary, not a toggle
+    assert ap2.handle({"type": "toggle", "name": "nope"})
+
+
+@R("REQ-143", "REQ-144")
+def test_knob_values_are_checked_and_shown(ap2):
+    assert ap2.handle({"type": "set", "name": "hdg_sel", "value": 359}) is None
+    assert ap2.handle({"type": "set", "name": "hdg_sel", "value": 360})      # no wrap
+    assert ap2.handle({"type": "set", "name": "alt_sel", "value": 2.5})      # int only
+    st = ap2.state()
+    assert st["inputs"]["hdg_sel"] == 359 and isinstance(st["inputs"]["hdg_sel"], int)
+    assert st["values"] == {"alt_sel": 15000, "hdg_sel": 359, "spd_sel": 250, "vs_sel": 0}

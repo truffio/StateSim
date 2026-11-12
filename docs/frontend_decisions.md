@@ -43,6 +43,14 @@ proposed and accepted on 2026-11-11 before the first front end was built.
 | D30 | Machine display names | The master CSV has an optional `name` column; a state machine card is titled with it, or with the file name when empty. The state variable in equations is still the file name (e.g. `state_ac`). |
 | D31 | Rationale and titles | Not used by the front end for now (see D10). |
 | D32 | Load errors | Unchanged for now: the first load error stops loading. |
+| D34 | Aircraft panels | Option B: a panel is an HTML file listed in the master CSV (type `panel`), wired by `data-input`, `data-show`, `data-format` and `data-lit-by` attributes; the file's scripts never run. |
+| D35 | Panel placement | A full-width top pane above the left and right panes, always shown; panels at full size, scaled down only when the window is narrower. |
+| D36 | Panel inputs | Inputs CSV `panel` column: the input is driven by that panel and gets no card. New widgets `toggle` (each press flips the bool) and `knob` (int/float within min/max, no wrap). |
+| D37 | Lights | Lights follow variables (`data-lit-by`), never the click. Light equations are defined later; the FCP has none yet. |
+| D38 | FCP for autopilot2 | `fd_on` (both FD buttons), `ap_on` and `appr_selected` become toggle buttons on the FCP; `EDM` its momentary button; new momentary inputs `hdg_pb`, `nav_pb`, `at_pb`, `xfr_pb`, `flc_pb`, `alt_pb`, `vnav_pb`, `vs_pb`, `fpa_pb` and knobs `spd_sel`, `hdg_sel` (0-359, no wrap), `alt_sel`, `vs_sel` (not used by the logic yet). |
+| D39 | Panel size | Master CSV `scale` column on panel rows; the FCP is shown at 0.75 (three quarters of its natural size, between the first full-size and half-size versions; proportions kept). |
+| D40 | Knob handling | Dragging a knob sets the angle under the pointer (absolute), replacing the vertical-drag handling that made the full range hard to reach. |
+| D41 | APPR light | `appr_light`: on when APPR is selected in Descent; stays on until Landed or Waiting TOGA; off after Reset. The equation reads its own previous value to stay on. |
 | D33 | Divider position | The page remembers the divider position (in the browser's local storage) and restores it when opened again. |
 | D29 | Front end tests | Unit tests of the session, server tests over real HTTP and WebSocket connections, and browser tests with Playwright (skipped when Playwright or Chromium is missing). |
 
@@ -50,6 +58,6 @@ proposed and accepted on 2026-11-11 before the first front end was built.
 
 | # | Topic | Question |
 |---|---|---|
-| O5 | Aircraft panel definition | **Next feature.** File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
+| O5b | Aircraft panels | Light equations for the other FCP buttons. |
 | O8b | Reloading | Reload edited CSV files without restarting the server. Postponed. |
 

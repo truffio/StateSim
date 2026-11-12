@@ -69,6 +69,9 @@ one standalone Boolean equation per row. The result is assigned to
 | `order` | evaluation order within the band (manual) |
 
 ## Writing equations
+* An equation can read its own result: it gets the previous pass value
+  (False at start), which makes a latch, e.g.
+  `(state_ac == 'Descent' and appr_selected) or (appr_light and state_ac != 'Landed')`.
 * Plain Python: `a and not b`, `(x or y) and z`, `alt > 1000`, `AP == "ENGAGED"`.
 * Names available: inputs, any result variable, state machine names (their
   current state as a string), and the reserved `tick`, `t` (ms), `dt` (ms).
@@ -117,6 +120,14 @@ Components: the state machine name, `EQ` (standalone equations), `INPUT`.
 * Equations are evaluated with Python `eval` (trusted authors, no sandbox).
 * `snapshot()` returns copies; modify inputs only with `set_input`.
 * Deterministic by design: no threads, async, wall-clock time or randomness.
+
+## Aircraft panels
+HTML files listed in the master CSV (`fcp.html,panel,,,Flight control panel,0.75`;
+the last column is the optional display `scale`), shown in a full-width top pane. Bind elements with attributes:
+`data-input="var"` (button: `momentary`/`toggle`; element: `knob`),
+`data-show="var" data-format="%03d"`, `data-lit-by="var"` (adds class `lit`).
+Panel inputs set the inputs CSV `panel` column to the file name (no card).
+Scripts in panel files never run. See `docs/frontend_ui_spec.md` section 3.
 
 ## Front end
 ```

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import replace
+from html.parser import HTMLParser
 from fractions import Fraction
 from os import PathLike
 from pathlib import Path
@@ -14,6 +15,7 @@ from .model import (
     EquationDef,
     InputDef,
     Model,
+    PanelDef,
     StateMachine,
     Transition,
     TransitionRow,
@@ -171,6 +173,14 @@ def _input_def(r: dict[str, str], default: object, src: str) -> InputDef:
     elif choices:
         raise ModelError("choices apply to enum inputs only", src)
     lit_by = get("lit_by")
+    panel = get("panel")
+    if panel and widget not in constants.PANEL_WIDGETS:
+        raise ModelError(f"widget {widget!r} cannot be used on a panel "
+                         f"(expected {', '.join(constants.PANEL_WIDGETS)})", src)
+    if widget in ("toggle", "knob") and not panel:
+        raise ModelError(f"the {widget} widget is for panel inputs (set the panel column)", src)
+    if widget == "knob" and (lo is None or hi is None):
+        raise ModelError("a knob needs min and max", src)
     if widget == "lit" and not lit_by:
         raise ModelError("a lit push-button needs lit_by", src)
     if lit_by and widget != "lit":
@@ -183,7 +193,92 @@ def _input_def(r: dict[str, str], default: object, src: str) -> InputDef:
         group=get("group") or constants.DEFAULT_INPUT_GROUP, widget=widget,
         label=get("label") or r["variable_name"], min=lo, max=hi, step=step,
         choices=choices, lit_by=lit_by, wide=_BOOLS[wide] if wide else False,
+        panel=panel,
     )
+
+
+class _PanelParser(HTMLParser):
+    """Collects (attribute, variable, line) for the panel binding attributes."""
+
+    WATCH = (constants.PANEL_INPUT_ATTR, constants.PANEL_SHOW_ATTR, constants.PANEL_LIT_ATTR)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.found: list[tuple[str, str, int]] = []
+
+    def handle_starttag(self, tag, attrs):
+        for k, v in attrs:
+            if k in self.WATCH:
+                self.found.append((k, (v or "").strip(), self.getpos()[0]))
+
+    handle_startendtag = handle_starttag
+
+
+def _panel_scale(text: str, source: str) -> float:
+    """Master CSV ``scale`` of a panel row: a positive number, default 1."""
+    if text == "":
+        return 1
+    try:
+        value = float(text)
+    except ValueError:
+        raise ModelError(f"invalid scale {text!r}", source) from None
+    if not value > 0:
+        raise ModelError(f"scale must be > 0, got {text}", source)
+    return value
+
+
+def _load_panel(path: Path, display: str, source: str) -> PanelDef:
+    """Read a panel HTML file and collect its variable bindings."""
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeDecodeError) as e:
+        raise ModelError(f"cannot read file: {e}", display) from None
+    parser = _PanelParser()
+    parser.feed(text)
+    parser.close()
+    groups: dict[str, list[str]] = {a: [] for a in _PanelParser.WATCH}
+    lines: list[tuple[str, str, int]] = []
+    for attr, var, line in parser.found:
+        if not var:
+            raise ModelError(f"{attr} is empty", f"{display}:{line}")
+        if var not in groups[attr]:
+            groups[attr].append(var)
+            lines.append((attr, var, line))
+    return PanelDef(name=Path(display).stem, file=display, html=text,
+                    inputs=tuple(groups[constants.PANEL_INPUT_ATTR]),
+                    shows=tuple(groups[constants.PANEL_SHOW_ATTR]),
+                    lits=tuple(groups[constants.PANEL_LIT_ATTR]),
+                    source=source, lines=tuple(lines))
+
+
+def _check_panels(panels: list[PanelDef], inputs: list[InputDef], known: set[str]) -> None:
+    """Every panel binding names a real variable, and panel inputs agree with
+    the inputs CSV ``panel`` column in both directions."""
+    by_name = {i.name: i for i in inputs}
+    files = {p.file for p in panels}
+    for i in inputs:
+        if i.panel and i.panel not in files:
+            raise ModelError(f"panel {i.panel!r} is not listed in the master CSV", i.source)
+    for p in panels:
+        def where(attr, var):
+            return f"{p.file}:{p.line_of(attr, var)}"
+        for v in p.inputs:
+            i = by_name.get(v)
+            if i is None:
+                raise ModelError(f"data-input {v!r} is not an input",
+                                 where(constants.PANEL_INPUT_ATTR, v))
+            if i.panel != p.file:
+                raise ModelError(f"input {v!r} must have panel={p.file} in the inputs CSV",
+                                 where(constants.PANEL_INPUT_ATTR, v))
+        for attr, names in ((constants.PANEL_SHOW_ATTR, p.shows),
+                            (constants.PANEL_LIT_ATTR, p.lits)):
+            for v in names:
+                if v not in known:
+                    raise ModelError(f"{attr} {v!r} is not a known variable", where(attr, v))
+        for i in inputs:
+            if i.panel == p.file and i.name not in p.inputs:
+                raise ModelError(f"input {i.name!r} has panel={p.file} but the panel has no "
+                                 f"data-input for it", i.source)
 
 
 def names_of(inputs, equations, state_machines) -> set[str]:
@@ -308,6 +403,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     band_of: dict[str, Fraction] = {}
     row_of: dict[str, int] = {}
     label_of: dict[str, str] = {}
+    scale_of: dict[str, float] = {}
     seen_single: dict[str, str] = {}
     for line, r in mrows:
         src = f"{master_name}:{line}"
@@ -325,6 +421,12 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
             order = _fraction(r.get("order", ""), "order", src)
             band_of[src] = _band(r.get("band", ""), src)
         else:
+            if ftype == constants.TYPE_PANEL:
+                entries.append((fname, ftype, order, src))
+                row_of[src] = line
+                label_of[src] = r.get("name", "")
+                scale_of[src] = _panel_scale(r.get("scale", ""), src)
+                continue
             if ftype in seen_single:
                 raise ModelError(
                     f"more than one {ftype!r} row (first at {seen_single[ftype]})", src
@@ -353,6 +455,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     state_machines: list[StateMachine] = []
     equations: list[EquationDef] = []
     inputs: list[InputDef] = []
+    panels: list[PanelDef] = []
     sm_rows = 0
 
     eq_row = 1 << 60
@@ -383,6 +486,8 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
                         source=rsrc,
                     )
                 )
+        elif ftype == constants.TYPE_PANEL:
+            panels.append(replace(_load_panel(path, fname, src), scale=scale_of[src]))
         else:
             for line, r in _read_csv(path, fname, constants.INPUTS_COLUMNS):
                 rsrc = f"{fname}:{line}"
@@ -394,6 +499,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     for i in inputs:
         if i.lit_by and i.lit_by not in known:
             raise ModelError(f"lit_by {i.lit_by!r} is not a known variable", i.source)
+    _check_panels(panels, inputs, known)
 
     if len(equations) + sm_rows > constants.MAX_EQUATIONS:
         raise ModelError(
@@ -409,4 +515,5 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         tick_hz=tick_hz,
         master_path=str(master_csv),
         equations_master_row=eq_row,
+        panels=tuple(panels),
     )

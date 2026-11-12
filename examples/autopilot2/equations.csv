@@ -4,3 +4,4 @@ radio_altitude == 0,Aircraft on ground,Replaces the on_ground variable written b
 guidance_src == 'IFCC',IFCC has guidance control,Replaces the ifcc_in_control variable written by Guidance Source,ifcc_in_control,10,11
 state_lat == 'Rollout',Rollout active,Replaces the rollout_active variable written by Lateral Modes,rollout_active,10,45
 state_at != 'Idle',Autothrottle on,Replaces the at_on variable written by Autothrottle,at_on,10,55
+"(state_ac == 'Descent' and appr_selected) or (appr_light and state_ac not in ('Landed', 'Waiting TOGA'))",APPR light,"Comes on when APPR is selected in Descent; stays on (reads its own previous value) until Landed or Waiting TOGA; off after Reset. Runs before the phase of flight machine (order 20) so it sees Descent on the pass where Descent changes to Approach",appr_light,10,15
