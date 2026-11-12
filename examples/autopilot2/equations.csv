@@ -1,0 +1,6 @@
+equation,explanation,rationale,result_variable,band,order
+ifcc_in_control,IFCC in control on the previous pass,Runs before ifcc_in_control is recomputed (order 11) so it holds the previous pass value; replaces the ifcc_in_control_prev variable written by Guidance Source,ifcc_in_control_prev,20,1
+radio_altitude == 0,Aircraft on ground,Replaces the on_ground variable written by several transitions in the previous tool,on_ground,20,2
+guidance_src == 'IFCC',IFCC has guidance control,Replaces the ifcc_in_control variable written by Guidance Source,ifcc_in_control,20,11
+state_lat == 'Rollout',Rollout active,Replaces the rollout_active variable written by Lateral Modes,rollout_active,20,45
+state_at != 'Idle',Autothrottle on,Replaces the at_on variable written by Autothrottle,at_on,20,55

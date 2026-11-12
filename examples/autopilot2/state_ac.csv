@@ -1,0 +1,26 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
+T1,Waiting TOGA,Takeoff,Waiting TOGA,on_ground == True,state_ac_t1_1,Lets takeoff !! from this place...,Ac accelerating to VR,20,6
+T1,Waiting TOGA,Takeoff,,toga == True,state_ac_t1_2,Lets takeoff !! from this place...,Ac accelerating to VR,20,7
+T2,Takeoff,Climb,,ground_speed > 0,state_ac_t2_1,,Aircraft in climb,20,8
+T2,Takeoff,Climb,,radio_altitude > 400,state_ac_t2_2,,Aircraft in climb,20,9
+T3,Climb,Cruise,,radio_altitude == 2500,state_ac_t3_1,,Aircraft in Cruise,20,10
+T4,Cruise,Descent,,radio_altitude < 2500,state_ac_t4_1,,Aircraft in Descent,20,11
+T5,EDM,Descent,,radio_altitude < 2500,state_ac_t5_1,,Aircraft in Descent,20,12
+T6,Descent,Approach,,radio_altitude < 2500,state_ac_t6_1,,Aircraft in Descent,20,13
+T6,Descent,Approach,,appr_selected == True,state_ac_t6_2,,Aircraft in Descent,20,14
+T7,Descent,Go Around,,toga == True,state_ac_t7_1,,Go Around,20,15
+T8,Approach,Final Approach,,dmc_tracking_loc == True,state_ac_t8_1,,Aircraft in approach,20,16
+T8,Approach,Final Approach,,dmc_tracking_gs == True,state_ac_t8_2,,Aircraft in approach,20,17
+T9,Approach,Go Around,,toga == True,state_ac_t9_1,,Go Around,20,18
+T10,Final Approach,Greasing,,state_vert == 'Flare_Active',state_ac_t10_1,,Machoman doing his thing,20,19
+T11,Final Approach,Go Around,,toga == True,state_ac_t11_1,,Go Around,20,20
+T12,Greasing,Touchdown,,radio_altitude == 0,state_ac_t12_1,,Touchdown,20,21
+T13,Greasing,Go Around,,toga == True,state_ac_t13_1,,Go Around,20,22
+T14,Touchdown,Landed,,radio_altitude == 0,state_ac_t14_1,,Touchdown,20,23
+T15,Landed,Waiting TOGA,,ground_speed == 0,state_ac_t15_1,,Ready for takeoff,20,24
+T16,Go Around,Cruise,,radio_altitude == 2500,state_ac_t16_1,,Recovered from TOGA/windshear,20,25
+G1,,Touchdown,,"state_ac in ['Descent', 'Approach', 'Final Approach']",state_ac_g1_1,,Touchdown,20,1
+G1,,Touchdown,,"state_vert in ['No_Vertical_State', 'preGsTrk']",state_ac_g1_2,,Touchdown,20,2
+G1,,Touchdown,,radio_altitude == 0,state_ac_g1_3,,Touchdown,20,3
+G2,,EDM,,"state_ac in ['Climb', 'Cruise']",state_ac_g2_1,,emergency decend commanded.,20,4
+G2,,EDM,,EDM == True,state_ac_g2_2,,emergency decend commanded.,20,5

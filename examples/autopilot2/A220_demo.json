@@ -1,0 +1,884 @@
+{
+  "system_name": "Autoland Guidance",
+  "variables": [
+    {"name": "ground_speed", "type": "int", "min": 0, "max": 160, "step": 5, "default": 0},
+    {"name": "radio_altitude", "type": "int", "min": 0, "max": 2500, "step": 5, "default": 0},
+    {"name": "capa", "type": "enum", "choices": ["NONE", "APPR1", "APPR2", "LAND2", "LAND3"], "default": "LAND3"},
+    {"name": "toga", "type": "button"},
+    {"name": "EDM", "type": "button"},
+    {"name": "ATdisc", "type": "button"},
+    {"name": "fd_on", "type": "bool", "default": false},
+    {"name": "ap_on", "type": "bool", "default": false},
+    {"name": "at_on", "type": "bool", "default": false},
+    {"name": "appr_selected", "type": "bool", "default": false},
+    {"name": "dmc_tracking_loc", "type": "bool", "default": false},
+    {"name": "dmc_tracking_gs", "type": "bool", "default": false},
+    {"name": "ifcc_in_control", "type": "var", "default": false},
+    {"name": "ifcc_in_control_prev", "type": "var", "default": false},
+    {"name": "claws_req_flare", "type": "bool", "default": false},
+    {"name": "rollout_active", "type": "var", "default": false},
+    {"name": "on_ground", "type": "var", "default": true},
+    {"name": "ground_time_gt_2s", "type": "bool", "default": false},
+    {"name": "ws_warning", "type": "bool", "default": false},
+    {"name": "law_loc", "type": "bool", "default": true},
+    {"name": "law_gs", "type": "bool", "default": true},
+    {"name": "law_align", "type": "bool", "default": true},
+    {"name": "law_rollout", "type": "bool", "default": true},
+    {"name": "law_flare", "type": "bool", "default": true},
+    {"name": "law_nd", "type": "bool", "default": true},
+    {"name": "law_pitch", "type": "bool", "default": true},
+    {"name": "law_roll", "type": "bool", "default": true},
+    {"name": "law_ga", "type": "bool", "default": true},
+    {"name": "law_ws", "type": "bool", "default": true},
+    {"name": "state_vert", "type": "var", "default": "Vertical_State_0"},
+    {"name": "state_lat", "type": "var", "default": "Lateral_State_0"},
+    {"name": "state_ac", "type": "var", "default": "Waiting TOGA"},
+    {"name": "state_at", "type": "var", "default": "Idle"}
+  ],
+  "machines": [
+    {
+      "name": "AC phase of flight",
+      "initial_state": "Waiting TOGA",
+      "global_transitions": [
+        {
+          "event": "(state_ac in ['Descent', 'Approach', 'Final Approach']) and (state_vert in ['No_Vertical_State', 'preGsTrk']) and (radio_altitude == 0)",
+          "next_state": "Touchdown",
+          "action": "Touchdown",
+          "set_vars": {
+            "on_ground": true,
+            "ground_speed": 140,
+            "state_ac": "Touchdown"
+          }
+        },
+        {
+          "event": "(state_ac in ['Climb', 'Cruise']) and (EDM == True)",
+          "next_state": "EDM",
+          "action": "emergency decend commanded.",
+          "set_vars": {
+            "state_ac": "EDM"
+          }
+        }
+      ],
+      "states": {
+        "Waiting TOGA": {
+          "transitions": [
+            {
+              "event": "(on_ground == True) and (toga == True)",
+              "next_state": "Takeoff",
+              "action": "Ac accelerating to VR",
+              "rationale": ["Lets takeoff !!", "from this place..."],
+              "set_vars": {
+                "fd_on": true,
+                "ground_speed": 0,
+                "state_ac": "Takeoff"
+              }
+            }
+          ]
+        },
+        "Takeoff": {
+          "transitions": [
+            {
+              "event": "(ground_speed > 0) and (radio_altitude > 400)",
+              "next_state": "Climb",
+              "action": "Aircraft in climb",
+              "set_vars": {
+                "ground_speed": 0,
+                "ap_on": true,
+                "on_ground": false,
+                "ground_time_gt_2s": false,
+                "state_ac": "Climb"
+              }
+            }
+          ]
+        },
+        "Climb": {
+          "transitions": [
+            {
+              "event": "(radio_altitude == 2500)",
+              "next_state": "Cruise",
+              "action": "Aircraft in Cruise",
+              "set_vars": {
+                "state_ac": "Cruise"
+              }
+            }
+          ]
+        },
+        "Cruise": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 2500)",
+              "next_state": "Descent",
+              "action": "Aircraft in Descent",
+              "set_vars": {
+                "state_ac": "Descent"
+              }
+            }
+          ]
+        },
+        "EDM": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 2500)",
+              "next_state": "Descent",
+              "action": "Aircraft in Descent",
+              "set_vars": {
+                "state_ac": "Descent"
+              }
+            }
+          ]
+        },
+        "Descent": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 2500) and (appr_selected == True)",
+              "next_state": "Approach",
+              "action": "Aircraft in Descent",
+              "set_vars": {
+                "state_ac": "Approach"
+              }
+            },
+            {
+              "event": "(toga == True)",
+              "next_state": "Go Around",
+              "action": "Go Around",
+              "set_vars": {
+              "appr_selected": false,
+              "dmc_tracking_loc": false,
+              "dmc_tracking_gs": false,
+              "state_ac": "Go Around"
+              }
+            }
+          ]
+        },
+        "Approach": {
+          "transitions": [
+            {
+              "event": "(dmc_tracking_loc == True) and (dmc_tracking_gs == True)",
+              "next_state": "Final Approach",
+              "action": "Aircraft in approach",
+              "set_vars": {
+                "state_ac": "Final Approach"
+              }
+            },
+            {
+              "event": "(toga == True)",
+              "next_state": "Go Around",
+              "action": "Go Around",
+              "set_vars": {
+                "appr_selected": false,
+                "dmc_tracking_loc": false,
+                "dmc_tracking_gs": false,
+                "state_ac": "Go Around"
+              }
+            }
+          ]
+        },
+        "Final Approach": {
+          "transitions": [
+            {
+              "event": "(state_vert == 'Flare_Active')",
+              "next_state": "Greasing",
+              "action": "Machoman doing his thing",
+              "set_vars": {
+                "state_ac": "Greasing"
+              }
+            },
+            {
+              "event": "(toga == True)",
+              "next_state": "Go Around",
+              "action": "Go Around",
+              "set_vars": {
+                "appr_selected": false,
+                "dmc_tracking_loc": false,
+                "dmc_tracking_gs": false,
+                "state_ac": "Go Around"
+              }
+            }
+          ]
+        },
+        "Greasing": {
+          "transitions": [
+            {
+              "event": "(radio_altitude == 0)",
+              "next_state": "Touchdown",
+              "action": "Touchdown",
+              "set_vars": {
+                "on_ground": true,
+                "state_ac": "Touchdown"
+              }
+            },
+            {
+              "event": "(toga == True)",
+              "next_state": "Go Around",
+              "action": "Go Around",
+              "set_vars": {
+                "appr_selected": false,
+                "dmc_tracking_loc": false,
+                "dmc_tracking_gs": false,
+                "state_ac": "Go Around"
+              }
+            }
+          ]
+        },
+        "Touchdown": {
+          "transitions": [
+            {
+              "event": "(radio_altitude == 0)",
+              "next_state": "Landed",
+              "action": "Touchdown",
+              "set_vars": {
+                "on_ground": true,
+                "ground_speed": 140,
+                "state_ac": "Landed"
+              }
+            }
+          ]
+        },
+        "Landed": {
+          "transitions": [
+            {
+              "event": "(ground_speed == 0)",
+              "next_state": "Waiting TOGA",
+              "action": "Ready for takeoff",
+              "set_vars": {
+                "on_ground": true,
+                "ground_speed": 0,
+                "ap_on": false,
+                "fd_on": false,
+                "state_ac": "Waiting TOGA"
+              }
+            }
+          ]
+        },
+        "Go Around": {
+          "transitions": [
+            {
+              "event": "(radio_altitude == 2500)",
+              "next_state": "Cruise",
+              "action": "Recovered from TOGA/windshear",
+              "set_vars": {
+                "state_ac": "Cruise"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Vertical Modes",
+      "initial_state": "Vertical_State_0",
+      "global_transitions": [
+        {
+          "event": "(ap_on == False) and (fd_on == False)",
+          "next_state": "Vertical_State_0",
+          "action": "AP/FD turned off. Resetting to Vertical State 0.",
+          "rationale": "Because this is a good idea.",
+          "set_vars": {
+            "state_vert": "Vertical_State_0"
+          }
+        },
+        {
+          "event": "(law_pitch == False)",
+          "next_state": "No_Vertical_State",
+          "action": "Loss of Pitch law, revert to No vertical State.",
+          "rationale": "Because this is another good idea.",
+          "set_vars": {
+            "state_vert": "No_Vertical_State"
+          }
+        },
+        {
+          "event": "(radio_altitude > 200) and (ifcc_in_control == False) and (ifcc_in_control_prev == True) and (state_vert in ['preGsTrk', 'GsTrk', 'Flare_Armed', 'Pitch', 'Go_Around', 'Windshear'])",
+          "next_state": "No_Vertical_State",
+          "action": "IFCC releasing control to DMC",
+          "set_vars": {
+            "state_vert": "No_Vertical_State"
+          }
+        }
+      ],
+      "states": {
+        "Vertical_State_0": {
+          "transitions": [
+            {
+              "event": "(ap_on == True) or (fd_on == True)",
+              "next_state": "No_Vertical_State",
+              "action": "FD or AP On but no vertical mode.",
+              "set_vars": {
+                "state_vert": "No_Vertical_State"
+              }
+            }
+          ]
+        },
+        "No_Vertical_State": {
+          "transitions": [
+            {
+              "event": "(appr_selected == True) and (dmc_tracking_gs == True) and (law_gs == True) and (capa in ['APPR1', 'APPR2', 'LAND2', 'LAND3'])",
+              "next_state": "preGsTrk",
+              "action": "DMC tracking GS",
+              "set_vars": {
+                "on_ground": false,
+                "ground_time_gt_2s": false,
+                "state_vert": "preGsTrk"
+              }
+            }
+          ]
+        },
+        "preGsTrk": {
+          "transitions": [
+            {
+              "event": "(ifcc_in_control == True) and (law_gs == True)",
+              "next_state": "GsTrk",
+              "action": "IFCC taking guidance control. Engaging GsTrk.",
+              "set_vars": {
+                "dmc_tracking_gs": false,
+                "state_vert": "GsTrk"
+              }
+            },
+            {
+              "event": "(appr_selected == False) or (capa == 'NONE')",
+              "next_state": "No_Vertical_State",
+              "action": "Loss of DMC AL",
+              "set_vars": {
+                "state_vert": "No_Vertical_State"
+              }
+            },
+            {
+              "event": "(state_vert == 'mp') and (law_gs == False)",
+              "next_state": "No_Vertical_State",
+              "action": "TEST",
+              "set_vars": {
+                "state_vert": "No_Vertical_State"
+              }
+            }
+          ]
+        },
+        "GsTrk": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 200) and (capa in ['LAND2', 'LAND3']) and (law_flare == True)",
+              "next_state": "Flare_Armed",
+              "action": "Below Flare Arm threshold (1500ft). Arming Flare.",
+              "set_vars": {
+                "state_vert": "Flare_Armed"
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (law_pitch == True) and ((law_gs == False) or (capa == 'NONE'))",
+              "next_state": "Pitch",
+              "action": "GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.",
+              "set_vars": {
+                "state_vert": "Pitch"
+              }
+            },
+            {
+              "event": "(radio_altitude < 50) and (capa == 'NONE')",
+              "next_state": "No_Vertical_State",
+              "action": "Capability lost below 50ft. Autoland aborted.",
+              "set_vars": {
+                "state_vert": "No_Vertical_State"
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (toga == True) and (on_ground == False) and (ws_warning == False) and (law_ga == True)",
+              "next_state": "Go_Around",
+              "action": "TOGA pressed. Initiating Go-Around.",
+              "set_vars": {
+                "state_vert": "Go_Around",
+                "appr_selected": false
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (on_ground == False) and (toga == True) and (ws_warning == True) and (law_ws == True)",
+              "next_state": "Windshear",
+              "action": "Windshear Warning + TOGA. Initiating Windshear Escape.",
+              "set_vars": {
+                "state_vert": "Windshear",
+                "appr_selected": false
+              }
+            }
+          ]
+        },
+        "Flare_Armed": {
+          "transitions": [
+            {
+              "event": "(claws_req_flare == True) and (law_flare == True)",
+              "next_state": "Flare_Active",
+              "action": "CLAWS requesting flare. Engaging Flare.",
+              "set_vars": {
+                "state_vert": "Flare_Active"
+              }
+            },
+            {
+              "event": "(ifcc_guidance == True) and (radio_altitude > 50) and (capa not in ['LAND2', 'LAND3']) and (law_gs == True)",
+              "next_state": "GsTrk",
+              "action": "Capability downgraded. Reverting to GsTrk (Disarming Flare).",
+              "set_vars": {
+                "state_vert": "GsTrk"
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and ((law_gs == False) or (capa == 'NONE'))",
+              "next_state": "Pitch",
+              "action": "GS Law Invalid or Capability lost. Reverting to Pitch.",
+              "set_vars": {
+                "state_vert": "Pitch"
+              }
+            },
+            {
+              "event": "(radio_altitude < 50) and (capa == 'NONE')",
+              "next_state": "No_Vertical_State",
+              "action": "Capability lost below 50ft. Autoland aborted.",
+              "set_vars": {
+                "state_vert": "No_Vertical_State"
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (toga == True) and (on_ground == False) and (ws_warning == False) and (law_ga == True)",
+              "next_state": "Go_Around",
+              "action": "TOGA pressed. Initiating Go-Around.",
+              "set_vars": {
+                "state_vert": "Go_Around",
+                "appr_selected": false
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (on_ground == False) and (toga == True) and (ws_warning == True) and (law_ws == True)",
+              "next_state": "Windshear",
+              "action": "Windshear Warning + TOGA. Initiating Windshear Escape.",
+              "set_vars": {
+                "state_vert": "Windshear",
+                "appr_selected": false
+              }
+            }
+          ]
+        },
+        "Flare_Active": {
+          "transitions": [
+            {
+              "event": "(on_ground == True) and (ground_time_gt_2s == True) and (rollout_active == True) and (law_nd == True)",
+              "next_state": "Nosedown",
+              "action": "Touchdown confirmed (>2s). Engaging Nosedown.",
+              "set_vars": {
+                "claws_req_flare": false,
+                "state_vert": "Windshear",
+                "appr_selected": false
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and ((law_flare == False) or (capa == 'NONE'))",
+              "next_state": "Pitch",
+              "action": "Flare Law Invalid or Capability lost. Reverting to Pitch.",
+              "set_vars": {
+                "state_vert": "Pitch"
+              }
+            },
+            {
+              "event": "(radio_altitude < 50) and (capa == 'NONE')",
+              "next_state": "No_Vertical_State",
+              "action": "Capability lost below 50ft. Autoland aborted.",
+              "set_vars": {
+                "state_vert": "No_Vertical_State"
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (toga == True) and (on_ground == False) and (ws_warning == False) and (law_ga == True)",
+              "next_state": "Go_Around",
+              "action": "TOGA pressed. Initiating Go-Around.",
+              "set_vars": {
+                "state_vert": "Go_Around",
+                "appr_selected": false
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (on_ground == False) and (toga == True) and (ws_warning == True) and (law_ws == True)",
+              "next_state": "Windshear",
+              "action": "Windshear Warning + TOGA. Initiating Windshear Escape.",
+              "set_vars": {
+                "state_vert": "Windshear",
+                "appr_selected": false
+              }
+            }
+          ]
+        },
+        "Nosedown": {
+          "transitions": [
+            {
+              "event": "(on_ground == True) and ((ground_speed < 30)or (law_nd == False))",
+              "next_state": "No_Vertical_State",
+              "action": "Rollout complete (Speed < 30kts). Disengaging vertical mode.",
+              "set_vars": {
+                "appr_selected": false,
+                "ifcc_guidance": false,
+                "state_vert": "No_Vertical_State"
+              }
+            }
+          ]
+        },
+        "Pitch": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 200) and (toga == True) and (on_ground == False) and (ws_warning == False) and (law_ga == True)",
+              "next_state": "Go_Around",
+              "action": "TOGA pressed. Initiating Go-Around from Pitch.",
+              "set_vars": {
+                "state_vert": "Go_Around",
+                "appr_selected": false
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (on_ground == False) and (toga == True) and (ws_warning == True) and (law_ws == True)",
+              "next_state": "Windshear",
+              "action": "Windshear Warning + TOGA. Initiating Windshear Escape from Pitch.",
+              "set_vars": {
+                "state_vert": "Windshear",
+                "appr_selected": false
+              }
+            }
+          ]
+        },
+        "Go_Around": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 200) and (on_ground == False) and (toga == True) and (ws_warning == True) and (law_ws == True)",
+              "next_state": "Windshear",
+              "action": "Windshear detected during Go-Around. Transitioning to Windshear mode.",
+              "set_vars": {
+                "state_vert": "Windshear",
+                "appr_selected": false
+              }
+            },
+            {
+              "event": "(law_ga == False)",
+              "next_state": "Pitch",
+              "action": "Go-Around Law Invalid. Reverting to Pitch.",
+              "set_vars": {
+                "state_vert": "Pitch"
+              }
+            }
+          ]
+        },
+        "Windshear": {
+          "transitions": [
+            {
+              "event": "(law_ws == False)",
+              "next_state": "Pitch",
+              "action": "Windshear Law Invalid. Reverting to Pitch.",
+              "set_vars": {
+                "state_vert": "Pitch"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Lateral Modes",
+      "initial_state": "Lateral_State_0",
+      "global_transitions": [
+        {
+          "event": "(ap_on == False) and (fd_on == False)",
+          "next_state": "Lateral_State_0",
+          "action": "AP/FD turned off. Resetting to Lateral State 0.",
+          "set_vars": {
+            "state_lat": "Lateral_State_0"
+          }
+        },
+        {
+          "event": "(radio_altitude < 200) and (toga == True) and (on_ground == False) and (law_ga == True)",
+          "next_state": "Roll",
+          "action": "TOGA pressed. Reverting to Lateral Roll mode.",
+          "set_vars": {
+            "state_lat": "Roll"
+          }
+        },
+        {
+          "event": "(radio_altitude > 200) and (ifcc_in_control == False) and (ifcc_in_control_prev == True) and (state_lat in ['preLocTrk', 'LocTrk', 'Align_Armed', 'Rollout_Armed', 'Roll'])",
+          "next_state": "No_Lateral_State",
+          "action": "IFCC releasing control to DMC",
+          "set_vars": {
+            "state_lat": "No_Lateral_State"
+          }
+        }
+      ],
+      "states": {
+        "Lateral_State_0": {
+          "transitions": [
+            {
+              "event": "(ap_on == True) or (fd_on == True)",
+              "next_state": "No_Lateral_State",
+              "action": "FD or AP On but no lateral mode.",
+              "set_vars": {
+                "state_lat": "No_Lateral_State"
+              }
+            }
+          ]
+        },
+        "No_Lateral_State": {
+          "transitions": [
+            {
+              "event": "(appr_selected == True) and (dmc_tracking_loc == True) and (law_loc == True) and (capa in ['APPR1', 'APPR2', 'LAND2', 'LAND3'])",
+              "next_state": "preLocTrk",
+              "action": "DMC tracking LOC",
+              "set_vars": {
+                "state_lat": "preLocTrk"
+              }
+            }
+          ]
+        },
+        "preLocTrk": {
+          "transitions": [
+            {
+              "event": "(ifcc_in_control == True) and (law_loc == True)",
+              "next_state": "LocTrk",
+              "action": "IFCC taking guidance control. Engaging LocTrk.",
+              "set_vars": {
+                "dmc_tracking_loc": false,
+                "state_lat": "LocTrk"
+              }
+            },
+            {
+              "event": "(appr_selected == False) or (capa == 'NONE')",
+              "next_state": "No_Lateral_State",
+              "action": "Loss of DMC AL",
+              "set_vars": {
+                "state_lat": "No_Lateral_State"
+              }
+            }
+          ]
+        },
+        "LocTrk": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 800) and (capa in ['LAND2', 'LAND3']) and (law_align == True)",
+              "next_state": "Align_Armed",
+              "action": "Arming Aling",
+              "set_vars": {
+                "state_lat": "Align_Armed"
+              }
+            },
+            {
+              "event": "(radio_altitude < 200) and (law_roll == True) and  ((law_loc == False) or (capa == 'NONE'))",
+              "next_state": "Roll",
+              "action": "GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.",
+              "set_vars": {
+                "state_lat": "Roll"
+              }
+            }
+          ]
+        },
+        "Align_Armed": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 200) and (law_align == True)",
+              "next_state": "Align",
+              "action": "Engaging Align",
+              "set_vars": {
+                "state_lat": "Align"
+              }
+            }
+          ]
+        },
+        "Align": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 50) and (law_rollout == True)",
+              "next_state": "Rollout_Armed",
+              "action": "Arming rollout",
+              "set_vars": {
+                "state_lat": "Rollout_Armed"
+              }
+            }
+          ]
+        },
+        "Rollout_Armed": {
+          "transitions": [
+            {
+              "event": "(radio_altitude < 1) and (law_rollout == True)",
+              "next_state": "Rollout",
+              "action": "Touchdown, activating rollout",
+              "set_vars": {
+                "rollout_active": true,
+                "on_ground": true,
+                "ground_speed": 140,
+                "radio_altitude": 0,
+                "state_lat": "Rollout"
+              }
+            }
+          ]
+        },
+        "Rollout": {
+          "transitions": [
+            {
+              "event": "(ground_time_gt_2s == True) and (ground_speed < 30)",
+              "next_state": "No_Lateral_State",
+              "action": "Rollout complete (Speed < 30kts). Disengaging lateral mode.",
+              "set_vars": {
+                "appr_selected": false,
+                "ifcc_guidance": false,
+                "rollout_active": false,
+                "state_lat": "Rollout"
+              }
+            }
+          ]
+        },
+        "Roll": {
+          "transitions": [
+            {
+              "event": "(ground_time_gt_2s == True) and (ground_speed < 30)",
+              "next_state": "No_Lateral_State",
+              "action": "Rollout complete (Speed < 30kts). Disengaging lateral mode.",
+              "set_vars": {
+                "appr_selected": false,
+                "ifcc_guidance": false,
+                "rollout_active": false,
+                "state_lat": "Rollout"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Guidance Source",
+      "initial_state": "DMC",
+      "global_transitions": [
+        {
+          "event": "(ifcc_in_control == False) and (ifcc_in_control_prev == True)",
+          "next_state": "DMC",
+          "action": "resetting ifcc_in_control_prev to False",
+          "set_vars": {
+            "ifcc_in_control_prev": false
+          }
+        }
+      ],
+      "states": {
+        "DMC": {
+          "transitions": [
+            {
+              "event": "(appr_selected == True) and (dmc_tracking_loc == True) and (dmc_tracking_gs == True) and (radio_altitude < 1500) and (radio_altitude > 200) and (law_loc == True) and (law_gs == True)",
+              "next_state": "IFCC",
+              "action": "IFCC Taking guidance control of the approach.",
+              "set_vars": {
+                "ifcc_in_control": true,
+                "ifcc_in_control_prev": false,
+                "dmc_tracking_gs": false,
+                "dmc_tracking_loc": false
+              }
+            }
+          ]
+        },
+        "IFCC": {
+          "transitions": [
+            {
+              "event": "(radio_altitude > 200) and (toga == True) or ((on_ground == True) and (ground_speed < 30))",
+              "next_state": "DMC",
+              "action": "DMC taking control of guidance.",
+              "set_vars": {
+                "ifcc_in_control": false,
+                "ifcc_in_control_prev": true,
+                "dmc_tracking_gs": false,
+                "dmc_tracking_loc": false,
+                "appr_selected": false
+              }
+            },
+            {
+              "event": "(radio_altitude > 1000) and (state_vert in ['Go_Around', 'Windshear', 'Pitch'])",
+              "next_state": "DMC",
+              "action": "DMC taking control of guidance.",
+              "set_vars": {
+                "ifcc_in_control": false,
+                "ifcc_in_control_prev": true
+              }
+            },
+            {
+              "event": "((state_lat == 'LocTrk') and (law_loc == False)) or ((state_vert == 'GsTrk') and (law_gs == False))",
+              "next_state": "DMC",
+              "action": "Lost IFCC mode, Dropping to DMC.",
+              "set_vars": {
+                "ifcc_in_control": false,
+                "ifcc_in_control_prev": true,
+                "dmc_tracking_gs": false,
+                "dmc_tracking_loc": false,
+                "appr_selected": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Autothrottle",
+      "initial_state": "Idle",
+      "global_transitions": [
+        {
+          "event": "(state_at =='Active') and (ATdisc == True)",
+          "next_state": "Idle",
+          "action": "resetting ifcc_in_control_prev to False",
+          "set_vars": {
+            "state_at": "Idle",
+            "at_on": false
+          }
+        }
+      ],
+      "states": {
+        "Idle": {
+          "transitions": [
+            {
+              "event": "(ground_speed > 25) and (state_ac == 'Takeoff')",
+              "next_state": "Active",
+              "action": "Autoengaging AT",
+              "set_vars": {
+                "state_at": "Active",
+                "at_on": true
+              }
+            }
+          ]
+        },
+        "Active": {
+          "transitions": [
+            {
+              "event": "(ground_speed > 60) and (radio_altitude < 400) and (appr_selected == False)",
+              "next_state": "Hold",
+              "action": "TQA hold",
+              "set_vars": {
+                "state_at": "Hold"
+              }
+            },
+            {
+              "event": "(radio_altitude < 50) and (appr_selected == True)",
+              "next_state": "Retard",
+              "action": "",
+              "set_vars": {
+                "state_at": "Retard"
+              }
+            }
+          ]
+        },
+        "Hold": {
+          "transitions": [
+            {
+              "event": "(radio_altitude > 400)",
+              "next_state": "Active",
+              "action": "Autoengaging AT",
+              "set_vars": {
+                "state_at": "Active"
+              }
+            }
+          ]
+        },        
+        "Retard": {
+          "transitions": [
+            {
+              "event": "(ground_time_gt_2s == True)",
+              "next_state": "Idle",
+              "action": "Automatic disengage of AT after tourchdown",
+              "set_vars": {
+                "state_at": "Idle",
+                "at_on": false
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

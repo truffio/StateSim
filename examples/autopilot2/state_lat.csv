@@ -1,0 +1,35 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
+T1,Lateral_State_0,No_Lateral_State,Lateral_State_0,ap_on == True or fd_on == True,state_lat_t1_1,,FD or AP On but no lateral mode.,20,11
+T2,No_Lateral_State,preLocTrk,,appr_selected == True,state_lat_t2_1,,DMC tracking LOC,20,12
+T2,No_Lateral_State,preLocTrk,,dmc_tracking_loc == True,state_lat_t2_2,,DMC tracking LOC,20,13
+T2,No_Lateral_State,preLocTrk,,law_loc == True,state_lat_t2_3,,DMC tracking LOC,20,14
+T2,No_Lateral_State,preLocTrk,,"capa in ['APPR1', 'APPR2', 'LAND2', 'LAND3']",state_lat_t2_4,,DMC tracking LOC,20,15
+T3,preLocTrk,LocTrk,,ifcc_in_control == True,state_lat_t3_1,,IFCC taking guidance control. Engaging LocTrk.,20,16
+T3,preLocTrk,LocTrk,,law_loc == True,state_lat_t3_2,,IFCC taking guidance control. Engaging LocTrk.,20,17
+T4,preLocTrk,No_Lateral_State,,appr_selected == False or capa == 'NONE',state_lat_t4_1,,Loss of DMC AL,20,18
+T5,LocTrk,Align_Armed,,radio_altitude < 800,state_lat_t5_1,,Arming Aling,20,19
+T5,LocTrk,Align_Armed,,"capa in ['LAND2', 'LAND3']",state_lat_t5_2,,Arming Aling,20,20
+T5,LocTrk,Align_Armed,,law_align == True,state_lat_t5_3,,Arming Aling,20,21
+T6,LocTrk,Roll,,radio_altitude < 200,state_lat_t6_1,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,20,22
+T6,LocTrk,Roll,,law_roll == True,state_lat_t6_2,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,20,23
+T6,LocTrk,Roll,,law_loc == False or capa == 'NONE',state_lat_t6_3,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,20,24
+T7,Align_Armed,Align,,radio_altitude < 200,state_lat_t7_1,,Engaging Align,20,25
+T7,Align_Armed,Align,,law_align == True,state_lat_t7_2,,Engaging Align,20,26
+T8,Align,Rollout_Armed,,radio_altitude < 50,state_lat_t8_1,,Arming rollout,20,27
+T8,Align,Rollout_Armed,,law_rollout == True,state_lat_t8_2,,Arming rollout,20,28
+T9,Rollout_Armed,Rollout,,radio_altitude < 1,state_lat_t9_1,,"Touchdown, activating rollout",20,29
+T9,Rollout_Armed,Rollout,,law_rollout == True,state_lat_t9_2,,"Touchdown, activating rollout",20,30
+T10,Rollout,No_Lateral_State,,ground_time_gt_2s == True,state_lat_t10_1,,Rollout complete (Speed < 30kts). Disengaging lateral mode.,20,31
+T10,Rollout,No_Lateral_State,,ground_speed < 30,state_lat_t10_2,,Rollout complete (Speed < 30kts). Disengaging lateral mode.,20,32
+T11,Roll,No_Lateral_State,,ground_time_gt_2s == True,state_lat_t11_1,,Rollout complete (Speed < 30kts). Disengaging lateral mode.,20,33
+T11,Roll,No_Lateral_State,,ground_speed < 30,state_lat_t11_2,,Rollout complete (Speed < 30kts). Disengaging lateral mode.,20,34
+G1,,Lateral_State_0,,ap_on == False,state_lat_g1_1,,AP/FD turned off. Resetting to Lateral State 0.,20,1
+G1,,Lateral_State_0,,fd_on == False,state_lat_g1_2,,AP/FD turned off. Resetting to Lateral State 0.,20,2
+G2,,Roll,,radio_altitude < 200,state_lat_g2_1,,TOGA pressed. Reverting to Lateral Roll mode.,20,3
+G2,,Roll,,toga == True,state_lat_g2_2,,TOGA pressed. Reverting to Lateral Roll mode.,20,4
+G2,,Roll,,on_ground == False,state_lat_g2_3,,TOGA pressed. Reverting to Lateral Roll mode.,20,5
+G2,,Roll,,law_ga == True,state_lat_g2_4,,TOGA pressed. Reverting to Lateral Roll mode.,20,6
+G3,,No_Lateral_State,,radio_altitude > 200,state_lat_g3_1,,IFCC releasing control to DMC,20,7
+G3,,No_Lateral_State,,ifcc_in_control == False,state_lat_g3_2,,IFCC releasing control to DMC,20,8
+G3,,No_Lateral_State,,ifcc_in_control_prev == True,state_lat_g3_3,,IFCC releasing control to DMC,20,9
+G3,,No_Lateral_State,,"state_lat in ['preLocTrk', 'LocTrk', 'Align_Armed', 'Rollout_Armed', 'Roll']",state_lat_g3_4,,IFCC releasing control to DMC,20,10
