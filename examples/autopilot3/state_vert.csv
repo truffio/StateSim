@@ -1,0 +1,65 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order,action_type,action
+G1,,Vertical_State_0,,ap_on == False,state_vert_g1_1,Because this is a good idea.,AP/FD turned off. Resetting to Vertical State 0.,1,,
+G1,,Vertical_State_0,,fd_on == False,state_vert_g1_2,Because this is a good idea.,AP/FD turned off. Resetting to Vertical State 0.,2,,
+G2,,No_Vertical_State,,law_pitch == False,state_vert_g2_1,Because this is another good idea.,"Loss of Pitch law, revert to No vertical State.",3,,
+G3,,No_Vertical_State,,radio_altitude > 200,state_vert_g3_1,,IFCC releasing control to DMC,4,,
+G3,,No_Vertical_State,,ifcc_in_control == False,state_vert_g3_2,,IFCC releasing control to DMC,5,,
+G3,,No_Vertical_State,,ifcc_in_control_prev == True,state_vert_g3_3,,IFCC releasing control to DMC,6,,
+G3,,No_Vertical_State,,"state_vert in ['preGsTrk', 'GsTrk', 'Flare_Armed', 'Pitch', 'Go_Around', 'Windshear']",state_vert_g3_4,,IFCC releasing control to DMC,7,,
+G4,,Go_Around,,"state_vert in ['GsTrk', 'Flare_Armed', 'Flare_Active', 'Pitch']",state_vert_g4_1,,TOGA pressed. Initiating Go-Around.,8,entry,STATE_VERT_G4
+G4,,Go_Around,,radio_altitude < 200,state_vert_g4_2,,TOGA pressed. Initiating Go-Around.,9,,
+G4,,Go_Around,,TOGA == True,state_vert_g4_3,,TOGA pressed. Initiating Go-Around.,10,,
+G4,,Go_Around,,on_ground == False,state_vert_g4_4,,TOGA pressed. Initiating Go-Around.,11,,
+G4,,Go_Around,,ws_warning == False,state_vert_g4_5,,TOGA pressed. Initiating Go-Around.,12,,
+G4,,Go_Around,,law_ga == True,state_vert_g4_6,,TOGA pressed. Initiating Go-Around.,13,,
+G5,,Windshear,,"state_vert in ['GsTrk', 'Flare_Armed', 'Flare_Active', 'Pitch']",state_vert_g5_1,,TOGA pressed during a windshear alert. Initiating Go-Around.,14,entry,STATE_VERT_G4
+G5,,Windshear,,radio_altitude < 200,state_vert_g5_2,,TOGA pressed during a windshear alert. Initiating Go-Around.,15,,
+G5,,Windshear,,TOGA == True,state_vert_g5_3,,TOGA pressed during a windshear alert. Initiating Go-Around.,16,,
+G5,,Windshear,,on_ground == False,state_vert_g5_4,,TOGA pressed during a windshear alert. Initiating Go-Around.,17,,
+G5,,Windshear,,ws_warning == True,state_vert_g5_5,,TOGA pressed during a windshear alert. Initiating Go-Around.,18,,
+G5,,Windshear,,law_ga == True,state_vert_g5_6,,TOGA pressed during a windshear alert. Initiating Go-Around.,19,,
+T1,Vertical_State_0,No_Vertical_State,Vertical_State_0,(ap_on == True) or (fd_on == True),state_vert_t1_1,,FD or AP On but no vertical mode.,20,,
+T2,No_Vertical_State,preGsTrk,,appr_on == True,state_vert_t2_1,,DMC tracking GS,21,entry,STATE_VERT_T2
+T2,No_Vertical_State,preGsTrk,,dmc_tracking_gs == True,state_vert_t2_2,,DMC tracking GS,22,,
+T2,No_Vertical_State,preGsTrk,,law_gs == True,state_vert_t2_3,,DMC tracking GS,23,,
+T2,No_Vertical_State,preGsTrk,,"capa in ['APPR1', 'APPR2', 'LAND2', 'LAND3']",state_vert_t2_4,,DMC tracking GS,24,,
+T3,preGsTrk,GsTrk,,ifcc_in_control == True,state_vert_t3_1,,IFCC taking guidance control. Engaging GsTrk.,25,entry,STATE_VERT_T3
+T3,preGsTrk,GsTrk,,law_gs == True,state_vert_t3_2,,IFCC taking guidance control. Engaging GsTrk.,26,,
+T4,preGsTrk,No_Vertical_State,,(appr_on == False) or (capa == 'NONE'),state_vert_t4_1,,Loss of DMC AL,27,,
+T5,GsTrk,Flare_Armed,,radio_altitude < 200,state_vert_t5_1,,Below Flare Arm threshold (1500ft). Arming Flare.,28,,
+T5,GsTrk,Flare_Armed,,"capa in ['LAND2', 'LAND3']",state_vert_t5_2,,Below Flare Arm threshold (1500ft). Arming Flare.,29,,
+T5,GsTrk,Flare_Armed,,law_flare == True,state_vert_t5_3,,Below Flare Arm threshold (1500ft). Arming Flare.,30,,
+T6,GsTrk,Pitch,,radio_altitude < 200,state_vert_t6_1,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,31,entry,STATE_VERT_G4
+T6,GsTrk,Pitch,,law_pitch == True,state_vert_t6_2,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,32,,
+T6,GsTrk,Pitch,,(law_gs == False) or (capa == 'NONE'),state_vert_t6_3,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,33,,
+T7,GsTrk,No_Vertical_State,,radio_altitude < 50,state_vert_t7_1,,Capability lost below 50ft. Autoland aborted.,34,entry,STATE_VERT_G4
+T7,GsTrk,No_Vertical_State,,capa == 'NONE',state_vert_t7_2,,Capability lost below 50ft. Autoland aborted.,35,,
+T8,Flare_Armed,Flare_Active,,claws_req_flare == True,state_vert_t8_1,,CLAWS requesting flare. Engaging Flare.,36,,
+T8,Flare_Armed,Flare_Active,,law_flare == True,state_vert_t8_2,,CLAWS requesting flare. Engaging Flare.,37,,
+T9,Flare_Armed,GsTrk,,ifcc_in_control == True,state_vert_t9_1,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,38,,
+T9,Flare_Armed,GsTrk,,radio_altitude > 50,state_vert_t9_2,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,39,,
+T9,Flare_Armed,GsTrk,,"capa not in ['LAND2', 'LAND3']",state_vert_t9_3,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,40,,
+T9,Flare_Armed,GsTrk,,law_gs == True,state_vert_t9_4,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,41,,
+T10,Flare_Armed,Pitch,,radio_altitude < 200,state_vert_t10_1,,GS Law Invalid or Capability lost. Reverting to Pitch.,42,entry,STATE_VERT_G4
+T10,Flare_Armed,Pitch,,(law_gs == False) or (capa == 'NONE'),state_vert_t10_2,,GS Law Invalid or Capability lost. Reverting to Pitch.,43,,
+T11,Flare_Armed,No_Vertical_State,,radio_altitude < 50,state_vert_t11_1,,Capability lost below 50ft. Autoland aborted.,44,entry,STATE_VERT_G4
+T11,Flare_Armed,No_Vertical_State,,capa == 'NONE',state_vert_t11_2,,Capability lost below 50ft. Autoland aborted.,45,,
+T12,Flare_Active,Nosedown,,on_ground == True,state_vert_t12_1,,Touchdown confirmed (>2s). Engaging Nosedown.,46,entry,STATE_VERT_T12
+T12,Flare_Active,Nosedown,,ground_time_gt_2s == True,state_vert_t12_2,,Touchdown confirmed (>2s). Engaging Nosedown.,47,,
+T12,Flare_Active,Nosedown,,rollout_active == True,state_vert_t12_3,,Touchdown confirmed (>2s). Engaging Nosedown.,48,,
+T12,Flare_Active,Nosedown,,law_nd == True,state_vert_t12_4,,Touchdown confirmed (>2s). Engaging Nosedown.,49,,
+T13,Flare_Active,Pitch,,radio_altitude < 200,state_vert_t13_1,,Flare Law Invalid or Capability lost. Reverting to Pitch.,50,entry,STATE_VERT_G4
+T13,Flare_Active,Pitch,,(law_flare == False) or (capa == 'NONE'),state_vert_t13_2,,Flare Law Invalid or Capability lost. Reverting to Pitch.,51,,
+T14,Flare_Active,No_Vertical_State,,radio_altitude < 50,state_vert_t14_1,,Capability lost below 50ft. Autoland aborted.,52,entry,STATE_VERT_G4
+T14,Flare_Active,No_Vertical_State,,capa == 'NONE',state_vert_t14_2,,Capability lost below 50ft. Autoland aborted.,53,,
+T15,Flare_Active,Go_Around,,TOGA == True,state_vert_t15_1,Go Around commanded during the 2 seconds time window following touchdown,,54,entry,STATE_VERT_G4
+T16,Nosedown,No_Vertical_State,,on_ground == True,state_vert_t16_1,End of autoland,Rollout complete (Speed < 30kts). Disengaging vertical mode.,55,entry,STATE_VERT_G4
+T16,Nosedown,No_Vertical_State,,(ground_speed < 30) or (law_nd == False),state_vert_t16_2,End of autoland,Rollout complete (Speed < 30kts). Disengaging vertical mode.,56,,
+T17,Nosedown,No_Vertical_State,,(radio_altitude > 0) or (TOGA == True),state_vert_t17_1,Touch and go or TOGA triggers end of autoland,Touch and go or TOGA triggers end of autoland.,57,entry,STATE_VERT_G4
+T18,Go_Around,Windshear,,radio_altitude < 200,state_vert_t18_1,,Windshear detected during Go-Around. Transitioning to Windshear mode.,58,entry,STATE_VERT_G4
+T18,Go_Around,Windshear,,on_ground == False,state_vert_t18_2,,Windshear detected during Go-Around. Transitioning to Windshear mode.,59,,
+T18,Go_Around,Windshear,,TOGA == True,state_vert_t18_3,,Windshear detected during Go-Around. Transitioning to Windshear mode.,60,,
+T18,Go_Around,Windshear,,ws_warning == True,state_vert_t18_4,,Windshear detected during Go-Around. Transitioning to Windshear mode.,61,,
+T18,Go_Around,Windshear,,law_ws == True,state_vert_t18_5,,Windshear detected during Go-Around. Transitioning to Windshear mode.,62,,
+T19,Go_Around,Pitch,,law_ga == False,state_vert_t19_1,,Go-Around Law Invalid. Reverting to Pitch.,63,,
+T20,Windshear,Pitch,,law_ws == False,state_vert_t20_1,,Windshear Law Invalid. Reverting to Pitch.,64,,

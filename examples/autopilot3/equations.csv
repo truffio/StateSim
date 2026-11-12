@@ -1,0 +1,32 @@
+equation,explanation,rationale,result_variable,band,order
+ap_on == True,FMA ap_visible shown,,fma_ap_visible,10,101
+"state_at in ['Hold', 'Active', 'Retard']","FMA at_color shows ""green""",,fma_at_color_green,10,102
+not fma_at_color_green and (state_at in ['Hold armed']),"FMA at_color shows ""white""","First matching line wins, as in the previous tool",fma_at_color_white,10,103
+"(state_at=='Hold armed') and (state_ac in ['Waiting TOGA', 'Takeoff'])","FMA TM_armed shows ""HOLD""",,fma_tm_armed_hold,10,104
+state_at=='Hold',"FMA TM_engaged shows ""HOLD""",,fma_tm_engaged_hold,10,105
+"not fma_tm_engaged_hold and ((state_at=='Active') and (state_ac in ['Climb', 'Descent', 'APPR armed', 'Go Around']))","FMA TM_engaged shows ""THRUST""","First matching line wins, as in the previous tool",fma_tm_engaged_thrust,10,106
+"not fma_tm_engaged_hold and not fma_tm_engaged_thrust and ((state_at=='Active') and (state_ac in ['Cruise', 'Approach', 'Final Approach', 'Greasing']))","FMA TM_engaged shows ""SPD""","First matching line wins, as in the previous tool",fma_tm_engaged_spd,10,107
+not fma_tm_engaged_hold and not fma_tm_engaged_thrust and not fma_tm_engaged_spd and (state_at=='Retard'),"FMA TM_engaged shows ""RETARD""","First matching line wins, as in the previous tool",fma_tm_engaged_retard,10,108
+state_ac == 'APPR armed',"FMA LNAV_armed_1 shows ""APPR""",,fma_lnav_armed_1_appr,10,109
+"(state_ac in ['Approach', 'Final Approach']) and (state_lat in ['Lateral_State_0', 'No_Lateral_State', 'preLocTrk', 'LocTrk', 'Align_Armed'])","FMA LNAV_engaged_1 shows ""APPR""",,fma_lnav_engaged_1_appr,10,110
+state_ac == 'Takeoff',"FMA LNAV_armed_2 shows ""FMS1""",,fma_lnav_armed_2_fms1,10,111
+not fma_lnav_armed_2_fms1 and (state_ac == 'APPR armed'),"FMA LNAV_armed_2 shows ""LOC1""","First matching line wins, as in the previous tool",fma_lnav_armed_2_loc1,10,112
+not fma_lnav_armed_2_fms1 and not fma_lnav_armed_2_loc1 and (state_lat == 'Align_Armed'),"FMA LNAV_armed_2 shows ""ALIGN""","First matching line wins, as in the previous tool",fma_lnav_armed_2_align,10,113
+not fma_lnav_armed_2_fms1 and not fma_lnav_armed_2_loc1 and not fma_lnav_armed_2_align and (state_lat == 'Rollout_Armed'),"FMA LNAV_armed_2 shows ""Rollout""","First matching line wins, as in the previous tool",fma_lnav_armed_2_rollout,10,114
+state_ac == 'Takeoff',"FMA LNAV_engaged_2 shows ""TO""",,fma_lnav_engaged_2_to,10,115
+"not fma_lnav_engaged_2_to and (state_ac in ['Climb', 'Cruise', 'Descent', 'APPR armed'])","FMA LNAV_engaged_2 shows ""FMS1""","First matching line wins, as in the previous tool",fma_lnav_engaged_2_fms1,10,116
+"not fma_lnav_engaged_2_to and not fma_lnav_engaged_2_fms1 and ((state_ac in ['Approach', 'Final Approach']) and (state_lat in ['Lateral_State_0', 'No_Lateral_State', 'preLocTrk']))","FMA LNAV_engaged_2 shows ""LOC1""","First matching line wins, as in the previous tool",fma_lnav_engaged_2_loc1,10,117
+"not fma_lnav_engaged_2_to and not fma_lnav_engaged_2_fms1 and not fma_lnav_engaged_2_loc1 and ((state_ac == 'Approach', 'Final Approach') and (state_lat in ['LocTrk', 'Align_Armed']))","FMA LNAV_engaged_2 shows ""LOC""","First matching line wins, as in the previous tool",fma_lnav_engaged_2_loc,10,118
+"not fma_lnav_engaged_2_to and not fma_lnav_engaged_2_fms1 and not fma_lnav_engaged_2_loc1 and not fma_lnav_engaged_2_loc and (state_lat in ['Align', 'Rollout_Armed'])","FMA LNAV_engaged_2 shows ""ALIGN""","First matching line wins, as in the previous tool",fma_lnav_engaged_2_align,10,119
+not fma_lnav_engaged_2_to and not fma_lnav_engaged_2_fms1 and not fma_lnav_engaged_2_loc1 and not fma_lnav_engaged_2_loc and not fma_lnav_engaged_2_align and (state_lat == 'Rollout'),"FMA LNAV_engaged_2 shows ""Rollout""","First matching line wins, as in the previous tool",fma_lnav_engaged_2_rollout,10,120
+state_ac == 'Takeoff',"FMA VNAV_armed_1 shows ""FLC""",,fma_vnav_armed_1_flc,10,121
+"not fma_vnav_armed_1_flc and (state_ac in ['Climb', 'Descent'])","FMA VNAV_armed_1 shows ""ALTS""","First matching line wins, as in the previous tool",fma_vnav_armed_1_alts,10,122
+not fma_vnav_armed_1_flc and not fma_vnav_armed_1_alts and (state_vert in ['Flare_Armed']),"FMA VNAV_armed_1 shows ""FLARE""","First matching line wins, as in the previous tool",fma_vnav_armed_1_flare,10,123
+state_ac == 'Takeoff',"FMA VNAV_engaged_1 shows ""TO""",,fma_vnav_engaged_1_to,10,124
+"not fma_vnav_engaged_1_to and (state_ac in ['Climb', 'Descent', 'APPR armed', 'Approach'])","FMA VNAV_engaged_1 shows ""FLC""","First matching line wins, as in the previous tool",fma_vnav_engaged_1_flc,10,125
+not fma_vnav_engaged_1_to and not fma_vnav_engaged_1_flc and (state_ac in ['Cruise']),"FMA VNAV_engaged_1 shows ""ALTS""","First matching line wins, as in the previous tool",fma_vnav_engaged_1_alts,10,126
+not fma_vnav_engaged_1_to and not fma_vnav_engaged_1_flc and not fma_vnav_engaged_1_alts and ((state_ac in ['Final Approach']) or (state_vert == 'GsTrk')),"FMA VNAV_engaged_1 shows ""GS""","First matching line wins, as in the previous tool",fma_vnav_engaged_1_gs,10,127
+not fma_vnav_engaged_1_to and not fma_vnav_engaged_1_flc and not fma_vnav_engaged_1_alts and not fma_vnav_engaged_1_gs and (state_vert in ['Flare_Active']),"FMA VNAV_engaged_1 shows ""FLARE""","First matching line wins, as in the previous tool",fma_vnav_engaged_1_flare,10,128
+state_ac == 'Takeoff',"FMA VNAV_armed_2 shows ""FLC""",,fma_vnav_armed_2_flc,10,129
+"not fma_vnav_armed_2_flc and (state_ac in ['Climb', 'Descent'])","FMA VNAV_armed_2 shows ""ALTS""","First matching line wins, as in the previous tool",fma_vnav_armed_2_alts,10,130
+"state_ac in ['APPR armed', 'Approach']","FMA VNAV_armed_3 shows ""GS""",,fma_vnav_armed_3_gs,10,131

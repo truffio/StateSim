@@ -147,3 +147,64 @@ def test_autopilot2_appr_light_latches_from_descent_to_landed():
     assert run(radio_altitude=0, claws_req_flare=True, ground_time_gt_2s=True) == ("Landed", False)
     eng2 = Engine(eng._model)                                   # reset: start values
     assert eng2.snapshot()["outputs"]["appr_light"] is False
+
+
+@R("REQ-154", "REQ-155", "REQ-157", "REQ-158")
+def test_autopilot3_autoland_with_actions():
+    """examples/autopilot3 (converted from the previous tool with its set_vars
+    as actions), flown through a front-end session: buttons are pulses."""
+    from statesim_server.session import Session
+    s = Session(load_model(EXAMPLES / "autopilot3" / "master.csv"))
+
+    def run(n=3, press=None, **inputs):
+        if press:
+            assert s.handle({"type": "press", "name": press}) is None
+        for k, v in inputs.items():
+            assert s.handle({"type": "set", "name": k, "value": v}) is None
+        for _ in range(n):
+            s.step()
+        snap = s.engine.snapshot()
+        return snap["states"], snap["inputs"], snap["outputs"]
+
+    st, i, _ = run(press="TOGA")
+    assert (st["state_ac"], st["state_fd"], st["state_at"]) == ("Takeoff", "FD-engaged", "Hold armed")
+    assert i["fd_on"] and i["at_on"] and s.state()["lit"]["fd_on"]
+    st, _, _ = run(ground_speed=130)
+    assert st["state_at"] == "Hold"
+    st, i, _ = run(radio_altitude=100)
+    assert st["state_ac"] == "Climb"
+    assert (i["ground_speed"], i["on_ground"]) == (0, False)          # set by the climb action
+    st, i, _ = run(press="AP_btn")
+    assert st["state_ap"] == "AP-engaged" and i["ap_on"]
+    run(radio_altitude=2500)
+    st, _, _ = run(radio_altitude=2000)
+    assert st["state_ac"] == "Descent"
+    st, i, _ = run(press="APPR_btn")
+    assert st["state_ac"] == "APPR armed" and not i["appr_on"]
+    st, i, _ = run(radio_altitude=1400, dmc_tracking_loc=True)
+    assert (st["state_ac"], st["state_lat"], i["appr_on"]) == ("Approach", "preLocTrk", True)
+    st, i, out = run(dmc_tracking_gs=True)
+    assert (st["guidance_src"], st["state_ac"], st["state_lat"], st["state_vert"]) == \
+        ("IFCC", "Final Approach", "LocTrk", "GsTrk")
+    assert i["ifcc_in_control"] and not i["dmc_tracking_loc"] and not i["dmc_tracking_gs"]
+    assert out["fma_vnav_engaged_1_gs"] and out["fma_tm_engaged_spd"]
+    run(radio_altitude=700)
+    st, _, _ = run(radio_altitude=40)
+    assert (st["state_lat"], st["state_vert"]) == ("Rollout_Armed", "Flare_Armed")
+    st, _, out = run(claws_req_flare=True)
+    assert (st["state_ac"], st["state_vert"], st["state_at"]) == ("Greasing", "Flare_Active", "Retard")
+    assert out["fma_tm_engaged_retard"]
+    st, i, _ = run(radio_altitude=0)
+    assert (st["state_ac"], st["state_lat"]) == ("Touchdown", "Rollout")
+    assert (i["ground_speed"], i["on_ground"], i["rollout_active"]) == (140, True, True)
+    st, i, _ = run(ground_time_gt_2s=True)
+    assert (st["state_vert"], st["state_at"], i["claws_req_flare"]) == ("Nosedown", "Idle", False)
+    st, _, _ = run(ground_speed=100)
+    assert st["state_ac"] == "Landed"
+    st, i, _ = run(1, ground_speed=20)                             # IFCC hands back to DMC
+    assert st["guidance_src"] == "DMC" and i["ifcc_in_control_prev"] is True
+    st, i, _ = run(1)                                              # one-pass pulse (during of DMC)
+    assert i["ifcc_in_control_prev"] is False
+    assert (st["state_lat"], st["state_vert"]) == ("No_Lateral_State", "No_Vertical_State")
+    st, _, _ = run(ground_speed=0)
+    assert st["state_ac"] == "Waiting TOGA"

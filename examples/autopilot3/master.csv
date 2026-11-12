@@ -1,0 +1,11 @@
+file_name,type,order,band,name
+state_ac.csv,state_machine,10,10,Aircraft
+state_fd.csv,state_machine,20,10,FD engage
+state_ap.csv,state_machine,30,10,AP engage
+state_vert.csv,state_machine,40,10,Vertical Modes
+state_lat.csv,state_machine,50,10,Lateral Modes
+guidance_src.csv,state_machine,60,10,Guidance Source
+state_at.csv,state_machine,70,10,Autothrottle
+equations.csv,equations,,,
+inputs.csv,inputs,,,
+actions.csv,actions,,,
