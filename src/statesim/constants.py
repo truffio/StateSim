@@ -13,6 +13,8 @@ RESERVED_NAMES: frozenset[str] = frozenset({"tick", "t", "dt"})
 
 # Master CSV.
 MASTER_COLUMNS: tuple[str, ...] = ("file_name", "type", "order")
+# Optional master column: display name of a state machine (front end only).
+MASTER_NAME_COLUMN = "name"
 TYPE_STATE_MACHINE = "state_machine"
 TYPE_EQUATIONS = "equations"
 TYPE_INPUTS = "inputs"
@@ -40,6 +42,22 @@ EQUATIONS_COLUMNS: tuple[str, ...] = (
     "order",
 )
 INPUTS_COLUMNS: tuple[str, ...] = ("variable_name", "type", "default_value")
+# Optional display columns of the inputs CSV (front end only).
+INPUTS_DISPLAY_COLUMNS: tuple[str, ...] = (
+    "group", "widget", "label", "min", "max", "step", "choices", "lit_by", "wide",
+)
+INPUT_TYPES: tuple[str, ...] = ("bool", "int", "float", "str", "enum")
+# Allowed widgets per input type; the first is the default (for int/float the
+# default is "slider" when min and max are given, else "number").
+INPUT_WIDGETS: dict[str, tuple[str, ...]] = {
+    "bool": ("switch", "momentary", "lit"),
+    "int": ("slider", "number"),
+    "float": ("slider", "number"),
+    "enum": ("dropdown",),
+    "str": ("text",),
+}
+DEFAULT_INPUT_GROUP = "Inputs"
+CHOICES_SEPARATOR = "|"
 
 # Trace component names for events that do not belong to a state machine.
 EQUATIONS_COMPONENT = "EQ"

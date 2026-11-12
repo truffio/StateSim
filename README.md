@@ -110,6 +110,21 @@ undefined variable names are not detected at load. An undefined name raises
 Cheat sheet: `docs/cheatsheet.md`. Jupyter demos: `notebooks/` (quickstart,
 closed-loop 6-state autopilot, bands/computation rate/timers/errors), with example CSV sets in `examples/`.
 
+## Front end
+
+A local web front end (`src/statesim_server/`, a separate package so the
+engine stays synchronous) runs a model in real time or as fast as possible:
+
+```
+pip install -e ".[server]"
+python -m statesim_server examples/autopilot2/master.csv
+```
+
+It opens `http://127.0.0.1:8765/`: input cards on the left (built from the
+inputs CSV display columns), run controls at the bottom left, and the state
+machines on the right, with the active state highlighted. Hover the active
+state to see its next states. See `docs/frontend_ui_spec.md`.
+
 ## Tests and report
 
 ```
@@ -121,7 +136,6 @@ The report covers unit tests and requirement-based use-case tests, with a
 requirement -> test -> result traceability matrix.
 
 ## Status
-Engine, tests and the test report are complete: 282 tests pass (179 unit,
-103 requirement-based, including long-run computation-rate tests and tests of
-the `examples/` models); of the 113 requirements, 107 are verified by tests and
-6 are review-only.
+Engine, front end (branch `frontend`), tests and the test report are in
+place. The test report (`reports/test_report.md`) lists every requirement with
+its tests and results.

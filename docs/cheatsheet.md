@@ -37,12 +37,17 @@ trace.lines()                                 # list of log lines
 | `ModelError`, `EvaluationError` | load error / run-time error (has `.source .tick .item`) |
 
 ## The CSV files
-**Master** (`file_name,type,order`): one row per file. `type` = `state_machine`,
+**Master** (`file_name,type,order`, optional `name`): one row per file. `name`
+is a state machine's display name on the front end. `type` = `state_machine`,
 `equations` or `inputs`. `order` is used for `state_machine` rows only. Paths
 are relative to the master file. Max one equations row and one inputs row.
 
 **Inputs** (`variable_name,type,default_value`): `type` = `bool` (true/false/1/0,
-any case), `int`, `float`, `str`. The value is parsed to a Python value.
+any case), `int`, `float`, `str`, `enum`. The value is parsed to a Python value.
+Optional display columns for the front end: `group, widget, label, min, max,
+step, choices, lit_by, wide` (enum choices separated by `|`; widgets: bool
+`switch`/`momentary`/`lit`, int/float `slider`/`number`, enum `dropdown`, str
+`text`). See `docs/frontend_ui_spec.md` section 4.
 
 **Equations** (`equation,explanation,rationale,result_variable,band,order`):
 one standalone Boolean equation per row. The result is assigned to
@@ -111,6 +116,12 @@ Components: the state machine name, `EQ` (standalone equations), `INPUT`.
 * Equations are evaluated with Python `eval` (trusted authors, no sandbox).
 * `snapshot()` returns copies; modify inputs only with `set_input`.
 * Deterministic by design: no threads, async, wall-clock time or randomness.
+
+## Front end
+```
+pip install -e ".[server]"
+python -m statesim_server examples/autopilot2/master.csv   # --port N, --no-browser, --trace FILE
+```
 
 ## Tests and report
 ```

@@ -3,13 +3,13 @@
 Converted from `A220_demo.json`, a system file of the previous tool. The JSON
 is kept for reference; the tool runs the CSV files: `master.csv`.
 
-| JSON machine | State machine file (= state variable) | Master order |
-|---|---|---|
-| AC phase of flight | `state_ac.csv` | 20 |
-| Vertical Modes | `state_vert.csv` | 30 |
-| Lateral Modes | `state_lat.csv` | 40 |
-| Guidance Source | `guidance_src.csv` | 10 |
-| Autothrottle | `state_at.csv` | 50 |
+| JSON machine | State machine file (= state variable) | Display name (master `name`) | Master order |
+|---|---|---|---|
+| AC phase of flight | `state_ac.csv` | Aircraft phase of flight | 20 |
+| Vertical Modes | `state_vert.csv` | Vertical guidance | 30 |
+| Lateral Modes | `state_lat.csv` | Lateral guidance | 40 |
+| Guidance Source | `guidance_src.csv` | Guidance source | 10 |
+| Autothrottle | `state_at.csv` | Autothrust | 50 |
 
 The previous tool kept copies of the states in variables (`state_ac`,
 `state_vert`, `state_lat`, `state_at`). The machines are named after those
@@ -27,9 +27,12 @@ first so `ifcc_in_control` is up to date when the other machines read it.
   `G2`, ... the global transitions. Globals get the lowest `order` numbers, so
   they win over the state's own transitions, as in the previous tool.
 - `action` became `title`; `rationale` became `rationale`.
-- Buttons became `bool` inputs; the enum `capa` became a `str` input
-  (default `LAND3`). Min, max, step, choices and button types are not used
-  yet: they wait for the new inputs CSV columns.
+- Buttons became `bool` inputs shown as momentary push-buttons; `capa` is an
+  `enum` input (default `LAND3`). The JSON's min, max, step and choices are in
+  the inputs CSV display columns, and the inputs are grouped into cards like
+  the previous tool's panels.
+
+Run it with the front end: `python -m statesim_server examples/autopilot2/master.csv`.
 
 ## Behaviour that changed
 

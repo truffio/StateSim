@@ -4,8 +4,9 @@ Working notes for writing the front end requirements. Sources:
 `docs/StateSim_FrontEnd_Spec.md` (the front end of a **previous** tool: a
 JavaScript, event-driven engine in one HTML page, used only as a source of UI
 ideas), `requirements_simulation_framework_spec.yaml`, and design discussions.
-No front end code is written until the requirements are agreed. The screen
-itself is specified in `docs/frontend_ui_spec.md`.
+The screen is specified in `docs/frontend_ui_spec.md`; requirements REQ-114
+to REQ-134 are in `docs/requirements.csv`. D22 to D29 are the defaults
+proposed and accepted on 2026-11-11 before the first front end was built.
 
 ## Decided
 
@@ -17,7 +18,7 @@ itself is specified in `docs/frontend_ui_spec.md`.
 | D4 | Enum type | Add an `enum` input type (a string restricted to a list of choices). |
 | D5 | Execution | Time-based: state machines and equations run periodically at their band rates, so values settle over time. There is no "run until settled" step. |
 | D6 | Run modes | **As fast as possible** (back end only, no front end, for testing), and **real time**: each band runs at its frequency in real time, as close as a non-real-time OS allows. The engine itself stays free of wall-clock time; the server paces the ticks. |
-| D7 | Momentary buttons | A press must be detectable by slow-band logic. Leaning towards a pulse with a minimum duration; buffering is the alternative. To be settled. |
+| D7 | Momentary buttons | A press must be detectable by slow-band logic: see D23. |
 | D8 | StateButtons | Some buttons light up according to a logic variable. |
 | D9 | Priority | Every state machine and equation has an order number. Global transitions get lower numbers when they must win. No implicit precedence. |
 | D10 | Rationale and titles | Kept in the state machine files. Their use in the front end is still to be defined; they are not shown on the states themselves. |
@@ -32,19 +33,23 @@ itself is specified in `docs/frontend_ui_spec.md`.
 | D19 | Machine layout order | State machines appear on screen in the order of their rows in the master CSV. |
 | D20 | State order in a machine | Inside a machine's area, states appear in the order they appear in that machine's CSV file. |
 | D21 | Transitions on screen | Nothing about transitions is shown. The current state is strongly highlighted. Hovering the mouse over the active state highlights its possible next states. |
+| D22 | Inputs CSV columns | Optional columns `group, widget, label, min, max, step, choices, lit_by, wide`; files without them still load (details in the UI spec, section 4). |
+| D23 | Push-button pulse | A press holds the input true for one period of the slowest band, then false. |
+| D24 | Run controls | Real time or as fast as possible, Pause/Resume, Step (only while paused), Reset (keeps the model, run mode and pause state). In real time, a backlog longer than 0.5 s is dropped rather than caught up. |
+| D25 | Global targets on hover | Highlighted, with a dashed orange border. |
+| D26 | Screen updates | Sent after ticks, at most 30 per second. |
+| D27 | Loading | Model path on the command line: `python -m statesim_server MASTER_CSV`. Reset restores start values without reloading files. |
+| D28 | Clients | Designed for one browser tab. Several tabs share the same session and all see the same values. |
+| D30 | Machine display names | The master CSV has an optional `name` column; a state machine card is titled with it, or with the file name when empty. The state variable in equations is still the file name (e.g. `state_ac`). |
+| D31 | Rationale and titles | Not used by the front end for now (see D10). |
+| D32 | Load errors | Unchanged for now: the first load error stops loading. |
+| D33 | Divider position | The page remembers the divider position (in the browser's local storage) and restores it when opened again. |
+| D29 | Front end tests | Unit tests of the session, server tests over real HTTP and WebSocket connections, and browser tests with Playwright (skipped when Playwright or Chromium is missing). |
 
 ## Open
 
 | # | Topic | Question |
 |---|---|---|
-| O1 | Button pulse | Pulse duration rule (fixed ms, the slowest band period reading the input, or per button), or buffering until read. |
-| O12 | Hover next states | Do the possible next states include the targets of global transitions (reachable from any state), or only transitions leaving the active state? |
-| O5 | Aircraft panel definition | File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
-| O6 | Inputs CSV columns | Exact new columns for D3 and D4. |
-| O7 | Real-time pacing | Overrun behaviour (a tick takes longer than its period), and pause, step and speed controls. |
-| O8 | Loading and reset | Model path on the command line or chosen in the page; reset to defaults without reloading; reload edited files. |
-| O9 | Error reporting | Report every load error at once instead of the first. |
-| O10 | Clients | One browser client, or several at once. |
-| O11 | Front end test approach | Browser tests (e.g. Playwright) and server API tests. |
-| O13 | Screen update rate | How often the screen updates while running (every tick, or capped at the display refresh rate). |
-| O14 | Splitter position | Whether the split between the panes is remembered between sessions. |
+| O5 | Aircraft panel definition | **Next feature.** File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
+| O8b | Reloading | Reload edited CSV files without restarting the server. Postponed. |
+

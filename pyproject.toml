@@ -11,10 +11,14 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov"]
+server = ["websockets>=13"]
+dev = ["pytest", "pytest-cov", "websockets>=13", "playwright"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+statesim_server = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
