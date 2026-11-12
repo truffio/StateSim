@@ -15,6 +15,7 @@ let controls = {};   // input name -> {kind, update(value)}
 let machines = {};   // machine name -> {boxes, next, global, active, shown}
 let litButtons = []; // [{el, var}]
 let built = false;
+let panels = null;    // StateSimPanels.build() result
 
 function send(msg) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -59,6 +60,7 @@ function build(model) {
   const root = $("machines");
   root.replaceChildren();
   for (const m of model.machines) root.append(machineCard(m));
+  panels = window.StateSimPanels.build($("top"), model.panels || [], send);
   built = true;
   requestAnimationFrame(fitStateText);
 }
@@ -217,6 +219,7 @@ function show(st) {
   for (const b of document.querySelectorAll(".seg button")) {
     b.setAttribute("aria-pressed", String(b.dataset.mode === st.mode));
   }
+  if (panels) panels.update(st);
   $("pause").textContent = st.paused ? "Resume" : "Pause";
   $("step").disabled = !st.paused;
 }
@@ -265,7 +268,10 @@ bar.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") { setW(w - 20); saveW(); e.preventDefault(); }
   if (e.key === "ArrowRight") { setW(w + 20); saveW(); e.preventDefault(); }
 });
-window.addEventListener("resize", () => setW(left.getBoundingClientRect().width));
+window.addEventListener("resize", () => {
+  setW(left.getBoundingClientRect().width);
+  if (panels) panels.fit();
+});
 setW(savedW());
 
 connect();

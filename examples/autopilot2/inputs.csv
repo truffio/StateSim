@@ -1,25 +1,38 @@
-variable_name,type,default_value,group,widget,label,min,max,step,choices,lit_by,wide
-ground_speed,int,0,Aircraft,slider,ground_speed (kt),0,160,5,,,
-radio_altitude,int,0,Aircraft,slider,radio_altitude (ft),0,2500,5,,,
-capa,enum,LAND3,Aircraft,dropdown,capa,,,,NONE|APPR1|APPR2|LAND2|LAND3,,
-fd_on,bool,false,Flight Control Panel,switch,fd_on,,,,,,
-ap_on,bool,false,Flight Control Panel,switch,ap_on,,,,,,
-appr_selected,bool,false,Flight Control Panel,switch,appr_selected,,,,,,
-toga,bool,false,Stick and Throttle,momentary,TOGA,,,,,,
-EDM,bool,false,Stick and Throttle,momentary,EDM,,,,,,
-ATdisc,bool,false,Stick and Throttle,momentary,AT DISC,,,,,,
-dmc_tracking_loc,bool,false,DMC and CLAWS requests,switch,dmc_tracking_loc,,,,,,
-dmc_tracking_gs,bool,false,DMC and CLAWS requests,switch,dmc_tracking_gs,,,,,,
-claws_req_flare,bool,false,DMC and CLAWS requests,switch,claws_req_flare,,,,,,
-ground_time_gt_2s,bool,false,DMC and CLAWS requests,switch,ground_time_gt_2s,,,,,,
-ws_warning,bool,false,DMC and CLAWS requests,switch,ws_warning,,,,,,
-law_loc,bool,true,CLAWS availability,switch,law_loc,,,,,,
-law_gs,bool,true,CLAWS availability,switch,law_gs,,,,,,
-law_align,bool,true,CLAWS availability,switch,law_align,,,,,,
-law_rollout,bool,true,CLAWS availability,switch,law_rollout,,,,,,
-law_flare,bool,true,CLAWS availability,switch,law_flare,,,,,,
-law_nd,bool,true,CLAWS availability,switch,law_nd,,,,,,
-law_pitch,bool,true,CLAWS availability,switch,law_pitch,,,,,,
-law_roll,bool,true,CLAWS availability,switch,law_roll,,,,,,
-law_ga,bool,true,CLAWS availability,switch,law_ga,,,,,,
-law_ws,bool,true,CLAWS availability,switch,law_ws,,,,,,
+variable_name,type,default_value,group,widget,label,min,max,step,choices,lit_by,wide,panel
+ground_speed,int,0,Aircraft,slider,ground_speed (kt),0,160,5,,,,
+radio_altitude,int,0,Aircraft,slider,radio_altitude (ft),0,2500,5,,,,
+capa,enum,LAND3,Aircraft,dropdown,capa,,,,NONE|APPR1|APPR2|LAND2|LAND3,,,
+fd_on,bool,false,,toggle,fd_on,,,,,,,fcp.html
+ap_on,bool,false,,toggle,ap_on,,,,,,,fcp.html
+appr_selected,bool,false,,toggle,appr_selected,,,,,,,fcp.html
+toga,bool,false,Stick and Throttle,momentary,TOGA,,,,,,,
+EDM,bool,false,,momentary,EDM,,,,,,,fcp.html
+ATdisc,bool,false,Stick and Throttle,momentary,AT DISC,,,,,,,
+dmc_tracking_loc,bool,false,DMC and CLAWS requests,switch,dmc_tracking_loc,,,,,,,
+dmc_tracking_gs,bool,false,DMC and CLAWS requests,switch,dmc_tracking_gs,,,,,,,
+claws_req_flare,bool,false,DMC and CLAWS requests,switch,claws_req_flare,,,,,,,
+ground_time_gt_2s,bool,false,DMC and CLAWS requests,switch,ground_time_gt_2s,,,,,,,
+ws_warning,bool,false,DMC and CLAWS requests,switch,ws_warning,,,,,,,
+law_loc,bool,true,CLAWS availability,switch,law_loc,,,,,,,
+law_gs,bool,true,CLAWS availability,switch,law_gs,,,,,,,
+law_align,bool,true,CLAWS availability,switch,law_align,,,,,,,
+law_rollout,bool,true,CLAWS availability,switch,law_rollout,,,,,,,
+law_flare,bool,true,CLAWS availability,switch,law_flare,,,,,,,
+law_nd,bool,true,CLAWS availability,switch,law_nd,,,,,,,
+law_pitch,bool,true,CLAWS availability,switch,law_pitch,,,,,,,
+law_roll,bool,true,CLAWS availability,switch,law_roll,,,,,,,
+law_ga,bool,true,CLAWS availability,switch,law_ga,,,,,,,
+law_ws,bool,true,CLAWS availability,switch,law_ws,,,,,,,
+hdg_pb,bool,false,,momentary,HDG,,,,,,,fcp.html
+nav_pb,bool,false,,momentary,NAV,,,,,,,fcp.html
+at_pb,bool,false,,momentary,AT,,,,,,,fcp.html
+xfr_pb,bool,false,,momentary,XFR,,,,,,,fcp.html
+flc_pb,bool,false,,momentary,FLC,,,,,,,fcp.html
+alt_pb,bool,false,,momentary,ALT,,,,,,,fcp.html
+vnav_pb,bool,false,,momentary,VNAV,,,,,,,fcp.html
+vs_pb,bool,false,,momentary,VS,,,,,,,fcp.html
+fpa_pb,bool,false,,momentary,FPA,,,,,,,fcp.html
+spd_sel,int,250,,knob,SPD,100,350,1,,,,fcp.html
+hdg_sel,int,90,,knob,HDG,0,359,1,,,,fcp.html
+alt_sel,int,15000,,knob,ALT,1000,41000,100,,,,fcp.html
+vs_sel,int,0,,knob,VS,-6000,6000,100,,,,fcp.html

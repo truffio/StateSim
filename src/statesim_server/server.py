@@ -21,7 +21,8 @@ from statesim import Model
 from .session import Session, describe_model
 
 STATIC = Path(__file__).resolve().parent / "static"
-PAGES = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/app.css": "app.css"}
+PAGES = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/app.css": "app.css",
+         "/panels.js": "panels.js"}
 WS_PATH = "/ws"
 SEND_HZ = 30            # at most this many screen updates per second
 FAST_SLICE_S = 0.02     # "as fast as possible": run ticks for this long, then yield

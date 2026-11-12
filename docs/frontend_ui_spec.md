@@ -1,6 +1,6 @@
 # StateSim user interface spec
 
-Version: draft 2, 2026-11-11. Status: implemented on branch `frontend`
+Version: draft 3, 2026-11-11. Status: implemented on branch `frontend`
 (`src/statesim_server/`); requirements REQ-114 to REQ-134.
 
 This spec defines the screen of the StateSim front end: what is on it, what
@@ -15,8 +15,10 @@ actions to it. It never evaluates logic itself.
 ## 1. Screen layout
 
 ```
++------------------------------------------------------------------------+
+|          [ AIRCRAFT PANEL(S), full width, always shown ]               |
 +---------------------------+-+------------------------------------------+
-| Aircraft panels           |#| +--------+ +--------+ +--------+ +------+ |
+|                           |#| +--------+ +--------+ +--------+ +------+ |
 |                           |#| | AP     | | FD     | | AT     | | ...  | |
 | +-----------+ +---------+ |#| | [ ][#] | | [#][ ] | | [ ][ ] | |      | |
 | | INPUT     | | INPUT   | |#| | [ ][ ] | +--------+ | [#][ ] | +------+ |
@@ -31,10 +33,13 @@ actions to it. It never evaluates logic itself.
    left pane               splitter        right pane
 ```
 
-- The screen is split into a **left pane** and a **right pane**, separated by
-  a vertical **splitter** (`#` above). Together they fill the browser window.
-- **Left pane**, top to bottom: aircraft panels (section 3), input cards
-  (section 4), run controls (section 6).
+- A **top pane** spans the full window width and holds the aircraft panels
+  (section 3). It is always shown when the model has panels.
+- Below it, the screen is split into a **left pane** and a **right pane**,
+  separated by a vertical **splitter** (`#` above). Together they fill the
+  rest of the browser window.
+- **Left pane**, top to bottom: input cards (section 4), run controls
+  (section 6).
 - **Right pane:** the state machine grid (section 5), and nothing else.
 - Each pane scrolls vertically on its own when its content is taller than the
   window. The page never scrolls horizontally.
@@ -63,10 +68,45 @@ explanatory captions.
 
 ## 3. Aircraft panels
 
-Aircraft panels are shown at the **top of the left pane**, above the input
-cards. They display results of the logic in a cockpit-like form. Their
-content, look and definition are to be specified separately (O5); each panel
-will have a defined width and height.
+An aircraft panel is an HTML file, listed in the master CSV with type
+`panel` (e.g. `fcp.html,panel,,,Flight control panel`). Its author controls
+the look entirely with HTML and CSS; StateSim provides the behaviour.
+
+### 3.1 Placement
+
+- Panels are shown in the **top pane**, full window width, above the left and
+  right panes, in master CSV order, centred. The top pane is always shown.
+- A panel is shown at its natural size. If the window is narrower than the
+  panel, it is scaled down to fit (never enlarged), without leaving gaps.
+
+### 3.2 What StateSim takes from the file
+
+- The `<style>` elements and the `<body>` content. Page-wide rules in the
+  file (e.g. on `body`) have no effect: each panel lives in its own isolated
+  part of the page (a shadow root), so its CSS cannot change the rest of the
+  screen and the screen's CSS cannot change the panel.
+- Scripts, external stylesheets, frames and inline event handlers (`onclick`
+  and the like) are removed and never run.
+
+### 3.3 Bindings
+
+| Attribute | On | Effect |
+|---|---|---|
+| `data-input="var"` | a button | Writes the input `var`. A `momentary` input gets a pulse per press (like a momentary push-button); a `toggle` input flips between true and false on each press. The button gets class `pressed` for 0.3 s after each press (the panel's CSS can style it). Keyboard: Enter or Space. |
+| `data-input="var"` | any element (e.g. a round `div`) whose input is a `knob` | Becomes a knob: it rotates over 270° from min to max, with a pointer mark. Drag up or down (3 px per step), mouse wheel (Shift: 10 steps), or the keyboard (arrows: 1 step, Page Up/Down: 10 steps, Home/End: min/max). It stops at min and max (no wrap) and sends whole steps. |
+| `data-show="var"` | any element | Its text is the current value of `var` (an input, result variable or state), formatted with `data-format`: printf-like, e.g. `%d`, `%03d` (`090`), `%+05d` (`+0500`, `-0500`), `%.2f`, `%s`. |
+| `data-lit-by="var"` | any element | Has class `lit` while `var` is true (the panel's CSS draws the light). Lights follow the logic, never the click. |
+
+### 3.4 Panel inputs in the inputs CSV
+
+- Every input driven by a panel has the panel file name in the `panel`
+  column. It gets no input card on the left.
+- Its `widget` is `momentary` or `toggle` (bool) or `knob` (int or float,
+  with min and max; `step` is the knob step).
+- At load, StateSim checks that every bound variable exists, that each
+  `data-input` names an input whose `panel` is this file, that every input
+  with a `panel` is used by that panel, and that the panel is listed in the
+  master CSV. Errors give the `file:line`.
 
 ## 4. Input cards
 
@@ -100,9 +140,11 @@ optional; a file without them still loads.
 | `choices` | Enum values separated by `\|` (e.g. `NONE\|APPR1\|LAND3`); the default must be one of them | (required for enum) |
 | `lit_by` | Variable that lights a `lit` push-button (an input or result variable) | (required for `lit`) |
 | `wide` | `true` makes the input's card full width | `false` |
+| `panel` | Panel file that drives the input (no card; see section 3.4) | (none) |
 
-Widgets allowed per type: bool `switch`, `momentary`, `lit`; int and float
-`slider`, `number`; enum `dropdown`; str `text`. Anything else, a default
+Widgets allowed per type: bool `switch`, `momentary`, `lit`, `toggle`
+(panel only); int and float `slider`, `number`, `knob` (panel only); enum
+`dropdown`; str `text`. Anything else, a default
 outside min/max, or a column that does not apply to the type is a load error
 with its `file:line`.
 
@@ -240,6 +282,6 @@ The server listens on `http://127.0.0.1:8765/` and opens the browser. Options:
 
 | # | Point |
 |---|---|
-| O5 | Aircraft panels: definition, content, size and placement. |
+| O5b | Aircraft panels: the light equations, and whether the panel is redesigned to be smaller. |
 | O8b | Reloading edited CSV files without restarting the server. |
 

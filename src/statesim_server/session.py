@@ -28,6 +28,8 @@ def describe_model(model: Model) -> dict:
 
     groups: dict[str, dict] = {}
     for i in model.inputs:
+        if i.panel:                      # driven by a panel: no card
+            continue
         g = groups.setdefault(i.group, {"name": i.group, "wide": False, "inputs": []})
         g["wide"] = g["wide"] or i.wide or i.widget == "slider"
         g["inputs"].append({
@@ -35,7 +37,15 @@ def describe_model(model: Model) -> dict:
             "min": i.min, "max": i.max, "step": i.step, "choices": list(i.choices),
             "lit_by": i.lit_by or None,
         })
-    return {"type": "model", "machines": machines, "groups": list(groups.values())}
+    by_name = {i.name: i for i in model.inputs}
+    panels = [{
+        "name": p.name, "html": p.html,
+        "inputs": {n: {"widget": by_name[n].widget, "label": by_name[n].label,
+                       "min": by_name[n].min, "max": by_name[n].max, "step": by_name[n].step}
+                   for n in p.inputs},
+    } for p in model.panels]
+    return {"type": "model", "machines": machines, "groups": list(groups.values()),
+            "panels": panels}
 
 
 class Session:
@@ -48,7 +58,10 @@ class Session:
         schedule = build_schedule(model)
         # A pulse lasts one period of the slowest band, so every band sees it.
         self.pulse_ticks = max((it.period_ticks for it in schedule), default=1)
-        self.lit_vars = sorted({i.lit_by for i in model.inputs if i.lit_by})
+        self.lit_vars = sorted({i.lit_by for i in model.inputs if i.lit_by}
+                               | {v for p in model.panels for v in p.lits})
+        # Variables a panel shows (data-show): sent with every state message.
+        self.shown_vars = sorted({v for p in model.panels for v in p.shows})
         self.mode = "realtime"
         self.paused = False
         self.engine = Engine(model, trace)
@@ -78,12 +91,20 @@ class Session:
         """Apply one browser message. Returns an error text or None.
 
         Messages: {"type": "set", "name", "value"}, {"type": "press", "name"},
+        {"type": "toggle", "name"} (flips a toggle button's bool input),
         {"type": "mode", "mode": "realtime"|"fast"}, {"type": "pause"},
         {"type": "resume"}, {"type": "step"}, {"type": "reset"}.
         """
         kind = msg.get("type")
         if kind == "set":
             return self._set(msg.get("name"), msg.get("value"))
+        if kind == "toggle":
+            name = msg.get("name")
+            i = self.inputs.get(name)
+            if i is None or i.widget != "toggle":
+                return f"{name!r} is not a toggle button"
+            self.engine.set_input(name, not self.engine.snapshot()["inputs"][name])
+            return None
         if kind == "press":
             name = msg.get("name")
             i = self.inputs.get(name)
@@ -154,6 +175,7 @@ class Session:
             "states": snap["states"],
             "inputs": snap["inputs"],
             "lit": {v: bool(self._value(snap, v)) for v in self.lit_vars},
+            "values": {v: self._value(snap, v) for v in self.shown_vars},
             "mode": self.mode,
             "paused": self.paused,
         }

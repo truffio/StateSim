@@ -118,6 +118,14 @@ Components: the state machine name, `EQ` (standalone equations), `INPUT`.
 * `snapshot()` returns copies; modify inputs only with `set_input`.
 * Deterministic by design: no threads, async, wall-clock time or randomness.
 
+## Aircraft panels
+HTML files listed in the master CSV (`fcp.html,panel,,,Flight control panel`),
+shown in a full-width top pane. Bind elements with attributes:
+`data-input="var"` (button: `momentary`/`toggle`; element: `knob`),
+`data-show="var" data-format="%03d"`, `data-lit-by="var"` (adds class `lit`).
+Panel inputs set the inputs CSV `panel` column to the file name (no card).
+Scripts in panel files never run. See `docs/frontend_ui_spec.md` section 3.
+
 ## Front end
 ```
 pip install -e ".[server]"

@@ -6,3 +6,4 @@ guidance_src.csv,state_machine,10,10,Guidance source
 state_at.csv,state_machine,50,10,Autothrust
 equations.csv,equations,,,
 inputs.csv,inputs,,,
+fcp.html,panel,,,Flight control panel

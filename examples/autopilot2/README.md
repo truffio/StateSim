@@ -34,6 +34,14 @@ first so `ifcc_in_control` is up to date when the other machines read it.
 
 Run it with the front end: `python -m statesim_server examples/autopilot2/master.csv`.
 
+## Flight control panel (`fcp.html`)
+
+Shown in the top pane (based on `testFCP.html`). `fd_on` (both FD buttons),
+`ap_on` and `appr_selected` (APPR) are toggle buttons there, and EDM is a
+momentary button, so they have no card on the left. The other buttons (HDG,
+NAV, AT, XFR, FLC, ALT, VNAV, VS, FPA) and the four knobs (SPD, HDG, ALT, VS)
+are new inputs the logic does not use yet. No lights are defined yet.
+
 ## Behaviour that changed
 
 The new tool never writes variables from transitions (`set_vars` is gone).

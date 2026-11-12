@@ -45,6 +45,30 @@ class InputDef:
     choices: tuple[str, ...] = ()
     lit_by: str = ""
     wide: bool = False
+    panel: str = ""          # panel file that drives this input (no card), else ""
+
+
+@dataclass(frozen=True)
+class PanelDef:
+    """One aircraft panel (an HTML file listed in the master CSV).
+
+    ``html`` is the file text. ``inputs``, ``shows`` and ``lits`` are the
+    variable names bound by its data-input, data-show and data-lit-by
+    attributes, in document order without repeats. ``lines`` maps
+    (attribute, variable) to the line of its first use (error messages).
+    """
+
+    name: str
+    file: str
+    html: str
+    inputs: tuple[str, ...]
+    shows: tuple[str, ...]
+    lits: tuple[str, ...]
+    source: str
+    lines: tuple[tuple[str, str, int], ...] = ()
+
+    def line_of(self, attr: str, var: str) -> int:
+        return next((n for a, v, n in self.lines if a == attr and v == var), 1)
 
 
 @dataclass(frozen=True)
@@ -148,6 +172,7 @@ class Model:
     tick_hz: Fraction
     master_path: str
     equations_master_row: int = 1 << 60
+    panels: tuple[PanelDef, ...] = ()
 
 
 def transition_sort_key(transition_id: str) -> tuple[int, int | str]:

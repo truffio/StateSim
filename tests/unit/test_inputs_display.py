@@ -91,3 +91,64 @@ def test_master_name_column_sets_state_machine_display_name(tmp_path):
     s, t = load_model(tmp_path / "master.csv").state_machines
     assert (s.name, s.display_name, s.label) == ("S", "Speed modes", "Speed modes")
     assert (t.name, t.label) == ("T", "T")                 # no name: the file name
+
+
+
+# ------------------------------------------------------------------ panels
+SM = ("transition_id,current_state,next_state,default_state,equation,result_variable,"
+      "rationale,title,order\n1,A,B,A,b,r,,,1\n")
+PANEL = """<html><head><style>.x{color:red}</style></head><body>
+<button data-input="b">B</button>
+<div data-input="k"></div>
+<div data-show="k" data-format="%03d"></div>
+<button data-lit-by="r" data-input="tg">T</button>
+</body></html>
+"""
+PIN = ("variable_name,type,default_value,widget,min,max,panel\n"
+       "b,bool,false,momentary,,,p.html\nk,int,5,knob,0,9,p.html\ntg,bool,false,toggle,,,p.html\n")
+
+
+def panel_model(tmp_path, html=PANEL, inputs=PIN, master_panel="p.html,panel,,,Panel P\n"):
+    (tmp_path / "S.csv").write_text(SM, encoding="utf-8")
+    (tmp_path / "p.html").write_text(html, encoding="utf-8")
+    (tmp_path / "inputs.csv").write_text(inputs, encoding="utf-8")
+    (tmp_path / "master.csv").write_text(
+        "file_name,type,order,band,name\nS.csv,state_machine,1,10,\ninputs.csv,inputs,,,\n"
+        + master_panel, encoding="utf-8")
+    return load_model(tmp_path / "master.csv")
+
+
+@R("REQ-139", "REQ-140", "REQ-141")
+def test_panel_is_loaded_with_its_bindings(tmp_path):
+    (p,) = panel_model(tmp_path).panels
+    assert (p.name, p.file, p.source) == ("p", "p.html", "master.csv:4")
+    assert p.inputs == ("b", "k", "tg") and p.shows == ("k",) and p.lits == ("r",)
+    assert "<button" in p.html
+    m = load_model(tmp_path / "master.csv")
+    assert {i.name: i.panel for i in m.inputs} == {"b": "p.html", "k": "p.html", "tg": "p.html"}
+
+
+@R("REQ-140", "REQ-141", "REQ-142", "REQ-143")
+@pytest.mark.parametrize("html, inputs, message, where", [
+    (PANEL.replace('data-input="b"', 'data-input="zz"'), PIN, "data-input 'zz' is not an input", "p.html:2"),
+    (PANEL.replace('data-show="k"', 'data-show="zz"'), PIN, "data-show 'zz' is not a known variable", "p.html:4"),
+    (PANEL.replace('data-lit-by="r"', 'data-lit-by="zz"'), PIN, "data-lit-by 'zz' is not a known", "p.html:5"),
+    (PANEL.replace('data-input="b"', 'data-input=""'), PIN, "data-input is empty", "p.html:2"),
+    (PANEL, PIN.replace("momentary,,,p.html", "momentary,,,"), "must have panel=p.html", "p.html:2"),
+    (PANEL.replace('<button data-input="b">B</button>', ""), PIN, "has panel=p.html but the panel has no", "inputs.csv:2"),
+    (PANEL, PIN.replace("knob,0,9,p.html", "knob,,,p.html"), "a knob needs min and max", "inputs.csv:3"),
+    (PANEL, PIN.replace("momentary,,,p.html", "switch,,,p.html"), "cannot be used on a panel", "inputs.csv:2"),
+    (PANEL, PIN + "z,bool,false,toggle,,,\n", "toggle widget is for panel inputs", "inputs.csv:5"),
+    (PANEL, PIN + "z,bool,false,momentary,,,q.html\n", "panel 'q.html' is not listed", "inputs.csv:5"),
+])
+def test_invalid_panel_bindings_are_rejected(tmp_path, html, inputs, message, where):
+    with pytest.raises(ModelError) as ei:
+        panel_model(tmp_path, html, inputs)
+    assert message in str(ei.value) and str(ei.value).startswith(where), str(ei.value)
+
+
+@R("REQ-139")
+def test_several_panel_rows_allowed_and_missing_panel_file_reported(tmp_path):
+    with pytest.raises(ModelError) as ei:
+        panel_model(tmp_path, master_panel="p.html,panel,,,\nnone.html,panel,,,\n")
+    assert "file not found: none.html" in str(ei.value)

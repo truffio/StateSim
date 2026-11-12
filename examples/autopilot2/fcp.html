@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flight Control Panel</title>
+    <!--
+      StateSim aircraft panel (based on testFCP.html).
+      StateSim shows the <style> and <body> content of this file in the top pane
+      and wires the elements below by their attributes; it never runs scripts.
+        data-input="var"   button: press (momentary) or flip (toggle), per the
+                           inputs CSV widget column; knob: an int within min/max
+        data-show="var"    shows the variable's value, data-format="%05d" etc.
+        data-lit-by="var"  adds class "lit" while the variable is true
+    -->
+    <style>
+        .fcp-container {
+            background-color: #4a545a;
+            border: 2px solid #2d3336;
+            border-radius: 10px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(13, auto);
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: max-content;
+        }
+        .display {
+            background-color: #000;
+            color: #32ff32;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2em;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 2px solid #222;
+            text-align: center;
+            min-width: 120px;
+        }
+        .display-label {
+            color: #ccc;
+            font-size: 0.7em;
+            text-align: center;
+            margin-bottom: -5px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .button-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .button {
+            background-color: #6c757d;
+            border: 1px solid #343a40;
+            border-radius: 4px;
+            color: #fff;
+            font: inherit;
+            font-weight: bold;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-width: 60px;
+            text-align: center;
+            position: relative;
+        }
+        .button:hover {
+            background-color: #899198;
+        }
+        /* press feedback (StateSim adds "pressed" for a moment after each press) */
+        .button.pressed, .button:active {
+            background-color: #a3abb2;
+        }
+        /* light bar above a button, on while its data-lit-by variable is true */
+        .button.lit::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 4px;
+            background-color: #32ff32;
+            border-radius: 2px;
+        }
+        .knob {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #555;
+            border: 3px solid #333;
+            cursor: grab;
+        }
+        .knob-label {
+            font-size: 0.8em;
+            margin-top: 5px;
+            color: #ddd;
+            text-align: center;
+        }
+        .divider {
+            width: 2px;
+            background-color: #343a40;
+            align-self: stretch;
+        }
+        .fd-spacer {
+            height: 100px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="fcp-container" id="fcp">
+        <div class="control-group">
+            <div class="fd-spacer"></div>
+            <button class="button" data-input="fd_on">FD</button>
+        </div>
+
+        <div class="control-group">
+            <div class="display-label">IAS / MACH</div>
+            <div class="display" data-show="spd_sel" data-format="%d">250</div>
+            <div>
+                <div class="knob" data-input="spd_sel" aria-label="SPD"></div>
+                <div class="knob-label">SPD</div>
+            </div>
+        </div>
+
+        <div class="button-stack">
+            <button class="button" data-input="hdg_pb">HDG</button>
+            <button class="button" data-input="nav_pb">NAV</button>
+            <button class="button" data-input="appr_selected">APPR</button>
+        </div>
+
+        <div class="control-group">
+            <div class="display-label">HDG</div>
+            <div class="display" data-show="hdg_sel" data-format="%03d">090</div>
+            <div>
+                <div class="knob" data-input="hdg_sel" aria-label="HDG"></div>
+                <div class="knob-label">HDG</div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="button-stack">
+            <button class="button" data-input="ap_on">AP</button>
+            <button class="button" data-input="at_pb">AT</button>
+            <button class="button" data-input="xfr_pb">XFR</button>
+            <button class="button" data-input="EDM">EDM</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="button-stack">
+            <button class="button" data-input="flc_pb">FLC</button>
+            <button class="button" data-input="alt_pb">ALT</button>
+            <button class="button" data-input="vnav_pb">VNAV</button>
+        </div>
+
+        <div class="control-group">
+            <div class="display-label">ALTITUDE</div>
+            <div class="display" data-show="alt_sel" data-format="%d">15000</div>
+            <div>
+                <div class="knob" data-input="alt_sel" aria-label="ALT"></div>
+                <div class="knob-label">ALT</div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="button-stack">
+            <button class="button" data-input="vs_pb">VS</button>
+            <button class="button" data-input="fpa_pb">FPA</button>
+        </div>
+
+        <div class="control-group">
+            <div class="display-label">VERT SPEED</div>
+            <div class="display" data-show="vs_sel" data-format="%+05d">+0000</div>
+            <div>
+                <div class="knob" data-input="vs_sel" aria-label="VS"></div>
+                <div class="knob-label">VS</div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="fd-spacer"></div>
+            <button class="button" data-input="fd_on">FD</button>
+        </div>
+    </div>
+
+</body>
+</html>
