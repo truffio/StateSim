@@ -86,6 +86,30 @@ class EquationDef:
 
 
 @dataclass(frozen=True)
+class ActionStatement:
+    """One row of the actions CSV: a single Python assignment statement.
+
+    ``targets`` are the variable names it writes (each an input), in the
+    order they appear in the statement.
+    """
+
+    statement: str
+    targets: tuple[str, ...]
+    rationale: str
+    source: str
+
+
+@dataclass(frozen=True)
+class ActionDef:
+    """All rows of the actions CSV sharing one ``action`` name, in file order
+    (the order they run in). ``source`` is the first row."""
+
+    name: str
+    statements: tuple[ActionStatement, ...]
+    source: str
+
+
+@dataclass(frozen=True)
 class TransitionRow:
     """One row (equation) of a state machine CSV.
 
@@ -113,6 +137,10 @@ class Transition:
     current_state: str | None
     next_state: str
     rows: tuple[TransitionRow, ...]
+    # Actions run when this transition fires (state machine action columns):
+    # exit before the state changes, entry after. "" = none.
+    exit_action: str = ""
+    entry_action: str = ""
 
     @property
     def order(self) -> Fraction:
@@ -147,6 +175,15 @@ class StateMachine:
     source: str
     master_row: int = 0
     display_name: str = ""
+    # (state, action) pairs: the action run on each pass spent in that state
+    # when no transition fires (state machine "during" rows).
+    during_actions: tuple[tuple[str, str], ...] = ()
+    # master CSV init_action: run once on the machine's first pass ("" = none).
+    init_action: str = ""
+
+    def during_action(self, state: str) -> str:
+        """The during action of ``state``, else ""."""
+        return next((a for s, a in self.during_actions if s == state), "")
 
     @property
     def label(self) -> str:
@@ -174,6 +211,7 @@ class Model:
     master_path: str
     equations_master_row: int = 1 << 60
     panels: tuple[PanelDef, ...] = ()
+    actions: tuple[ActionDef, ...] = ()   # actions CSV, by first appearance
 
 
 def transition_sort_key(transition_id: str) -> tuple[int, int | str]:

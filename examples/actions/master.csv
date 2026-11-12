@@ -1,0 +1,4 @@
+file_name,type,order,band,name,init_action
+phase.csv,state_machine,10,10,Phase of flight,START
+inputs.csv,inputs,,,,
+actions.csv,actions,,,,

@@ -146,3 +146,14 @@ REQ-144,frontend,"A panel readout shall show its variable's current value format
 REQ-145,frontend,"A panel element with data-lit-by shall have the lit class while that variable is true, so lights follow the logic and not the click",frontend_ui_spec.3,use_case_test
 REQ-146,frontend,"Panel styles shall not affect the rest of the page, and scripts and inline event handlers in a panel file shall not run",frontend_ui_spec.3,use_case_test
 REQ-147,frontend,"A panel row of the master CSV may set a scale column (positive number, default 1); the panel shall be shown at that size with its proportions kept, and scaled down further only if the window is too narrow",frontend_ui_spec.3.1,use_case_test
+REQ-148,actions,"The master CSV shall accept at most one actions row; the actions file has columns action and statement (optional rationale)",decisions.C,unit_test
+REQ-149,actions,"Each actions CSV row shall be one Python assignment (=, chained or augmented) to plain names; anything else is a load error with file:line",decisions.C,unit_test
+REQ-150,actions,"Rows sharing an action name shall run in file row order",decisions.C,unit_test
+REQ-151,actions,"An action statement shall write inputs only; writing an equation result, a state or an undeclared name is a load error",decisions.C,unit_test
+REQ-152,actions,"An input with widget none shall be an internal variable: accepted for every type and not shown on the front end",decisions.C,unit_test
+REQ-153,actions,"State machine rows may set action_type (entry, exit, during) and action; both or neither, and the action must be defined",decisions.C,unit_test
+REQ-154,actions,"When a transition fires its exit action shall run before the state changes and its entry action after; at most one of each per transition",decisions.C,unit_test
+REQ-155,actions,"A during action shall belong to its row's current_state and run on each pass in that state when no transition fires (a global self-transition counts as none); one per state",decisions.C,unit_test
+REQ-156,actions,"The master init_action column of a state machine row shall name an action run once on the machine's first pass before its transitions; empty runs nothing",decisions.C,unit_test
+REQ-157,actions,"Action writes shall be visible immediately to later items in the same pass and each changed variable shall be logged under the state machine name",decisions.C,unit_test
+REQ-158,frontend,"Input controls shall show values written by actions on the next state update",decisions.C,unit_test

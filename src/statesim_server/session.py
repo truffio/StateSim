@@ -28,7 +28,7 @@ def describe_model(model: Model) -> dict:
 
     groups: dict[str, dict] = {}
     for i in model.inputs:
-        if i.panel:                      # driven by a panel: no card
+        if i.panel or i.widget == "none":  # driven by a panel, or internal: no card
             continue
         g = groups.setdefault(i.group, {"name": i.group, "wide": False, "inputs": []})
         g["wide"] = g["wide"] or i.wide or i.widget == "slider"

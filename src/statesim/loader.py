@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import csv
 from dataclasses import replace
 from html.parser import HTMLParser
@@ -12,6 +13,8 @@ from pathlib import Path
 from . import constants
 from .errors import ModelError
 from .model import (
+    ActionDef,
+    ActionStatement,
     EquationDef,
     InputDef,
     Model,
@@ -86,6 +89,79 @@ def _check_expr(src: str, source: str) -> None:
         raise ModelError(f"invalid expression {src!r}: {e}", source) from None
 
 
+_ASSIGN_HINT = "one assignment per row, e.g. x = 0 or x += 1"
+
+
+def _parse_statement(src: str, source: str) -> tuple[str, ...]:
+    """Check one actions CSV statement; return the names it assigns.
+
+    It must be exactly one assignment (``=``, chained ``a = b = 0``, or an
+    augmented one like ``+=``) whose targets are plain names.
+    """
+    if src == "":
+        raise ModelError("statement is empty", source)
+    try:
+        tree = ast.parse(src, "<statement>", "exec")
+    except SyntaxError as e:
+        raise ModelError(f"invalid statement {src!r}: {e.msg}", source) from None
+    except (ValueError, MemoryError, RecursionError) as e:
+        raise ModelError(f"invalid statement {src!r}: {e}", source) from None
+    if len(tree.body) != 1:
+        raise ModelError(f"statement {src!r} must be a single statement ({_ASSIGN_HINT})",
+                         source)
+    node = tree.body[0]
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+    elif isinstance(node, ast.AugAssign):
+        targets = [node.target]
+    else:
+        raise ModelError(f"statement {src!r} is not an assignment ({_ASSIGN_HINT})", source)
+    out: list[str] = []
+    for t in targets:
+        if not isinstance(t, ast.Name):
+            raise ModelError(f"statement {src!r} must assign plain variable names", source)
+        if t.id not in out:
+            out.append(t.id)
+    return tuple(out)
+
+
+def _load_actions(path: Path, display: str) -> list[ActionDef]:
+    """Read the actions CSV: rows sharing an action name, in file order."""
+    groups: dict[str, list[ActionStatement]] = {}
+    for line, r in _read_csv(path, display, constants.ACTIONS_COLUMNS):
+        src = f"{display}:{line}"
+        name = r["action"]
+        if name == "":
+            raise ModelError("action is empty", src)
+        if not name.isidentifier():
+            raise ModelError(f"action {name!r} is not a valid identifier", src)
+        targets = _parse_statement(r["statement"], src)
+        groups.setdefault(name, []).append(ActionStatement(
+            statement=r["statement"], targets=targets,
+            rationale=r.get("rationale", ""), source=src))
+    return [ActionDef(name=n, statements=tuple(st), source=st[0].source)
+            for n, st in groups.items()]
+
+
+def _row_action(r: dict[str, str], src: str) -> tuple[str, str]:
+    """(action_type, action) of a state machine row, ("", "") if none."""
+    kind = r.get(constants.SM_ACTION_TYPE_COLUMN, "")
+    name = r.get(constants.SM_ACTION_COLUMN, "")
+    if not kind and not name:
+        return "", ""
+    if not name:
+        raise ModelError("action_type is set but action is empty", src)
+    if not kind:
+        raise ModelError(f"action {name!r} needs an action_type "
+                         f"({', '.join(constants.ACTION_TYPES)})", src)
+    if kind not in constants.ACTION_TYPES:
+        raise ModelError(f"unknown action_type {kind!r} "
+                         f"(expected {', '.join(constants.ACTION_TYPES)})", src)
+    if not name.isidentifier():
+        raise ModelError(f"action {name!r} is not a valid identifier", src)
+    return kind, name
+
+
 class _Names:
     """Registry enforcing identifier/reserved/unique rules."""
 
@@ -151,9 +227,10 @@ def _input_def(r: dict[str, str], default: object, src: str) -> InputDef:
     widget = get("widget")
     if widget == "":
         widget = ("slider" if lo is not None and hi is not None else "number")             if kind in ("int", "float") else allowed[0]
-    if widget not in allowed:
+    if widget not in allowed and widget != constants.INTERNAL_WIDGET:
         raise ModelError(f"widget {widget!r} not allowed for type {kind} "
-                         f"(expected {', '.join(allowed)})", src)
+                         f"(expected {', '.join(allowed)}, or "
+                         f"{constants.INTERNAL_WIDGET} for an internal variable)", src)
     if kind in ("int", "float"):
         if widget == "slider" and (lo is None or hi is None):
             raise ModelError("a slider needs min and max", src)
@@ -281,6 +358,31 @@ def _check_panels(panels: list[PanelDef], inputs: list[InputDef], known: set[str
                                  f"data-input for it", i.source)
 
 
+def _check_actions(actions: list[ActionDef], refs: list[tuple[str, str]],
+                   inputs: list[InputDef], known: set[str]) -> None:
+    """Every action named by a state machine exists, and every statement
+    writes inputs only (an internal variable is an input with widget none)."""
+    defined = {a.name for a in actions}
+    for name, src in refs:
+        if name not in defined:
+            raise ModelError(f"action {name!r} is not defined in the actions CSV", src)
+    input_names = {i.name for i in inputs}
+    for a in actions:
+        for st in a.statements:
+            for t in st.targets:
+                if t in input_names:
+                    continue
+                if t in known:
+                    raise ModelError(
+                        f"action {a.name!r} writes {t!r}, which is not an input "
+                        "(equation results and states are written by the logic only)",
+                        st.source)
+                raise ModelError(
+                    f"action {a.name!r} writes {t!r}, which is not declared "
+                    f"(add it to the inputs CSV; widget {constants.INTERNAL_WIDGET} "
+                    "for an internal variable)", st.source)
+
+
 def names_of(inputs, equations, state_machines) -> set[str]:
     """Every variable name a model defines."""
     out = {i.name for i in inputs} | {e.result_variable for e in equations}
@@ -293,8 +395,11 @@ def names_of(inputs, equations, state_machines) -> set[str]:
 def _load_state_machine(
     path: Path, display: str, master_order: Fraction, master_source: str, names: _Names,
     master_row: int = 0, band: Fraction = Fraction(1),
-) -> tuple[StateMachine, int]:
-    """Load one state machine file. Its band comes from the master CSV."""
+) -> tuple[StateMachine, int, list[tuple[str, str]]]:
+    """Load one state machine file. Its band comes from the master CSV.
+
+    Also returns the (action name, source) of every action the rows name; the
+    caller checks they exist once the actions CSV is read."""
     stem = Path(display).stem
     rows = _read_csv(path, display, constants.STATE_MACHINE_COLUMNS)
     if rows and "band" in rows[0][1]:
@@ -306,6 +411,8 @@ def _load_state_machine(
     appearance: list[str] = []
     next_states: set[str] = set()
     cur_refs: list[tuple[str, str]] = []
+    during: dict[str, tuple[str, str]] = {}      # state -> (action, source)
+    action_refs: list[tuple[str, str]] = []      # (action, source)
 
     for idx, (line, r) in enumerate(rows):
         src = f"{display}:{line}"
@@ -329,12 +436,31 @@ def _load_state_machine(
 
         g = groups.get(tid)
         if g is None:
-            g = groups[tid] = {"cur": cur, "next": nxt, "rows": []}
+            g = groups[tid] = {"cur": cur, "next": nxt, "rows": [],
+                               constants.ACTION_ENTRY: None, constants.ACTION_EXIT: None}
         elif g["cur"] != cur or g["next"] != nxt:
             raise ModelError(
                 f"duplicate transition_id {tid!r}: rows disagree on current_state/next_state",
                 src,
             )
+        kind, action = _row_action(r, src)
+        if kind == constants.ACTION_DURING:
+            if not cur:
+                raise ModelError("a during action needs a current_state "
+                                 "(it runs while in that state)", src)
+            prev = during.get(cur)
+            if prev is not None and prev[0] != action:
+                raise ModelError(f"state {cur!r} already has during action {prev[0]!r} "
+                                 f"(at {prev[1]})", src)
+            during.setdefault(cur, (action, src))
+        elif kind:
+            prev = g[kind]
+            if prev is not None:
+                raise ModelError(f"transition {tid!r} already has {kind} action "
+                                 f"{prev[0]!r} (at {prev[1]})", src)
+            g[kind] = (action, src)
+        if action:
+            action_refs.append((action, src))
         g["rows"].append(
             (
                 order,
@@ -370,8 +496,11 @@ def _load_state_machine(
     transitions = []
     for tid, g in groups.items():
         trows = tuple(x[2] for x in sorted(g["rows"], key=lambda x: (x[0], x[1])))
+        entry, exit_ = g[constants.ACTION_ENTRY], g[constants.ACTION_EXIT]
         transitions.append(
-            Transition(id=tid, current_state=g["cur"] or None, next_state=g["next"], rows=trows)
+            Transition(id=tid, current_state=g["cur"] or None, next_state=g["next"], rows=trows,
+                       entry_action=entry[0] if entry else "",
+                       exit_action=exit_[0] if exit_ else "")
         )
     transitions.sort(key=lambda tr: (tr.order, transition_sort_key(tr.id)))
 
@@ -384,8 +513,9 @@ def _load_state_machine(
         transitions=tuple(transitions),
         source=master_source,
         master_row=master_row,
+        during_actions=tuple((s, a) for s, (a, _src) in during.items()),
     )
-    return sm, len(rows)
+    return sm, len(rows), action_refs
 
 
 def load_model(master_csv: str | PathLike[str]) -> Model:
@@ -404,6 +534,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     row_of: dict[str, int] = {}
     label_of: dict[str, str] = {}
     scale_of: dict[str, float] = {}
+    init_of: dict[str, str] = {}
     seen_single: dict[str, str] = {}
     for line, r in mrows:
         src = f"{master_name}:{line}"
@@ -417,10 +548,16 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         if fname == "":
             raise ModelError("file_name is empty", src)
         order: Fraction | None = None
+        init = r.get(constants.MASTER_INIT_ACTION_COLUMN, "")
         if ftype == constants.TYPE_STATE_MACHINE:
             order = _fraction(r.get("order", ""), "order", src)
             band_of[src] = _band(r.get("band", ""), src)
+            if init and not init.isidentifier():
+                raise ModelError(f"init_action {init!r} is not a valid identifier", src)
+            init_of[src] = init
         else:
+            if init:
+                raise ModelError("init_action applies to state_machine rows only", src)
             if ftype == constants.TYPE_PANEL:
                 entries.append((fname, ftype, order, src))
                 row_of[src] = line
@@ -456,6 +593,8 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     equations: list[EquationDef] = []
     inputs: list[InputDef] = []
     panels: list[PanelDef] = []
+    actions: list[ActionDef] = []
+    action_refs: list[tuple[str, str]] = []
     sm_rows = 0
 
     eq_row = 1 << 60
@@ -465,9 +604,13 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
             raise ModelError(f"file not found: {fname}", src)
         if ftype == constants.TYPE_STATE_MACHINE:
             assert order is not None
-            sm, n = _load_state_machine(path, fname, order, src, names, row_of[src],
-                                        band_of[src])
-            state_machines.append(replace(sm, display_name=label_of[src]))
+            sm, n, refs = _load_state_machine(path, fname, order, src, names, row_of[src],
+                                              band_of[src])
+            state_machines.append(replace(sm, display_name=label_of[src],
+                                          init_action=init_of[src]))
+            action_refs += refs
+            if init_of[src]:
+                action_refs.append((init_of[src], src))
             sm_rows += n
         elif ftype == constants.TYPE_EQUATIONS:
             eq_row = row_of[src]
@@ -486,6 +629,8 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
                         source=rsrc,
                     )
                 )
+        elif ftype == constants.TYPE_ACTIONS:
+            actions = _load_actions(path, fname)
         elif ftype == constants.TYPE_PANEL:
             panels.append(replace(_load_panel(path, fname, src), scale=scale_of[src]))
         else:
@@ -500,6 +645,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         if i.lit_by and i.lit_by not in known:
             raise ModelError(f"lit_by {i.lit_by!r} is not a known variable", i.source)
     _check_panels(panels, inputs, known)
+    _check_actions(actions, action_refs, inputs, known)
 
     if len(equations) + sm_rows > constants.MAX_EQUATIONS:
         raise ModelError(
@@ -516,4 +662,5 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         master_path=str(master_csv),
         equations_master_row=eq_row,
         panels=tuple(panels),
+        actions=tuple(actions),
     )

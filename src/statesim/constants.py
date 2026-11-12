@@ -22,7 +22,12 @@ TYPE_STATE_MACHINE = "state_machine"
 TYPE_EQUATIONS = "equations"
 TYPE_INPUTS = "inputs"
 TYPE_PANEL = "panel"
-FILE_TYPES: tuple[str, ...] = (TYPE_STATE_MACHINE, TYPE_EQUATIONS, TYPE_INPUTS, TYPE_PANEL)
+TYPE_ACTIONS = "actions"
+FILE_TYPES: tuple[str, ...] = (TYPE_STATE_MACHINE, TYPE_EQUATIONS, TYPE_INPUTS, TYPE_PANEL,
+                               TYPE_ACTIONS)
+# Optional master column on state_machine rows: an action run once, on the
+# machine's first pass, before its transitions (empty: nothing runs).
+MASTER_INIT_ACTION_COLUMN = "init_action"
 # Panel files (HTML) bind elements to variables with these attributes.
 PANEL_INPUT_ATTR = "data-input"      # a button or knob that writes an input
 PANEL_SHOW_ATTR = "data-show"        # shows a variable's value
@@ -51,6 +56,16 @@ EQUATIONS_COLUMNS: tuple[str, ...] = (
     "band",
     "order",
 )
+# Optional state machine columns: attach an action to the row.
+SM_ACTION_TYPE_COLUMN = "action_type"
+SM_ACTION_COLUMN = "action"
+ACTION_ENTRY = "entry"      # when the row's transition fires, after the state changes
+ACTION_EXIT = "exit"        # when the row's transition fires, before the state changes
+ACTION_DURING = "during"    # each pass in the row's current_state with no transition firing
+ACTION_TYPES: tuple[str, ...] = (ACTION_ENTRY, ACTION_EXIT, ACTION_DURING)
+# Actions CSV: one Python assignment per row; rows sharing an action name run
+# in file order. rationale is optional.
+ACTIONS_COLUMNS: tuple[str, ...] = ("action", "statement")
 INPUTS_COLUMNS: tuple[str, ...] = ("variable_name", "type", "default_value")
 # Optional display columns of the inputs CSV (front end only).
 INPUTS_DISPLAY_COLUMNS: tuple[str, ...] = (
@@ -66,6 +81,9 @@ INPUT_WIDGETS: dict[str, tuple[str, ...]] = {
     "enum": ("dropdown",),
     "str": ("text",),
 }
+# Widget of an internal variable: declared in the inputs CSV so actions can
+# write it, but shown nowhere (no card, no panel).
+INTERNAL_WIDGET = "none"
 DEFAULT_INPUT_GROUP = "Inputs"
 CHOICES_SEPARATOR = "|"
 
