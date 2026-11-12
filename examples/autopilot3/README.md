@@ -48,8 +48,9 @@ The display names on the front end are the JSON machine names.
 - **Variables:** the separators became input groups (cards).
   - `int` became a slider, `enum` a dropdown and `bool` a switch.
   - `button` became a momentary push-button.
-  - `StateButton` became a lit push-button, lit by its state variable: `FD_btn`
-    is lit by `fd_on`, and likewise for AP, AT and APPR.
+  - `StateButton` became a button on the flight control panel, lit by its
+    state variable: `FD_btn` is lit by `fd_on`, and likewise for AP, AT and
+    APPR (see below).
   - `var` variables and the state variables of the StateButtons (`on_ground`,
     `rollout_active`, `ifcc_in_control`, `ifcc_in_control_prev`, `fd_on`,
     `ap_on`, `at_on`, `appr_on`) are internal variables, with widget `none`.
@@ -60,6 +61,26 @@ The display names on the front end are the JSON machine names.
   as in the previous tool: each line is ANDed with "no earlier line of this
   field". The front end doesn't show these yet; they're in the trace and the
   snapshot outputs.
+
+## Flight control panel (`fcp.html`)
+
+This is the panel from `autopilot2`, shown in the top pane at 3/4 size
+(`scale` 0.75), with its buttons rebound to this model:
+
+| Button | Input (momentary) | Light (`data-lit-by`) |
+|---|---|---|
+| FD (both) | `FD_btn` | `fd_on` |
+| AP | `AP_btn` | `ap_on` |
+| AT | `AT_btn` | `at_on` |
+| APPR | `APPR_btn` | `appr_on` |
+
+As in the previous tool, a press is a momentary pulse and the logic decides
+the light. For example, FD also comes on by itself with AP or TOGA, and its
+light follows. These four buttons therefore have no card on the left.
+
+The other buttons (HDG, NAV, XFR, EDM, FLC, ALT, VNAV, VS, FPA) and the four
+knobs (SPD, HDG, ALT, VS) are inputs the logic does not use, as in
+`autopilot2`.
 
 ## Behaviour that changed
 

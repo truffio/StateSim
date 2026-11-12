@@ -5,10 +5,10 @@ capa,enum,LAND3,Aircraft Controls,dropdown,capa,,,,NONE|APPR1|APPR2|LAND2|LAND3,
 ws_warning,bool,false,Aircraft Controls,switch,ws_warning,,,,,,,
 ground_time_gt_2s,bool,false,Aircraft Controls,switch,ground_time_gt_2s,,,,,,,
 on_ground,bool,true,,none,,,,,,,,
-FD_btn,bool,false,Flight Control Panel,lit,FD_btn,,,,,fd_on,,
-AP_btn,bool,false,Flight Control Panel,lit,AP_btn,,,,,ap_on,,
-AT_btn,bool,false,Flight Control Panel,lit,AT_btn,,,,,at_on,,
-APPR_btn,bool,false,Flight Control Panel,lit,APPR_btn,,,,,appr_on,,
+FD_btn,bool,false,,momentary,FD_btn,,,,,,,fcp.html
+AP_btn,bool,false,,momentary,AP_btn,,,,,,,fcp.html
+AT_btn,bool,false,,momentary,AT_btn,,,,,,,fcp.html
+APPR_btn,bool,false,,momentary,APPR_btn,,,,,,,fcp.html
 TOGA,bool,false,Stick Controls,momentary,TOGA,,,,,,,
 APdisc,bool,false,Stick Controls,momentary,APdisc,,,,,,,
 ATdisc,bool,false,Stick Controls,momentary,ATdisc,,,,,,,
@@ -33,3 +33,16 @@ ap_on,bool,false,,none,,,,,,,,
 appr_on,bool,false,,none,,,,,,,,
 at_on,bool,false,,none,,,,,,,,
 fd_on,bool,false,,none,,,,,,,,
+EDM,bool,false,,momentary,EDM,,,,,,,fcp.html
+hdg_pb,bool,false,,momentary,HDG,,,,,,,fcp.html
+nav_pb,bool,false,,momentary,NAV,,,,,,,fcp.html
+xfr_pb,bool,false,,momentary,XFR,,,,,,,fcp.html
+flc_pb,bool,false,,momentary,FLC,,,,,,,fcp.html
+alt_pb,bool,false,,momentary,ALT,,,,,,,fcp.html
+vnav_pb,bool,false,,momentary,VNAV,,,,,,,fcp.html
+vs_pb,bool,false,,momentary,VS,,,,,,,fcp.html
+fpa_pb,bool,false,,momentary,FPA,,,,,,,fcp.html
+spd_sel,int,250,,knob,SPD,100,350,1,,,,fcp.html
+hdg_sel,int,90,,knob,HDG,0,359,1,,,,fcp.html
+alt_sel,int,15000,,knob,ALT,1000,41000,100,,,,fcp.html
+vs_sel,int,0,,knob,VS,-6000,6000,100,,,,fcp.html
