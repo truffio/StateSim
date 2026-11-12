@@ -1,0 +1,7 @@
+action,statement,rationale
+START,ground_speed = 0,Aircraft parked at start
+TAKEOFF_ROLL,ground_speed = 140,Takeoff roll speed
+CLIMB_INIT,ground_speed = 0,Speed goes back to 0 once the aircraft climbs past 400 ft (as the previous tool did)
+CLIMB_INIT,climb_ticks = 0,Restart the climb timer
+CLIMB_TIMER,climb_ticks += 1,Count the passes spent in Climb (10 Hz)
+LANDING,ground_speed = 60,Rolling out after landing

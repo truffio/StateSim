@@ -1,0 +1,5 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order,action_type,action
+T1,Ground,Takeoff,Ground,toga == True,phase_t1,,Takeoff roll,1,entry,TAKEOFF_ROLL
+T2,Takeoff,Climb,,radio_altitude > 400,phase_t2,,Aircraft in climb,2,entry,CLIMB_INIT
+T3,Climb,Cruise,,climb_ticks >= 50,phase_t3,,5 s of climb: cruise,3,during,CLIMB_TIMER
+T4,Cruise,Ground,,radio_altitude == 0,phase_t4,,Landed,4,exit,LANDING

@@ -67,6 +67,23 @@ one standalone Boolean equation per row. The result is assigned to
 | `equation` | Python-syntax Boolean expression |
 | `result_variable` | Boolean variable receiving this row's result |
 | `order` | evaluation order within the band (manual) |
+| `action_type`, `action` | optional: `entry` / `exit` (when this row's transition fires) or `during` (each pass in `current_state` with no transition firing), and the action name |
+
+**Actions** (`action,statement`, optional `rationale`; master type `actions`):
+one Python assignment per row (`speed = 0`, `n += 1`, `a = b = 0`); rows with
+the same `action` run in file order. Statements write inputs only; declare an
+internal variable as an input with widget `none` (not shown). Order when a
+transition fires: exit action, state change, entry action. A master
+`init_action` column on a `state_machine` row runs an action once on the
+machine's first pass (empty = none). See `docs/decisions.md` Part C.
+
+```
+# actions.csv                      # state_ac.csv (extra columns)
+action,statement                   ...,order,action_type,action
+CLIMB_INIT,ground_speed = 0        ...,8,entry,CLIMB_INIT
+CLIMB_INIT,ap_on = True            ...,30,during,CLIMB_TIMER
+CLIMB_TIMER,climb_ticks += 1
+```
 
 ## Writing equations
 * An equation can read its own result: it gets the previous pass value

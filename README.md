@@ -102,6 +102,16 @@ inputs CSV `default_value` is parsed according to its `type` (`bool`, `int`,
 `float`, `str`). Time is absolute simulation time in milliseconds (`t`), and
 `dt` is the milliseconds since the item last ran.
 
+### Actions (writing variables)
+
+Equations and transitions only compute Booleans and states. To change a
+variable, such as setting the speed slider to 0 when the aircraft starts to
+climb, use actions. They are listed in an `actions` CSV (one Python assignment
+per row, rows with the same name run in order). State machine rows name them
+in two optional columns, `action_type` (`entry`, `exit` or `during`) and
+`action`. Actions write inputs only. An internal counter is an input with
+widget `none`. See `docs/decisions.md` Part C and `docs/cheatsheet.md`.
+
 Known limitations (a load-time checker is a possible future feature): a default
 state with no outgoing transition, a global transition to the current state and
 undefined variable names are not detected at load. An undefined name raises

@@ -60,6 +60,17 @@ class Engine:
            names used by the expression(s) involved (all rows of the winning
            transition for a state change) that exist in the context.
 
+    Actions (actions CSV; docs/decisions.md Part C): when a transition fires,
+    its exit action runs first (state still the old one), then the state
+    changes and the transition is logged, then its entry action runs (state
+    already the new one). When no transition fires (a global self-transition
+    counts as none), the current state's during action runs. On a machine's
+    first pass its master init_action, if any, runs before the transitions
+    are evaluated. An action runs its statements in order with exec() on the
+    context; each changed target is logged with component = SM name, action =
+    f"{action}: set {var} {old!r}->{new!r}". Statements are not type-checked
+    or clamped to min/max.
+
     Expressions are evaluated with the context dict as eval globals
     (``__builtins__`` is stored in it once and excluded from snapshots and
     trace values). A runtime error in an expression is raised as
@@ -104,6 +115,17 @@ class Engine:
                for tr in sm.transitions for r in tr.rows]
         )
         self._sm_names = sorted(sm.name for sm in model.state_machines)
+        # Actions: name -> [(code, targets, used names, source)] in run order.
+        self._actions = {}
+        for a in model.actions:
+            stmts = []
+            for st in a.statements:
+                code = compile(st.statement.strip(), st.source, "exec")
+                used = tuple(sorted(set(names_used(code)) | set(st.targets)))
+                stmts.append((code, st.targets, used, st.source))
+            self._actions[a.name] = stmts
+        self._sm_defs = {sm.name: sm for sm in model.state_machines}
+        self._sm_started: set[str] = set()
         ctx: dict = {}
         for i in model.inputs:
             ctx[i.name] = i.default
@@ -162,7 +184,48 @@ class Engine:
             else:
                 self._run_sm(item.name)
 
+    def _run_action(self, sm: str, action: str) -> None:
+        """Run the statements of ``action`` in order; log each changed target
+        under the state machine's name."""
+        ctx = self._ctx
+        for code, targets, used, src in self._actions[action]:
+            old = [ctx[n] for n in targets]
+            try:
+                exec(code, ctx)
+            except Exception as exc:
+                raise EvaluationError(src, self._tick, sm, exc) from exc
+            for n, before in zip(targets, old):
+                if ctx[n] != before or type(ctx[n]) is not type(before):
+                    self._emit(sm, f"{action}: set {n} {before!r}->{ctx[n]!r}",
+                               self._vals(used))
+
     def _run_sm(self, name: str) -> None:
+        if name not in self._sm_started:
+            self._sm_started.add(name)
+            init = self._sm_defs[name].init_action
+            if init:
+                self._run_action(name, init)
+        fired = self._select(name)
+        if fired is None:
+            during = self._sm_defs[name].during_action(self._ctx[name])
+            if during:
+                self._run_action(name, during)
+            return
+        tr, label, used = fired
+        ctx = self._ctx
+        cur = ctx[name]
+        values = self._vals(used)  # the values that made the transition fire
+        if tr.exit_action:
+            self._run_action(name, tr.exit_action)
+        ctx[name] = tr.next_state
+        self._emit(name, f'{label} {cur}->{tr.next_state} "{tr.title}"', values)
+        if tr.entry_action:
+            self._run_action(name, tr.entry_action)
+
+    def _select(self, name: str):
+        """Evaluate every row; return (transition, label, used names) of the
+        transition that fires, or None when none does (including a global
+        self-transition, which wins the pass but changes nothing)."""
         ctx = self._ctx
         trans = self._sms[name]
         results = []
@@ -184,11 +247,9 @@ class Engine:
             if not ok:
                 continue
             if tr.current_state is None and tr.next_state == cur:
-                return  # global self-transition: no-op, still wins
-            values = self._vals(used)
-            ctx[name] = tr.next_state
-            self._emit(name, f'{label} {cur}->{tr.next_state} "{tr.title}"', values)
-            return
+                return None  # global self-transition: no-op, still wins
+            return tr, label, used
+        return None
 
     def run(self, ticks: int) -> None:
         """Call step() ``ticks`` times (0 is a no-op); ValueError if negative."""

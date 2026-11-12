@@ -1,0 +1,5 @@
+variable_name,type,default_value,group,widget,label,min,max,step
+radio_altitude,int,0,Aircraft,slider,radio_altitude (ft),0,2500,5
+ground_speed,int,0,Aircraft,slider,ground_speed (kt),0,160,5
+toga,bool,false,Aircraft,momentary,TOGA,,,
+climb_ticks,int,0,,none,,,,

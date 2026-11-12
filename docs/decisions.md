@@ -125,3 +125,48 @@ excluded from snapshots and trace values. Expressions are compiled once in
   `set_input` is logged on every call, at the current tick.
 - **Sources.** `"file:line"`, file as written in the master CSV, 1-based
   physical line with the header on line 1.
+
+## Part C: actions (setvar), user-approved 2026-11-12
+
+Actions let the logic write variables, which the previous tool did with a
+transition's `set_vars`.
+
+- **Actions CSV.** A master row of type `actions` (at most one) lists a file
+  with columns `action, statement` and optional `rationale`. Each row is ONE
+  Python assignment: `x = 0`, chained `a = b = 0`, or augmented `x += 1`;
+  targets are plain names. Rows sharing an `action` name form that action and
+  run in file row order (row order matters in this file only). Anything else
+  (two statements, a call, `a.b = 1`, unpacking) is a load error.
+- **Targets.** A statement may write inputs only. An internal variable
+  (counter, timer, flag) is declared in the inputs CSV with widget `none`: it
+  is not shown on the front end. Writing an equation result or a state machine
+  state is a load error, so each variable has one kind of writer. Values are
+  not type-checked or clamped to min/max (like `set_input`).
+- **State machine columns.** Optional `action_type` and `action` on any row;
+  both set or both empty. `action_type` is one of:
+  - `entry`: runs when the row's transition fires, after the state changes.
+  - `exit`: runs when the row's transition fires, before the state changes.
+    At most one entry and one exit action per transition (across its rows).
+  - `during`: belongs to the row's `current_state` (not allowed on a global
+    row). It runs on each pass spent in that state when no transition fires.
+    At most one during action per state (repeating the same name is fine).
+  An action name with no definition in the actions CSV is a load error.
+- **Order in one pass of a machine.** All rows evaluated; winner selected as
+  before. If a transition fires: exit action, state change (logged), entry
+  action. If none fires, or the winner is a global self-transition (no-op),
+  the current state's during action runs. A non-global self-transition fires,
+  so it runs exit and entry and not during.
+- **Initial action.** Optional master column `init_action` on
+  `state_machine` rows (an error on other rows): an action run once on the
+  machine's first pass, before its transitions are evaluated. Empty (the
+  default) runs nothing. Reset builds a new engine, so it runs again.
+- **Visibility and trace.** Writes are visible immediately to later
+  statements and items in the same pass. Each changed target is logged with
+  component = the state machine name and action
+  `<ACTION>: set <var> <old!r>-><new!r>`, values = names used by the
+  statement. The values on a transition event are taken before its exit
+  action runs. A runtime error raises EvaluationError with the actions CSV
+  row as source and the state machine as item.
+- **Front end.** Controls redraw from the engine's input values every step,
+  so a slider written by an action moves by itself; the user can still move
+  it afterwards (last writer wins).
