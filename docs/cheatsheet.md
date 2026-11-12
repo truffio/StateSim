@@ -122,7 +122,7 @@ Components: the state machine name, `EQ` (standalone equations), `INPUT`.
 * Deterministic by design: no threads, async, wall-clock time or randomness.
 
 ## Aircraft panels
-HTML files listed in the master CSV (`fcp.html,panel,,,Flight control panel,0.5`;
+HTML files listed in the master CSV (`fcp.html,panel,,,Flight control panel,0.75`;
 the last column is the optional display `scale`), shown in a full-width top pane. Bind elements with attributes:
 `data-input="var"` (button: `momentary`/`toggle`; element: `knob`),
 `data-show="var" data-format="%03d"`, `data-lit-by="var"` (adds class `lit`).

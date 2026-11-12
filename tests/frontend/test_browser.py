@@ -262,7 +262,7 @@ def test_panel_in_full_width_top_pane(open_page):
     top = pg.locator("#top").bounding_box()
     assert top["x"] == 0 and top["y"] == 0 and top["width"] == 1440
     host = panel(pg).bounding_box()
-    assert host["width"] == pytest.approx(1185 / 2, abs=20)      # master scale 0.5
+    assert host["width"] == pytest.approx(1185 * 0.75, abs=25)   # master scale 0.75
     assert pg.locator(".layout").bounding_box()["y"] >= top["height"] - 1
     for label in ("FD", "HDG", "NAV", "APPR", "AP", "AT", "XFR", "EDM", "FLC", "ALT", "VNAV", "VS", "FPA"):
         assert panel(pg).get_by_role("button", name=label, exact=True).count() >= 1
@@ -273,7 +273,7 @@ def test_panel_in_full_width_top_pane(open_page):
 def test_panel_scale_and_narrow_windows(browser, server_url):
     url = server_url(EXAMPLES / "autopilot2" / "master.csv")
     sizes = {}
-    for vw in (800, 450):
+    for vw in (1000, 450):
         pg = browser.new_page(viewport={"width": vw, "height": 900})
         pg.goto(url)
         pg.wait_for_selector(".st.active")
@@ -282,10 +282,10 @@ def test_panel_scale_and_narrow_windows(browser, server_url):
         sizes[vw] = (host["width"], host["height"])
         assert host["width"] <= vw - 24 + 1 and host["x"] >= 0   # never overflows
         pg.close()
-    assert sizes[800][0] == pytest.approx(1185 / 2, abs=20)      # scale 0.5 fits: unchanged
-    assert sizes[450][0] < sizes[800][0]                         # too narrow: smaller still
+    assert sizes[1000][0] == pytest.approx(1185 * 0.75, abs=25)  # scale 0.75 fits: unchanged
+    assert sizes[450][0] < sizes[1000][0]                        # too narrow: smaller still
     ratio = lambda wh: wh[0] / wh[1]                              # noqa: E731
-    assert ratio(sizes[450]) == pytest.approx(ratio(sizes[800]), rel=0.03)   # proportions kept
+    assert ratio(sizes[450]) == pytest.approx(ratio(sizes[1000]), rel=0.03)   # proportions kept
 
 
 @R("REQ-142")
