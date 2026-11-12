@@ -105,7 +105,8 @@ class StateMachine:
     """One state machine file.
 
     ``name`` is the file stem; it is also the context variable holding the
-    current state (a str). ``master_order`` is the master CSV ``order``.
+    current state (a str). ``display_name`` is the optional master CSV
+    ``name`` column (display only). ``master_order`` is the master CSV ``order``.
     ``states`` lists every state name in first-appearance order, default
     state first. ``transitions`` are sorted by (Transition.order,
     transition_sort_key(id)). ``source`` is the master CSV row
@@ -120,6 +121,12 @@ class StateMachine:
     transitions: tuple[Transition, ...]
     source: str
     master_row: int = 0
+    display_name: str = ""
+
+    @property
+    def label(self) -> str:
+        """Name shown to people: the master CSV ``name`` column, else ``name``."""
+        return self.display_name or self.name
 
 
 @dataclass(frozen=True)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from dataclasses import replace
 from fractions import Fraction
 from os import PathLike
 from pathlib import Path
@@ -310,6 +311,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
 
     entries: list[tuple[str, str, Fraction | None, str]] = []
     row_of: dict[str, int] = {}
+    label_of: dict[str, str] = {}
     seen_single: dict[str, str] = {}
     for line, r in mrows:
         src = f"{master_name}:{line}"
@@ -333,6 +335,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
             seen_single[ftype] = src
         entries.append((fname, ftype, order, src))
         row_of[src] = line
+        label_of[src] = r.get("name", "")
 
     n_sm = sum(1 for e in entries if e[1] == constants.TYPE_STATE_MACHINE)
     if n_sm > constants.MAX_STATE_MACHINES:
@@ -363,7 +366,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         if ftype == constants.TYPE_STATE_MACHINE:
             assert order is not None
             sm, n = _load_state_machine(path, fname, order, src, names, row_of[src])
-            state_machines.append(sm)
+            state_machines.append(replace(sm, display_name=label_of[src]))
             sm_rows += n
         elif ftype == constants.TYPE_EQUATIONS:
             eq_row = row_of[src]

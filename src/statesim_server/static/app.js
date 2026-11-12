@@ -143,7 +143,7 @@ function fmt(v) {
 
 function machineCard(m) {
   const card = el("div", "sm");
-  card.append(el("h3", null, m.name));
+  card.append(el("h3", null, m.label));
   const grid = el("div", "states");
   const boxes = {};
   const info = { boxes, next: m.next, global: m.global, active: null, shown: false };

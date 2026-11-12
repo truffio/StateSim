@@ -13,6 +13,8 @@ RESERVED_NAMES: frozenset[str] = frozenset({"tick", "t", "dt"})
 
 # Master CSV.
 MASTER_COLUMNS: tuple[str, ...] = ("file_name", "type", "order")
+# Optional master column: display name of a state machine (front end only).
+MASTER_NAME_COLUMN = "name"
 TYPE_STATE_MACHINE = "state_machine"
 TYPE_EQUATIONS = "equations"
 TYPE_INPUTS = "inputs"

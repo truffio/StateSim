@@ -144,7 +144,9 @@ are reset (section 6). The logic never writes inputs.
 - Cards are 200 px wide; the grid shows as many columns as fit the right pane
   and as many rows as needed.
 - A card is white with a light grey border and rounded corners. It shows the
-  machine name in blue bold, then its state boxes. Nothing else.
+  machine's display name in blue bold, then its state boxes. Nothing else.
+  The display name is the master CSV `name` column; when it is empty, the
+  file name without `.csv` is shown.
 - The card and its name are not clickable.
 
 ### 5.2 State boxes
@@ -222,7 +224,6 @@ Font: Inter (falls back to the system sans-serif); values in JetBrains Mono.
 - If the connection to the server is lost, a dark message at the bottom of
   the screen says so and the page reconnects every second; it disappears once
   connected again.
-- Machines are titled with their file name (e.g. `state_ac`).
 
 ## 9. Starting the front end
 
@@ -242,4 +243,3 @@ The server listens on `http://127.0.0.1:8765/` and opens the browser. Options:
 | O5 | Aircraft panels: definition, content, size and placement. |
 | O8b | Reloading edited CSV files without restarting the server. |
 | O14 | Whether the splitter position is remembered between sessions. |
-| O15 | Display names for state machines. |

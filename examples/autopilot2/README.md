@@ -3,13 +3,13 @@
 Converted from `A220_demo.json`, a system file of the previous tool. The JSON
 is kept for reference; the tool runs the CSV files: `master.csv`.
 
-| JSON machine | State machine file (= state variable) | Master order |
-|---|---|---|
-| AC phase of flight | `state_ac.csv` | 20 |
-| Vertical Modes | `state_vert.csv` | 30 |
-| Lateral Modes | `state_lat.csv` | 40 |
-| Guidance Source | `guidance_src.csv` | 10 |
-| Autothrottle | `state_at.csv` | 50 |
+| JSON machine | State machine file (= state variable) | Display name (master `name`) | Master order |
+|---|---|---|---|
+| AC phase of flight | `state_ac.csv` | Aircraft phase of flight | 20 |
+| Vertical Modes | `state_vert.csv` | Vertical guidance | 30 |
+| Lateral Modes | `state_lat.csv` | Lateral guidance | 40 |
+| Guidance Source | `guidance_src.csv` | Guidance source | 10 |
+| Autothrottle | `state_at.csv` | Autothrust | 50 |
 
 The previous tool kept copies of the states in variables (`state_ac`,
 `state_vert`, `state_lat`, `state_at`). The machines are named after those

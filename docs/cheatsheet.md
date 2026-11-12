@@ -37,7 +37,8 @@ trace.lines()                                 # list of log lines
 | `ModelError`, `EvaluationError` | load error / run-time error (has `.source .tick .item`) |
 
 ## The CSV files
-**Master** (`file_name,type,order`): one row per file. `type` = `state_machine`,
+**Master** (`file_name,type,order`, optional `name`): one row per file. `name`
+is a state machine's display name on the front end. `type` = `state_machine`,
 `equations` or `inputs`. `order` is used for `state_machine` rows only. Paths
 are relative to the master file. Max one equations row and one inputs row.
 

@@ -40,14 +40,15 @@ proposed and accepted on 2026-11-11 before the first front end was built.
 | D26 | Screen updates | Sent after ticks, at most 30 per second. |
 | D27 | Loading | Model path on the command line: `python -m statesim_server MASTER_CSV`. Reset restores start values without reloading files. |
 | D28 | Clients | Designed for one browser tab. Several tabs share the same session and all see the same values. |
+| D30 | Machine display names | The master CSV has an optional `name` column; a state machine card is titled with it, or with the file name when empty. The state variable in equations is still the file name (e.g. `state_ac`). |
+| D31 | Rationale and titles | Not used by the front end for now (see D10). |
+| D32 | Load errors | Unchanged for now: the first load error stops loading. |
 | D29 | Front end tests | Unit tests of the session, server tests over real HTTP and WebSocket connections, and browser tests with Playwright (skipped when Playwright or Chromium is missing). |
 
 ## Open
 
 | # | Topic | Question |
 |---|---|---|
-| O5 | Aircraft panel definition | File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
-| O8b | Reloading | Reload edited CSV files without restarting the server. |
-| O9 | Error reporting | Report every load error at once instead of the first. |
-| O15 | Machine display names | Machines show their file name (e.g. `state_ac`); a display name (e.g. "AC phase of flight") would need a new master CSV column. |
+| O5 | Aircraft panel definition | **Next feature.** File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
+| O8b | Reloading | Reload edited CSV files without restarting the server. Postponed. |
 | O14 | Splitter position | Whether the split between the panes is remembered between sessions. |

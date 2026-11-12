@@ -24,7 +24,7 @@ def describe_model(model: Model) -> dict:
                     glob.append(tr.next_state)
             elif tr.next_state != tr.current_state and tr.next_state not in nxt[tr.current_state]:
                 nxt[tr.current_state].append(tr.next_state)
-        machines.append({"name": sm.name, "states": list(sm.states), "next": nxt, "global": glob})
+        machines.append({"name": sm.name, "label": sm.label, "states": list(sm.states), "next": nxt, "global": glob})
 
     groups: dict[str, dict] = {}
     for i in model.inputs:

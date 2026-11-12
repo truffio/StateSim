@@ -54,11 +54,12 @@ def boxes(pg):
     return [loc.nth(i).bounding_box() for i in range(loc.count())]
 
 
-@R("REQ-119", "REQ-120", "REQ-121", "REQ-124")
+@R("REQ-119", "REQ-120", "REQ-121", "REQ-124", "REQ-136")
 def test_layout_built_from_model(open_page):
     pg = open_page()
     assert pg.locator(".sm h3").all_text_contents() == \
-        ["state_ac", "state_vert", "state_lat", "guidance_src", "state_at"]
+        ["Aircraft phase of flight", "Vertical guidance", "Lateral guidance", "Guidance source",
+         "Autothrust"]
     assert pg.locator(".sm").first.locator(".st").all_text_contents()[:3] == \
         ["Waiting TOGA", "Takeoff", "Climb"]
     for i in range(5):
