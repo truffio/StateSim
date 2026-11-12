@@ -39,7 +39,7 @@ def describe_model(model: Model) -> dict:
         })
     by_name = {i.name: i for i in model.inputs}
     panels = [{
-        "name": p.name, "html": p.html,
+        "name": p.name, "html": p.html, "scale": p.scale,
         "inputs": {n: {"widget": by_name[n].widget, "label": by_name[n].label,
                        "min": by_name[n].min, "max": by_name[n].max, "step": by_name[n].step}
                    for n in p.inputs},

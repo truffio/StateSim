@@ -119,3 +119,31 @@ def test_autopilot2_a220_autoland_sequence():
     assert (s["state_vert"], s["state_ac"], s["state_at"]) == ("Nosedown", "Landed", "Idle")
     s = run(ground_speed=20)
     assert s["guidance_src"] == "DMC" and s["state_vert"] != "Nosedown"
+
+
+
+@R("REQ-145")
+def test_autopilot2_appr_light_latches_from_descent_to_landed():
+    eng = Engine(load_model(EXAMPLES / "autopilot2" / "master.csv"))
+
+    def run(n=3, **inputs):
+        for k, v in inputs.items():
+            eng.set_input(k, v)
+        eng.run(n)
+        s = eng.snapshot()
+        return s["states"]["state_ac"], s["outputs"]["appr_light"]
+
+    run(1)
+    eng.set_input("toga", True); run(1); eng.set_input("toga", False)
+    run(ground_speed=30)
+    run(fd_on=True, ap_on=True, radio_altitude=500)
+    assert run(radio_altitude=2500) == ("Cruise", False)
+    assert run(appr_selected=True) == ("Cruise", False)        # not in Descent: off
+    run(appr_selected=False)
+    assert run(radio_altitude=1400) == ("Descent", False)
+    assert run(appr_selected=True) == ("Approach", True)       # APPR in Descent: on
+    assert run(appr_selected=False) == ("Approach", True)      # stays on
+    assert run(dmc_tracking_loc=True, dmc_tracking_gs=True) == ("Final Approach", True)
+    assert run(radio_altitude=0, claws_req_flare=True, ground_time_gt_2s=True) == ("Landed", False)
+    eng2 = Engine(eng._model)                                   # reset: start values
+    assert eng2.snapshot()["outputs"]["appr_light"] is False

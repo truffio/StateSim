@@ -113,7 +113,7 @@ def panel_model(tmp_path, html=PANEL, inputs=PIN, master_panel="p.html,panel,,,P
     (tmp_path / "p.html").write_text(html, encoding="utf-8")
     (tmp_path / "inputs.csv").write_text(inputs, encoding="utf-8")
     (tmp_path / "master.csv").write_text(
-        "file_name,type,order,band,name\nS.csv,state_machine,1,10,\ninputs.csv,inputs,,,\n"
+        "file_name,type,order,band,name,scale\nS.csv,state_machine,1,10,,\ninputs.csv,inputs,,,,\n"
         + master_panel, encoding="utf-8")
     return load_model(tmp_path / "master.csv")
 
@@ -152,3 +152,15 @@ def test_several_panel_rows_allowed_and_missing_panel_file_reported(tmp_path):
     with pytest.raises(ModelError) as ei:
         panel_model(tmp_path, master_panel="p.html,panel,,,\nnone.html,panel,,,\n")
     assert "file not found: none.html" in str(ei.value)
+
+
+
+@R("REQ-147")
+def test_panel_scale_column(tmp_path):
+    assert panel_model(tmp_path).panels[0].scale == 1.0
+    m = panel_model(tmp_path, master_panel="p.html,panel,,,Panel P,0.5\n")
+    assert m.panels[0].scale == 0.5
+    for bad, msg in (("0", "scale must be > 0"), ("-1", "scale must be > 0"), ("big", "invalid scale")):
+        with pytest.raises(ModelError) as ei:
+            panel_model(tmp_path, master_panel=f"p.html,panel,,,Panel P,{bad}\n")
+        assert msg in str(ei.value) and "master.csv:4" in str(ei.value)

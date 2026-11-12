@@ -40,7 +40,15 @@ Shown in the top pane (based on `testFCP.html`). `fd_on` (both FD buttons),
 `ap_on` and `appr_selected` (APPR) are toggle buttons there, and EDM is a
 momentary button, so they have no card on the left. The other buttons (HDG,
 NAV, AT, XFR, FLC, ALT, VNAV, VS, FPA) and the four knobs (SPD, HDG, ALT, VS)
-are new inputs the logic does not use yet. No lights are defined yet.
+are new inputs the logic does not use yet. The panel is shown at half size
+(`scale` 0.5 in `master.csv`).
+
+The APPR light (`appr_light` in `equations.csv`, order 15) comes on when APPR
+is selected while the phase of flight is Descent, and stays on until the phase
+of flight is Landed or Waiting TOGA (or Reset). It reads its own previous value
+to stay on, and runs before the phase of flight machine (order 20) so it still
+sees Descent on the pass where Descent changes to Approach. The other buttons
+have no light yet.
 
 ## Behaviour that changed
 

@@ -214,6 +214,19 @@ class _PanelParser(HTMLParser):
     handle_startendtag = handle_starttag
 
 
+def _panel_scale(text: str, source: str) -> float:
+    """Master CSV ``scale`` of a panel row: a positive number, default 1."""
+    if text == "":
+        return 1
+    try:
+        value = float(text)
+    except ValueError:
+        raise ModelError(f"invalid scale {text!r}", source) from None
+    if not value > 0:
+        raise ModelError(f"scale must be > 0, got {text}", source)
+    return value
+
+
 def _load_panel(path: Path, display: str, source: str) -> PanelDef:
     """Read a panel HTML file and collect its variable bindings."""
     try:
@@ -390,6 +403,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     band_of: dict[str, Fraction] = {}
     row_of: dict[str, int] = {}
     label_of: dict[str, str] = {}
+    scale_of: dict[str, float] = {}
     seen_single: dict[str, str] = {}
     for line, r in mrows:
         src = f"{master_name}:{line}"
@@ -411,6 +425,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
                 entries.append((fname, ftype, order, src))
                 row_of[src] = line
                 label_of[src] = r.get("name", "")
+                scale_of[src] = _panel_scale(r.get("scale", ""), src)
                 continue
             if ftype in seen_single:
                 raise ModelError(
@@ -472,7 +487,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
                     )
                 )
         elif ftype == constants.TYPE_PANEL:
-            panels.append(_load_panel(path, fname, src))
+            panels.append(replace(_load_panel(path, fname, src), scale=scale_of[src]))
         else:
             for line, r in _read_csv(path, fname, constants.INPUTS_COLUMNS):
                 rsrc = f"{fname}:{line}"

@@ -17,7 +17,6 @@
     .ss-knob.ss-dragging { cursor: grabbing; }
   `;
   const KNOB_ANGLE = 135;        // degrees each side of 12 o'clock
-  const PX_PER_STEP = 3;         // vertical drag distance per step
   const FLASH_MS = 300;
 
   // printf-like formatting: %d %5d %05d %+05d %.2f %s %%
@@ -76,7 +75,7 @@
       wrap.append(...[...doc.body.childNodes].filter((n) => !(n.nodeName === "STYLE")));
       root.append(base, ...styles, wrap);
       top.append(host);
-      hosts.push({ host, wrap });
+      hosts.push({ host, wrap, scale: p.scale || 1 });
 
       for (const e of root.querySelectorAll("[data-input]")) {
         const name = e.getAttribute("data-input");
@@ -95,11 +94,12 @@
 
     function fit() {
       const avail = top.clientWidth - 2 * 12;
-      for (const { host, wrap } of hosts) {
+      for (const { host, wrap, scale } of hosts) {
         wrap.style.transform = "none";
         const w = wrap.offsetWidth, h = wrap.offsetHeight;
-        const s = w > 0 ? Math.min(1, avail / w) : 1;   // never enlarged
-        wrap.style.transform = s < 1 ? `scale(${s})` : "none";
+        // the panel's scale, reduced further only if the window is too narrow
+        const s = w > 0 ? Math.min(scale, avail / w) : scale;
+        wrap.style.transform = s !== 1 ? `scale(${s})` : "none";
         host.style.width = Math.floor(w * s) + "px";
         host.style.height = Math.ceil(h * s) + "px";
       }
@@ -163,12 +163,25 @@
       requestAnimationFrame(() => { pending = false; send({ type: "set", name, value }); });
     };
 
+    // Dragging: the knob's mark follows the pointer's angle around the knob
+    // centre, so one sweep covers the whole range. The dead zone at the
+    // bottom (between the two end stops) keeps the nearer end.
+    const fromPointer = (m) => {
+      const r = e.getBoundingClientRect();
+      const dx = m.clientX - (r.left + r.width / 2), dy = m.clientY - (r.top + r.height / 2);
+      if (dx * dx + dy * dy < 4) return;                          // too close to the centre
+      let a = Math.atan2(dx, -dy) * 180 / Math.PI;                 // 0 = 12 o'clock, clockwise +
+      if (a > KNOB_ANGLE) a = dx >= 0 ? KNOB_ANGLE : -KNOB_ANGLE;
+      if (a < -KNOB_ANGLE) a = dx >= 0 ? KNOB_ANGLE : -KNOB_ANGLE;
+      set(min + (a + KNOB_ANGLE) / (2 * KNOB_ANGLE) * (max - min));
+    };
     e.addEventListener("pointerdown", (ev) => {
       e.setPointerCapture(ev.pointerId);
       dragging = true;
       e.classList.add("ss-dragging");
-      const y0 = ev.clientY, v0 = value;
-      const move = (m) => set(v0 + Math.round((y0 - m.clientY) / PX_PER_STEP) * step);
+      e.focus({ preventScroll: true });
+      fromPointer(ev);
+      const move = (m) => fromPointer(m);
       const up = () => {
         dragging = false;
         e.classList.remove("ss-dragging");

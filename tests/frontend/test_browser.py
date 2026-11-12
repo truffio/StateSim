@@ -262,24 +262,30 @@ def test_panel_in_full_width_top_pane(open_page):
     top = pg.locator("#top").bounding_box()
     assert top["x"] == 0 and top["y"] == 0 and top["width"] == 1440
     host = panel(pg).bounding_box()
-    assert host["width"] == pytest.approx(1185, abs=40)          # full size: fits 1440 px
+    assert host["width"] == pytest.approx(1185 / 2, abs=20)      # master scale 0.5
     assert pg.locator(".layout").bounding_box()["y"] >= top["height"] - 1
     for label in ("FD", "HDG", "NAV", "APPR", "AP", "AT", "XFR", "EDM", "FLC", "ALT", "VNAV", "VS", "FPA"):
         assert panel(pg).get_by_role("button", name=label, exact=True).count() >= 1
     assert panel(pg).get_by_role("slider").count() == 4
 
 
-@R("REQ-139")
-def test_panel_scales_down_only_when_too_wide(browser, server_url):
+@R("REQ-139", "REQ-147")
+def test_panel_scale_and_narrow_windows(browser, server_url):
     url = server_url(EXAMPLES / "autopilot2" / "master.csv")
-    pg = browser.new_page(viewport={"width": 800, "height": 900})
-    pg.goto(url)
-    pg.wait_for_selector(".st.active")
-    pg.wait_for_timeout(300)
-    host = pg.locator(".panel-host").bounding_box()
-    assert host["width"] <= 800 - 24 + 1                          # scaled to fit, no overflow
-    assert host["x"] >= 0
-    pg.close()
+    sizes = {}
+    for vw in (800, 450):
+        pg = browser.new_page(viewport={"width": vw, "height": 900})
+        pg.goto(url)
+        pg.wait_for_selector(".st.active")
+        pg.wait_for_timeout(300)
+        host = pg.locator(".panel-host").bounding_box()
+        sizes[vw] = (host["width"], host["height"])
+        assert host["width"] <= vw - 24 + 1 and host["x"] >= 0   # never overflows
+        pg.close()
+    assert sizes[800][0] == pytest.approx(1185 / 2, abs=20)      # scale 0.5 fits: unchanged
+    assert sizes[450][0] < sizes[800][0]                         # too narrow: smaller still
+    ratio = lambda wh: wh[0] / wh[1]                              # noqa: E731
+    assert ratio(sizes[450]) == pytest.approx(ratio(sizes[800]), rel=0.03)   # proportions kept
 
 
 @R("REQ-142")
@@ -321,11 +327,20 @@ def test_knobs_turn_within_limits_and_show_formatted_values(open_page):
     pg.mouse.wheel(0, 100)                                           # wheel down: -100 fpm
     pg.wait_for_function("document.querySelector('.panel-host').shadowRoot"
                          ".querySelector('[data-show=vs_sel]').textContent === '-0100'")
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    pg.mouse.move(cx, cy - 6)                                        # press on the knob,
     pg.mouse.down()
-    pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2 - 30, steps=5)
-    pg.mouse.up()                                                    # drag up: +10 steps
+    pg.mouse.move(cx + 60, cy, steps=8)                              # pointer to 3 o'clock
+    pg.mouse.up()                                                    # mark follows: 225/270 of range
     pg.wait_for_function("document.querySelector('.panel-host').shadowRoot"
-                         ".querySelector('[data-show=vs_sel]').textContent === '+0900'")
+                         ".querySelector('[data-show=vs_sel]').textContent === '+4000'")
+    pg.mouse.move(cx, cy - 6)
+    pg.mouse.down()
+    pg.mouse.move(cx + 60, cy + 1, steps=4)
+    pg.mouse.move(cx + 20, cy + 60, steps=4)                         # into the bottom dead zone
+    pg.mouse.up()                                                    # stays at the nearer end
+    pg.wait_for_function("document.querySelector('.panel-host').shadowRoot"
+                         ".querySelector('[data-show=vs_sel]').textContent === '+6000'")
     pg.locator("#pause").click()
     pg.locator("#step").click()
     pg.wait_for_timeout(200)
@@ -378,3 +393,16 @@ def test_panel_lights_scripts_and_style_isolation(open_page, tmp_path):
     page_btn = pg.locator("#pause").evaluate("e => getComputedStyle(e).color")
     assert page_btn != "rgb(1, 2, 3)"
     assert go.evaluate("e => getComputedStyle(e).color") == "rgb(1, 2, 3)"
+
+
+
+@R("REQ-145")
+def test_appr_light_on_the_fcp(open_page):
+    pg = open_page()
+    appr = panel(pg).get_by_role("button", name="APPR")
+    pg.locator("#pause").click()
+    assert "lit" not in (appr.get_attribute("class") or "")
+    appr.click()                                                   # not in Descent: no light
+    pg.locator("#step").click()
+    pg.wait_for_timeout(300)
+    assert "lit" not in (appr.get_attribute("class") or "")

@@ -145,3 +145,4 @@ REQ-143,frontend,"A panel knob shall set its int or float input within min and m
 REQ-144,frontend,"A panel readout shall show its variable's current value formatted with its data-format (printf-like: %d, %03d, %+05d, %.2f, %s)",frontend_ui_spec.3,use_case_test
 REQ-145,frontend,"A panel element with data-lit-by shall have the lit class while that variable is true, so lights follow the logic and not the click",frontend_ui_spec.3,use_case_test
 REQ-146,frontend,"Panel styles shall not affect the rest of the page, and scripts and inline event handlers in a panel file shall not run",frontend_ui_spec.3,use_case_test
+REQ-147,frontend,"A panel row of the master CSV may set a scale column (positive number, default 1); the panel shall be shown at that size with its proportions kept, and scaled down further only if the window is too narrow",frontend_ui_spec.3.1,use_case_test

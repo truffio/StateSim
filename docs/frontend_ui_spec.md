@@ -1,6 +1,6 @@
 # StateSim user interface spec
 
-Version: draft 3, 2026-11-11. Status: implemented on branch `frontend`
+Version: draft 4, 2026-11-11. Status: implemented on branch `frontend`
 (`src/statesim_server/`); requirements REQ-114 to REQ-134.
 
 This spec defines the screen of the StateSim front end: what is on it, what
@@ -76,8 +76,10 @@ the look entirely with HTML and CSS; StateSim provides the behaviour.
 
 - Panels are shown in the **top pane**, full window width, above the left and
   right panes, in master CSV order, centred. The top pane is always shown.
-- A panel is shown at its natural size. If the window is narrower than the
-  panel, it is scaled down to fit (never enlarged), without leaving gaps.
+- A panel is shown at its natural size times the `scale` of its master CSV
+  row (optional, a positive number, default 1; e.g. `0.5` for half size),
+  with its proportions kept. If the window is narrower than that, it is
+  scaled down further to fit, without leaving gaps.
 
 ### 3.2 What StateSim takes from the file
 
@@ -93,7 +95,7 @@ the look entirely with HTML and CSS; StateSim provides the behaviour.
 | Attribute | On | Effect |
 |---|---|---|
 | `data-input="var"` | a button | Writes the input `var`. A `momentary` input gets a pulse per press (like a momentary push-button); a `toggle` input flips between true and false on each press. The button gets class `pressed` for 0.3 s after each press (the panel's CSS can style it). Keyboard: Enter or Space. |
-| `data-input="var"` | any element (e.g. a round `div`) whose input is a `knob` | Becomes a knob: it rotates over 270° from min to max, with a pointer mark. Drag up or down (3 px per step), mouse wheel (Shift: 10 steps), or the keyboard (arrows: 1 step, Page Up/Down: 10 steps, Home/End: min/max). It stops at min and max (no wrap) and sends whole steps. |
+| `data-input="var"` | any element (e.g. a round `div`) whose input is a `knob` | Becomes a knob: it turns over 270° (min at 7:30, max at 4:30), with a pointer mark. Press on the knob and drag: the mark follows the pointer's angle around the knob (the pointer may leave the knob), so one sweep covers the full range; in the bottom gap between the end stops it stays at the nearer end. Also the mouse wheel (Shift: 10 steps) and the keyboard (arrows: 1 step, Page Up/Down: 10 steps, Home/End: min/max). It stops at min and max (no wrap) and sends whole steps. |
 | `data-show="var"` | any element | Its text is the current value of `var` (an input, result variable or state), formatted with `data-format`: printf-like, e.g. `%d`, `%03d` (`090`), `%+05d` (`+0500`, `-0500`), `%.2f`, `%s`. |
 | `data-lit-by="var"` | any element | Has class `lit` while `var` is true (the panel's CSS draws the light). Lights follow the logic, never the click. |
 
@@ -282,6 +284,6 @@ The server listens on `http://127.0.0.1:8765/` and opens the browser. Options:
 
 | # | Point |
 |---|---|
-| O5b | Aircraft panels: the light equations, and whether the panel is redesigned to be smaller. |
+| O5b | Aircraft panels: light equations for the other FCP buttons. |
 | O8b | Reloading edited CSV files without restarting the server. |
 
