@@ -225,3 +225,25 @@ def test_push_button_look_and_press_feedback(open_page):
     pg.wait_for_timeout(700)
     assert "pressed" not in toga.get_attribute("class")
     assert style() == ["rgb(246, 248, 250)", "rgb(28, 36, 48)"]
+
+
+@R("REQ-137")
+def test_divider_position_is_remembered(open_page):
+    pg = open_page()
+    width = lambda: pg.locator("#left").bounding_box()["width"]   # noqa: E731
+    pg.locator("#splitter").focus()
+    for _ in range(3):
+        pg.keyboard.press("ArrowRight")
+    assert width() == 500
+    pg.reload()
+    pg.wait_for_selector(".st.active")
+    assert width() == 500
+    x = pg.locator("#splitter").bounding_box()["x"] + 4
+    pg.mouse.move(x, 450); pg.mouse.down(); pg.mouse.move(x - 100, 450, steps=5); pg.mouse.up()
+    pg.reload()
+    pg.wait_for_selector(".st.active")
+    assert width() == 400
+    pg.evaluate("localStorage.setItem('statesim.leftPaneWidth', '5000')")   # too wide for the window
+    pg.reload()
+    pg.wait_for_selector(".st.active")
+    assert width() == 1440 - 240

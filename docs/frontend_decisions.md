@@ -43,6 +43,7 @@ proposed and accepted on 2026-11-11 before the first front end was built.
 | D30 | Machine display names | The master CSV has an optional `name` column; a state machine card is titled with it, or with the file name when empty. The state variable in equations is still the file name (e.g. `state_ac`). |
 | D31 | Rationale and titles | Not used by the front end for now (see D10). |
 | D32 | Load errors | Unchanged for now: the first load error stops loading. |
+| D33 | Divider position | The page remembers the divider position (in the browser's local storage) and restores it when opened again. |
 | D29 | Front end tests | Unit tests of the session, server tests over real HTTP and WebSocket connections, and browser tests with Playwright (skipped when Playwright or Chromium is missing). |
 
 ## Open
@@ -51,4 +52,4 @@ proposed and accepted on 2026-11-11 before the first front end was built.
 |---|---|---|
 | O5 | Aircraft panel definition | **Next feature.** File format, widgets (annunciators, lit buttons, text displays), layout, which variables drive them. |
 | O8b | Reloading | Reload edited CSV files without restarting the server. Postponed. |
-| O14 | Splitter position | Whether the split between the panes is remembered between sessions. |
+

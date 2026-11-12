@@ -49,7 +49,7 @@ actions to it. It never evaluates logic itself.
 | Keyboard | The bar can take keyboard focus (Tab). Left and right arrows move it by 20 px. |
 | Highlight | The bar takes a light blue tint while hovered, focused or dragged. |
 | Limits | Left pane at least 280 px; right pane at least 240 px. When the window is resized, the split is clamped to these limits. |
-| Default | Left pane 440 px wide. |
+| Default and memory | The position is remembered in the browser and restored when the page is opened again (clamped to the limits). Without a remembered position, the left pane is 440 px wide. |
 
 Content reflows when the split moves: input cards rearrange their columns,
 and the state machine grid gains or loses columns. Nothing is clipped.
@@ -242,4 +242,4 @@ The server listens on `http://127.0.0.1:8765/` and opens the browser. Options:
 |---|---|
 | O5 | Aircraft panels: definition, content, size and placement. |
 | O8b | Reloading edited CSV files without restarting the server. |
-| O14 | Whether the splitter position is remembered between sessions. |
+

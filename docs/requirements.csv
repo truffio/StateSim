@@ -135,3 +135,4 @@ REQ-133,frontend,"Names from the CSV files shall be shown as text, never interpr
 REQ-134,frontend,The server shall listen on 127.0.0.1 by default,frontend_decisions.D1,unit_test
 REQ-135,frontend,"Momentary push-buttons shall have a light grey fill and a dark outline; every push-button shall show visible feedback while held and for 0.3 s after each press",frontend_ui_spec.4.3,use_case_test
 REQ-136,frontend,"The master CSV shall accept an optional name column giving a state machine's display name; the page shall title each machine with it, or with the file name when it is empty",frontend_decisions.D30,use_case_test
+REQ-137,frontend,"The page shall remember the divider position in the browser and restore it, within the pane limits, when the page is opened again; without stored data it shall use 440 px",frontend_decisions.D33,use_case_test

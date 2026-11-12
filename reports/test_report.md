@@ -4,11 +4,11 @@
 
 | Category | Total | Pass | Fail | Error | Skip |
 |---|---:|---:|---:|---:|---:|
-| Unit | 230 | 230 | 0 | 0 | 0 |
+| Unit | 231 | 231 | 0 | 0 | 0 |
 | Requirement | 105 | 105 | 0 | 0 | 0 |
-| Total | 335 | 335 | 0 | 0 | 0 |
+| Total | 336 | 336 | 0 | 0 | 0 |
 
-Requirements (136): PASS 130, FAIL 0, UNTESTED 0, NOT-AUTOMATED 6, SKIP 0
+Requirements (137): PASS 131, FAIL 0, UNTESTED 0, NOT-AUTOMATED 6, SKIP 0
 
 ## 2. Failures
 
@@ -154,6 +154,7 @@ No failures or errors.
 | REQ-134 | frontend | The server shall listen on 127.0.0.1 by default | unit_test | tests.unit.test_session::test_server_listens_on_localhost_by_default (pass) | PASS |
 | REQ-135 | frontend | Momentary push-buttons shall have a light grey fill and a dark outline; every push-button shall show visible feedback while held and for 0.3 s after each press | use_case_test | tests.frontend.test_browser::test_push_button_look_and_press_feedback (pass) | PASS |
 | REQ-136 | frontend | The master CSV shall accept an optional name column giving a state machine's display name; the page shall title each machine with it, or with the file name when it is empty | use_case_test | tests.frontend.test_browser::test_layout_built_from_model (pass); tests.unit.test_inputs_display::test_master_name_column_sets_state_machine_display_name (pass) | PASS |
+| REQ-137 | frontend | The page shall remember the divider position in the browser and restore it, within the pane limits, when the page is opened again; without stored data it shall use 440 px | use_case_test | tests.frontend.test_browser::test_divider_position_is_remembered (pass) | PASS |
 
 ## 4. Orphan tests (no requirement property)
 

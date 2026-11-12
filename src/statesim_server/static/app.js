@@ -231,7 +231,15 @@ $("reset").addEventListener("click", () => send({ type: "reset" }));
 
 // --------------------------------------------------------------- splitter
 const left = $("left"), bar = $("splitter");
-const MIN = 280;
+const MIN = 280, DEFAULT_W = 440, KEY = "statesim.leftPaneWidth";
+// The divider position is remembered in this browser (a convenience only:
+// storage may be unavailable, then the default is used).
+function savedW() {
+  try { const v = Number(localStorage.getItem(KEY)); return v > 0 ? v : DEFAULT_W; } catch { return DEFAULT_W; }
+}
+function saveW() {
+  try { localStorage.setItem(KEY, String(Math.round(left.getBoundingClientRect().width))); } catch { /* ignore */ }
+}
 const maxW = () => Math.max(MIN, window.innerWidth - 240);
 function setW(w) {
   w = Math.round(Math.min(maxW(), Math.max(MIN, w)));
@@ -247,16 +255,17 @@ bar.addEventListener("pointerdown", (e) => {
   const up = () => {
     bar.removeEventListener("pointermove", move); bar.removeEventListener("pointerup", up);
     bar.classList.remove("dragging"); document.body.classList.remove("resizing");
+    saveW();
     fitStateText();
   };
   bar.addEventListener("pointermove", move); bar.addEventListener("pointerup", up);
 });
 bar.addEventListener("keydown", (e) => {
   const w = left.getBoundingClientRect().width;
-  if (e.key === "ArrowLeft") { setW(w - 20); e.preventDefault(); }
-  if (e.key === "ArrowRight") { setW(w + 20); e.preventDefault(); }
+  if (e.key === "ArrowLeft") { setW(w - 20); saveW(); e.preventDefault(); }
+  if (e.key === "ArrowRight") { setW(w + 20); saveW(); e.preventDefault(); }
 });
 window.addEventListener("resize", () => setW(left.getBoundingClientRect().width));
-setW(440);
+setW(savedW());
 
 connect();
