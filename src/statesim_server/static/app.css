@@ -41,8 +41,13 @@ body.resizing { cursor: col-resize; user-select: none; }
 .card h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--blue); text-transform: uppercase; }
 .pb { font: inherit; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 10px; text-transform: uppercase;
       overflow-wrap: anywhere; cursor: pointer; }
-.pb.momentary { border: 0; background: var(--red); color: #fff; padding: 12px; }
+.pb.momentary { border: 2px solid var(--ink); background: var(--state-bg); color: var(--ink); }
 .pb.lit { border: 2px solid var(--ink); background: var(--card); color: var(--ink); }
+/* press feedback: while held, and for a moment after each click */
+.pb { transition: background-color .25s, border-color .25s, color .25s, transform .05s; }
+.pb:active, .pb.pressed { border-color: var(--blue); background: var(--blue-tint); color: var(--blue-dark);
+                          transition: none; }
+.pb:active { transform: translateY(1px); }
 .pb.lit.on { border-color: var(--green-dark); background: var(--green); color: #fff; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
 .row > label, .switch > span:first-child { overflow-wrap: anywhere; min-width: 0; }

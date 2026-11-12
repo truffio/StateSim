@@ -4,11 +4,11 @@
 
 | Category | Total | Pass | Fail | Error | Skip |
 |---|---:|---:|---:|---:|---:|
-| Unit | 228 | 228 | 0 | 0 | 0 |
+| Unit | 229 | 229 | 0 | 0 | 0 |
 | Requirement | 105 | 105 | 0 | 0 | 0 |
-| Total | 333 | 333 | 0 | 0 | 0 |
+| Total | 334 | 334 | 0 | 0 | 0 |
 
-Requirements (134): PASS 128, FAIL 0, UNTESTED 0, NOT-AUTOMATED 6, SKIP 0
+Requirements (135): PASS 129, FAIL 0, UNTESTED 0, NOT-AUTOMATED 6, SKIP 0
 
 ## 2. Failures
 
@@ -152,6 +152,7 @@ No failures or errors.
 | REQ-132 | frontend | The splitter shall resize the two panes by dragging or with the arrow keys (20 px), keeping the left pane at least 280 px and the right pane at least 240 px | use_case_test | tests.frontend.test_browser::test_splitter_resizes_panes (pass) | PASS |
 | REQ-133 | frontend | Names from the CSV files shall be shown as text, never interpreted as HTML | use_case_test | tests.frontend.test_browser::test_names_are_shown_as_text (pass) | PASS |
 | REQ-134 | frontend | The server shall listen on 127.0.0.1 by default | unit_test | tests.unit.test_session::test_server_listens_on_localhost_by_default (pass) | PASS |
+| REQ-135 | frontend | Momentary push-buttons shall have a light grey fill and a dark outline; every push-button shall show visible feedback while held and for 0.3 s after each press | use_case_test | tests.frontend.test_browser::test_push_button_look_and_press_feedback (pass) | PASS |
 
 ## 4. Orphan tests (no requirement property)
 

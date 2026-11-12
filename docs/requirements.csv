@@ -133,3 +133,4 @@ REQ-131,frontend,The server shall send screen updates at most 30 times per secon
 REQ-132,frontend,"The splitter shall resize the two panes by dragging or with the arrow keys (20 px), keeping the left pane at least 280 px and the right pane at least 240 px",frontend_ui_spec.1.1,use_case_test
 REQ-133,frontend,"Names from the CSV files shall be shown as text, never interpreted as HTML",frontend_ui_spec.8,use_case_test
 REQ-134,frontend,The server shall listen on 127.0.0.1 by default,frontend_decisions.D1,unit_test
+REQ-135,frontend,"Momentary push-buttons shall have a light grey fill and a dark outline; every push-button shall show visible feedback while held and for 0.3 s after each press",frontend_ui_spec.4.3,use_case_test

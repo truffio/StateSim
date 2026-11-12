@@ -114,7 +114,7 @@ are reset (section 6). The logic never writes inputs.
 
 | Control | Input type | Look | Clickable | What it does | What changes colour |
 |---|---|---|---|---|---|
-| **Momentary push-button** (`momentary`) | bool | Full card width, solid red, white bold upper-case label | Yes | A press sends a pulse: the input is true for one period of the slowest band, then false. | Nothing. Its colour is fixed. |
+| **Momentary push-button** (`momentary`) | bool | Full card width, light grey fill, dark 2 px outline, dark bold upper-case label | Yes | A press sends a pulse: the input is true for one period of the slowest band, then false. | Press feedback only (below). |
 | **Lit push-button** (`lit`) | bool | Full card width, bold upper-case label | Yes | A press sends the same pulse as a momentary push-button. | The background follows a **linked logic variable**, not the click: green with white text when the variable is true; white with dark border and dark text when false. A press the logic rejects leaves it unlit. |
 | **Slider** (`slider`) | int, float | Input name on the left and its value on the right in blue monospace, slider below across the card | Yes (drag the knob or click the track) | Writes the value while it moves, within the min, max and step of the definition. The value readout follows. | Nothing. |
 | **Switch** (`switch`) | bool | Input name on the left, two-state sliding switch on the right | Yes (switch or name) | Each click toggles the input between true and false. | On: blue track, knob on the right. Off: grey track, knob on the left. |
@@ -122,6 +122,10 @@ are reset (section 6). The logic never writes inputs.
 | **Number field** (`number`) | int, float | Input name on the left, number box on the right | Yes | Writes the typed value when it is confirmed (Enter or leaving the field). | Nothing. |
 | **Text field** (`text`) | str | Input name on the left, text box on the right | Yes | Writes the text when it is confirmed. | Nothing. |
 
+- **Press feedback** (both push-button kinds): while the pointer holds the
+  button down it turns light blue with a blue outline and moves down by 1 px;
+  after each click (mouse or keyboard) it stays light blue for 0.3 s, then
+  fades back. A lit push-button that is lit stays green.
 - All controls can be reached and used with the keyboard: Tab to focus;
   Enter or Space presses a push-button or toggles a switch; arrow keys move a
   slider by one step or change the drop-down choice.
@@ -195,13 +199,13 @@ of catching up.
 | Token | Value | Used for |
 |---|---|---|
 | Blue | #005c99 | Card and machine titles, values, active state, selected run mode, switch on |
-| Dark blue | #003d66 | Text of a next state |
-| Light blue | #dcf0fa | Fill of a next state, splitter highlight |
+| Dark blue | #003d66 | Text of a next state and of a pressed push-button |
+| Light blue | #dcf0fa | Fill of a next state and of a pressed push-button, splitter highlight |
 | Green / dark green | #00a37d / #007a5e | Lit push-button fill / border |
-| Red | #c62a3a | Momentary push-button |
 | Orange / light orange / dark orange | #b35c00 / #fff1de / #6b3600 | Global next state border / fill / text |
 | Grey track | #b9c1cc | Switch off |
 | Page background | #eef1f5 | Page and splitter |
+| Light grey | #f6f8fa | Inactive state, momentary push-button |
 | Card | #ffffff | Input and machine cards, buttons |
 | Ink / muted | #1c2430 / #4a5565 | Text / inactive state text |
 | Lines | #d9dee5, #c3cad4 | Card and state borders, button borders |

@@ -68,7 +68,13 @@ function control(i) {
   if (i.widget === "momentary" || i.widget === "lit") {
     const b = el("button", "pb " + i.widget, i.label);
     b.type = "button";
-    b.addEventListener("click", () => send({ type: "press", name: i.name }));
+    let flash = null;
+    b.addEventListener("click", () => {
+      send({ type: "press", name: i.name });
+      b.classList.add("pressed");                  // visible feedback, even for short pulses
+      clearTimeout(flash);
+      flash = setTimeout(() => b.classList.remove("pressed"), 300);
+    });
     if (i.widget === "lit") {
       b.setAttribute("aria-pressed", "false");
       litButtons.push({ el: b, var: i.lit_by });

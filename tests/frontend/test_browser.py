@@ -209,3 +209,18 @@ def test_names_are_shown_as_text(open_page, tmp_path):
     assert pg.locator(".card h2").text_content() == "<i>G</i>"
     assert pg.locator(".switch > span:first-child").text_content() == "<u>lab</u>"
     assert pg.locator("img, b, i, u").count() == 0
+
+
+@R("REQ-135")
+def test_push_button_look_and_press_feedback(open_page):
+    pg = open_page()
+    toga = pg.get_by_role("button", name="TOGA")
+    style = lambda: toga.evaluate(   # noqa: E731
+        "e => { const s = getComputedStyle(e); return [s.backgroundColor, s.borderTopColor]; }")
+    assert style() == ["rgb(246, 248, 250)", "rgb(28, 36, 48)"]   # light grey, dark outline
+    toga.click()
+    assert "pressed" in toga.get_attribute("class")
+    assert style() == ["rgb(220, 240, 250)", "rgb(0, 92, 153)"]   # light blue, blue outline
+    pg.wait_for_timeout(700)
+    assert "pressed" not in toga.get_attribute("class")
+    assert style() == ["rgb(246, 248, 250)", "rgb(28, 36, 48)"]
