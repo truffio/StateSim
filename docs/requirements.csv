@@ -5,10 +5,10 @@ REQ-003,master,The engine shall load one state machine per state_machine file in
 REQ-004,master,The engine shall use the master CSV order column to order state machines within their band,framework.master_configuration.columns.order,use_case_test
 REQ-005,master,The engine shall share one ordering space within a band between state machines and equations,framework.master_configuration.columns.order,use_case_test
 REQ-006,master,The engine shall ignore the master CSV order column for equations and inputs rows,framework.master_configuration.columns.order,unit_test
-REQ-007,master,The engine shall take execution rate from the band column of the definition files and not from the master CSV,framework.master_configuration.description,unit_test
+REQ-007,master,"The engine shall take a state machine's execution rate from the band column of its master CSV row, and an equation's rate from the band column of the equations file",framework.master_configuration.description,unit_test
 REQ-008,loader,The engine shall read all definition files including the master file as CSV with no YAML or JSON inputs,framework.components.definition_source,review
 REQ-009,loader,The engine shall build an immutable Model from the master CSV and the files it references,framework.architecture.design,unit_test
-REQ-010,loader,"The engine shall read state machine CSV columns transition_id, current_state, next_state, default_state, equation, result_variable, rationale, title, band and order",framework.csv_formats.state_machine_file.columns,unit_test
+REQ-010,loader,"The engine shall read state machine CSV columns transition_id, current_state, next_state, default_state, equation, result_variable, rationale, title and order",framework.csv_formats.state_machine_file.columns,unit_test
 REQ-011,loader,"The engine shall read equations CSV columns equation, explanation, rationale, result_variable, band and order",framework.csv_formats.equations_file.columns,unit_test
 REQ-012,loader,"The engine shall read inputs CSV columns variable_name, type and default_value",framework.csv_formats.inputs_file.columns,unit_test
 REQ-013,equations,The engine shall evaluate equations as Python-syntax Boolean expressions over context variable names,framework.components.logic_evaluation,use_case_test
@@ -46,7 +46,7 @@ REQ-044,bands,The engine shall evaluate all items sharing a band at the same rat
 REQ-045,bands,The engine shall use a tick rate equal to the least common multiple of all band frequencies,framework.architecture.constraints,unit_test
 REQ-046,bands,The engine shall make every band period a whole number of ticks,framework.architecture.constraints,unit_test
 REQ-047,bands,The engine shall use exact integer arithmetic for scheduling with no floating-point accumulation,framework.architecture.constraints,static_check
-REQ-048,bands,The engine shall support band and order columns in every state machine file and the equations file,framework.csv_formats.common_columns.note,unit_test
+REQ-048,bands,"The engine shall read band and order columns in the equations file, an order column in every state machine file, and order and band columns on master CSV state machine rows",framework.csv_formats.common_columns.note,unit_test
 REQ-049,execution,The engine shall run items within a band in their manual order each time the band is scheduled,framework.timing_and_execution.execution_order.determinism,use_case_test
 REQ-050,execution,The engine shall let a later item see the result of an earlier item in the same pass,framework.timing_and_execution.execution_order.determinism,use_case_test
 REQ-051,execution,The engine shall let an earlier item see the previous pass value of a later item result,framework.timing_and_execution.execution_order.determinism,use_case_test
@@ -68,7 +68,7 @@ REQ-066,loadcheck,The engine shall treat rows sharing a transition_id as one tra
 REQ-067,loadcheck,The engine shall reject a transition referencing an unknown state at load,framework.architecture.design,unit_test
 REQ-068,loadcheck,The engine shall reject a state machine file with zero default_state rows at load,framework.csv_formats.state_machine_file.columns.default_state,unit_test
 REQ-069,loadcheck,The engine shall reject a state machine file with more than one default_state row at load,framework.csv_formats.state_machine_file.columns.default_state,unit_test
-REQ-070,loadcheck,The engine shall reject a state machine file whose rows use more than one band at load,framework.csv_formats.common_columns.band,unit_test
+REQ-070,loadcheck,"The engine shall reject at load a state machine file that has a band column (its band is set in the master CSV)",framework.csv_formats.common_columns.band,unit_test
 REQ-071,loadcheck,The engine shall reject at load rows sharing a transition_id that disagree on current_state or next_state,framework.csv_formats.state_machine_file.columns.transition_id,unit_test
 REQ-072,loadcheck,The engine shall reject at load a non-empty current_state that can never be entered (neither the default_state nor any transition next_state),framework.architecture.design,unit_test
 REQ-073,loadcheck,The engine shall reject a total equation count above MAX_EQUATIONS at load,framework.supported_logic.tool_constraints,unit_test
@@ -136,3 +136,4 @@ REQ-134,frontend,The server shall listen on 127.0.0.1 by default,frontend_decisi
 REQ-135,frontend,"Momentary push-buttons shall have a light grey fill and a dark outline; every push-button shall show visible feedback while held and for 0.3 s after each press",frontend_ui_spec.4.3,use_case_test
 REQ-136,frontend,"The master CSV shall accept an optional name column giving a state machine's display name; the page shall title each machine with it, or with the file name when it is empty",frontend_decisions.D30,use_case_test
 REQ-137,frontend,"The page shall remember the divider position in the browser and restore it, within the pane limits, when the page is opened again; without stored data it shall use 440 px",frontend_decisions.D33,use_case_test
+REQ-138,loadcheck,"The engine shall reject at load a master CSV state_machine row whose band is empty, not a number or not positive",framework.master_configuration.columns.band,use_case_test

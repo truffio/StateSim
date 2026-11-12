@@ -198,13 +198,14 @@ def test_splitter_resizes_panes(open_page):
 @R("REQ-133")
 def test_names_are_shown_as_text(open_page, tmp_path):
     (tmp_path / "M.csv").write_text(
-        "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order\n"
-        "1,<b>A</b>,<img src=x onerror=alert(1)>,<b>A</b>,False,r,,,10,1\n", encoding="utf-8")
+        "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order\n"
+        "1,<b>A</b>,<img src=x onerror=alert(1)>,<b>A</b>,False,r,,,1\n", encoding="utf-8")
     (tmp_path / "inputs.csv").write_text(
         "variable_name,type,default_value,group,label\nx,bool,false,<i>G</i>,<u>lab</u>\n",
         encoding="utf-8")
     (tmp_path / "master.csv").write_text(
-        "file_name,type,order\nM.csv,state_machine,1\ninputs.csv,inputs,\n", encoding="utf-8")
+        "file_name,type,order,band\nM.csv,state_machine,1,10\ninputs.csv,inputs,,\n",
+        encoding="utf-8")
     pg = open_page(master=tmp_path / "master.csv")
     assert pg.locator(".st").all_text_contents() == ["<b>A</b>", "<img src=x onerror=alert(1)>"]
     assert pg.locator(".card h2").text_content() == "<i>G</i>"

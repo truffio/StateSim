@@ -94,9 +94,9 @@ framework:
       A single master CSV file defines the overall simulation composition.
       Each row is the name of a file that defines something: one row per
       state machine file, plus one row for the equations file and one row
-      for the external inputs file. Execution
-      rate and order are not set here; they are defined on each row of the
-      individual definition files.
+      for the external inputs file. A state machine's execution rate
+      (band) and order are set on its row here; equations carry their own
+      band and order in the equations file.
     columns:
       file_name: name (path) of a state machine or equations CSV file
       type: >
@@ -107,6 +107,11 @@ framework:
         state machine within its band, set manually. It is the same
         mechanism, and shares the same ordering space within a band, as
         the order of equations. Not used for equations or inputs rows.
+      band: >
+        For state_machine rows (required): the rate, in Hz, at which that
+        state machine runs. Not used for equations or inputs rows.
+      name: >
+        Optional display name of a state machine, shown by the front end.
 
   component_configuration:
     description: >
@@ -114,8 +119,8 @@ framework:
       single CSV file holding all Boolean equations that are not linked to
       a state machine, plus a single CSV file defining the external
       inputs. With n state machines there are therefore n + 2 definition
-      files. Every file includes band and order columns (see
-      csv_formats.common_columns).
+      files. Every equation row has band and order columns; a state machine
+      file has an order column, and its band is set in the master CSV.
     standalone_equation_reuse: >
       An equation defined in the standalone equations file can be used
       inside a state machine by referring to the Boolean variable assigned
@@ -127,17 +132,17 @@ framework:
     common_columns:
       band: >
         The rate, in Hertz (Hz), at which the row is evaluated. All rows
-        sharing a band are evaluated at the same rate. All rows of one
-        state machine file must share a single band; a state machine is
-        never split across bands. A band is an explicit frequency; bands
+        sharing a band are evaluated at the same rate. A state machine runs
+        at one band, set on its master CSV row (its file has no band
+        column); a state machine is never split across bands. A band is an explicit frequency; bands
         are not required to be integer multiples or factors of each other
         (e.g. 20 Hz and 30 Hz may coexist).
       order: >
         The relative order of evaluation within the band. Set manually by
         the author.
       note: >
-        Present in every definition file (state machine files and the
-        standalone equations file).
+        band: in the equations file and the master CSV (state machine
+        rows). order: in every definition file.
 
     state_machine_file:
       description: >
@@ -168,8 +173,10 @@ framework:
           String explaining why this transition / equation exists.
         title: >
           String giving the transition a short title.
-        band: see common_columns
         order: see common_columns
+      band_note: >
+        A state machine file has no band column; the band is the master
+        CSV band column of its row.
       multiple_equations: >
         When a transition has more than one equation (row, grouped by
         transition_id), the equations are ANDed together: the transition

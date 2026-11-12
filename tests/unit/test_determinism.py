@@ -104,7 +104,7 @@ def _distinct_orders(master: Path) -> bool:
             with open(d / m["file_name"], newline="", encoding="utf-8") as g:
                 rows = list(csv.DictReader(g))
             if m["type"] == "state_machine":
-                keys = [(rows[0]["band"], m["order"])]
+                keys = [(m["band"], m["order"])]
                 row_orders = [r["order"] for r in rows]
                 if len(set(row_orders)) != len(row_orders):
                     return False

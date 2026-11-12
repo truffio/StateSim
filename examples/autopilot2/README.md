@@ -19,7 +19,7 @@ first so `ifcc_in_control` is up to date when the other machines read it.
 
 ## How the conversion was done
 
-- Everything runs in one 20 Hz band.
+- Everything runs in one 10 Hz band (state machine bands in `master.csv`).
 - Each `event` became one transition. Its top-level `and` terms became
   separate rows of that transition (ANDed); a condition with a top-level `or`
   stays one row. Row results are named `<machine>_<transition>_<row>`.

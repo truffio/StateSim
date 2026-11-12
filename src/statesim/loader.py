@@ -197,13 +197,16 @@ def names_of(inputs, equations, state_machines) -> set[str]:
 
 def _load_state_machine(
     path: Path, display: str, master_order: Fraction, master_source: str, names: _Names,
-    master_row: int = 0,
+    master_row: int = 0, band: Fraction = Fraction(1),
 ) -> tuple[StateMachine, int]:
+    """Load one state machine file. Its band comes from the master CSV."""
     stem = Path(display).stem
     rows = _read_csv(path, display, constants.STATE_MACHINE_COLUMNS)
+    if rows and "band" in rows[0][1]:
+        raise ModelError("band is set in the master CSV, not in the state machine file",
+                         f"{display}:1")
 
     default_state: str | None = None
-    band: Fraction | None = None
     groups: dict[str, dict] = {}
     appearance: list[str] = []
     next_states: set[str] = set()
@@ -225,13 +228,6 @@ def _load_state_machine(
                     src,
                 )
             default_state = r["default_state"]
-        b = _band(r["band"], src)
-        if band is None:
-            band = b
-        elif b != band:
-            raise ModelError(
-                f"all rows of a state machine must share one band ({b} != {band})", src
-            )
         order = _fraction(r["order"], "order", src)
         _check_expr(r["equation"], src)
         names.add(r["result_variable"], "result_variable", src)
@@ -266,7 +262,6 @@ def _load_state_machine(
 
     if default_state is None:
         raise ModelError("no default_state specified", f"{display}:1")
-    assert band is not None  # a default_state implies at least one row
 
     for cur, src in cur_refs:
         if cur != default_state and cur not in next_states:
@@ -310,6 +305,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     mrows = _read_csv(master_path, master_name, ("file_name", "type"))
 
     entries: list[tuple[str, str, Fraction | None, str]] = []
+    band_of: dict[str, Fraction] = {}
     row_of: dict[str, int] = {}
     label_of: dict[str, str] = {}
     seen_single: dict[str, str] = {}
@@ -327,6 +323,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         order: Fraction | None = None
         if ftype == constants.TYPE_STATE_MACHINE:
             order = _fraction(r.get("order", ""), "order", src)
+            band_of[src] = _band(r.get("band", ""), src)
         else:
             if ftype in seen_single:
                 raise ModelError(
@@ -365,7 +362,8 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
             raise ModelError(f"file not found: {fname}", src)
         if ftype == constants.TYPE_STATE_MACHINE:
             assert order is not None
-            sm, n = _load_state_machine(path, fname, order, src, names, row_of[src])
+            sm, n = _load_state_machine(path, fname, order, src, names, row_of[src],
+                                        band_of[src])
             state_machines.append(replace(sm, display_name=label_of[src]))
             sm_rows += n
         elif ftype == constants.TYPE_EQUATIONS:

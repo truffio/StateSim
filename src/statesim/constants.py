@@ -12,7 +12,8 @@ MAX_STATE_MACHINES: int = 10_000
 RESERVED_NAMES: frozenset[str] = frozenset({"tick", "t", "dt"})
 
 # Master CSV.
-MASTER_COLUMNS: tuple[str, ...] = ("file_name", "type", "order")
+MASTER_COLUMNS: tuple[str, ...] = ("file_name", "type", "order", "band")
+# order and band are used (and required) on state_machine rows only.
 # Optional master column: display name of a state machine (front end only).
 MASTER_NAME_COLUMN = "name"
 TYPE_STATE_MACHINE = "state_machine"
@@ -30,7 +31,6 @@ STATE_MACHINE_COLUMNS: tuple[str, ...] = (
     "result_variable",
     "rationale",
     "title",
-    "band",
     "order",
 )
 EQUATIONS_COLUMNS: tuple[str, ...] = (

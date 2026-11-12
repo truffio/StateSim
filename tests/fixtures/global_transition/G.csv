@@ -1,5 +1,5 @@
-transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
-1,IDLE,RUN,IDLE,start,t1_start,Start,Run,10,1
-2,RUN,IDLE,,stop,t2_stop,Stop,Stop,10,2
-3,,FAULT,,fault,t3_fault,Fault from any state,Fault,10,3
-4,FAULT,IDLE,,reset,t4_reset,Reset,Reset,10,4
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order
+1,IDLE,RUN,IDLE,start,t1_start,Start,Run,1
+2,RUN,IDLE,,stop,t2_stop,Stop,Stop,2
+3,,FAULT,,fault,t3_fault,Fault from any state,Fault,3
+4,FAULT,IDLE,,reset,t4_reset,Reset,Reset,4

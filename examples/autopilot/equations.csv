@@ -1,9 +1,9 @@
 equation,explanation,rationale,result_variable,band,order
-not on_ground and hyd_ok,Autopilot may be engaged,Engagement interlock: airborne with hydraulics,ap_engage_ok,20,1
-ap_disc_pb or not hyd_ok,Autopilot disconnect condition,Pilot disconnect or loss of hydraulics,ap_disc_cond,20,2
-"AP in ('VS', 'ALT_ARMED', 'ALT_CAP', 'ALT_HOLD')",Autopilot engaged in any mode,Reads the AP state at the start of the pass,ap_engaged,20,3
-abs(sel_alt - alt) <= abs(vs) / 10 + 50,Inside the altitude capture zone,Zone grows with vertical speed (200 ft at 1500 fpm),in_capture_zone,20,4
-abs(sel_alt - alt) <= 20,At the selected altitude,Capture complete within 20 ft,at_sel_alt,20,5
-AP == 'ALT_CAP',FMA shows ALT*,Display layer: runs after the state machine,fma_alt_star,20,11
+not on_ground and hyd_ok,Autopilot may be engaged,Engagement interlock: airborne with hydraulics,ap_engage_ok,10,1
+ap_disc_pb or not hyd_ok,Autopilot disconnect condition,Pilot disconnect or loss of hydraulics,ap_disc_cond,10,2
+"AP in ('VS', 'ALT_ARMED', 'ALT_CAP', 'ALT_HOLD')",Autopilot engaged in any mode,Reads the AP state at the start of the pass,ap_engaged,10,3
+abs(sel_alt - alt) <= abs(vs) / 10 + 50,Inside the altitude capture zone,Zone grows with vertical speed (200 ft at 1500 fpm),in_capture_zone,10,4
+abs(sel_alt - alt) <= 20,At the selected altitude,Capture complete within 20 ft,at_sel_alt,10,5
+AP == 'ALT_CAP',FMA shows ALT*,Display layer: runs after the state machine,fma_alt_star,10,11
 AP == 'ALT_HOLD' and abs(sel_alt - alt) > 200,Altitude deviation in ALT HOLD,Monitoring layer at 10 Hz,mon_alt_dev,10,12
-AP == 'DISC_WARN',Master warning,Autopilot disconnect warning until acknowledged,master_warning,20,13
+AP == 'DISC_WARN',Master warning,Autopilot disconnect warning until acknowledged,master_warning,10,13

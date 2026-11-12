@@ -50,13 +50,15 @@ module docstrings in `src/statesim/` repeat them next to each signature.
 11. Global transition to the current state is a no-op, not logged.
 12. Timers = expressions over t; "components" deferred.
 13. Master CSV (columns file_name, type in {state_machine,equations,inputs},
-    order [state_machine rows only]); paths relative to the master file's
+    order and band [state_machine rows only, both required], optional name); paths relative to the master file's
     directory; duplicate result_variable across files is a load error;
     set_input on unknown name raises KeyError; snapshot also includes inputs.
 14. Load checks: expression syntax, duplicate transition_id, unknown states,
-    exactly one default_state per SM, single band per SM file, limits.
-15. `order` column in SM files orders transitions within the SM; band stays
-    in each SM file (all rows same band).
+    exactly one default_state per SM, a valid band on every master SM row
+    and no band column in SM files, limits.
+15. `order` column in SM files orders transitions within the SM. (Revised
+    2026-11-11) A state machine's band is set on its master CSV row, not in
+    its file.
 
 Equations are Python syntax evaluated with `eval(code, ctx)`: the live
 context dict is the eval GLOBALS (revised T11b), with `__builtins__` set once

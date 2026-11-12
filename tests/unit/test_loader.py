@@ -23,12 +23,29 @@ GOOD_SM = SM_HDR + (
 )
 
 
+# State machine files are written in SM_HDR form (with a band column) for
+# readability; write() moves the band to _BANDS and master() puts it in the
+# master CSV, where the loader expects it.
+_BANDS: dict[tuple[str, str], str] = {}
+
+
 def write(tmp_path, name, text):
+    if text.startswith(SM_HDR):
+        lines = text.split("\n")
+        cells = [ln.split(",") for ln in lines[1:] if ln]
+        if cells:
+            _BANDS[(str(tmp_path), name)] = cells[0][8]
+        text = "\n".join(",".join(c[:8] + c[9:]) for c in [lines[0].split(",")] + cells) + "\n"
     (tmp_path / name).write_text(text, encoding="utf-8")
 
 
 def master(tmp_path, rows, text=None):
-    body = "file_name,type,order\n" + "".join(r + "\n" for r in rows)
+    def with_band(r):
+        f = r.split(",")
+        if len(f) == 3 and f[1] == "state_machine":
+            f.append(_BANDS.get((str(tmp_path), f[0]), "20"))
+        return ",".join(f)
+    body = "file_name,type,order,band\n" + "".join(with_band(r) + "\n" for r in rows)
     write(tmp_path, "master.csv", text if text is not None else body)
     return tmp_path / "master.csv"
 
@@ -94,12 +111,12 @@ def test_empty_master_gives_tick_1(tmp_path):
 def test_bom_whitespace_and_extra_columns_crlf(tmp_path):
     text = (
         "﻿transition_id , current_state,next_state,default_state,equation,"
-        "result_variable,rationale,title,band,order,extra\r\n"
-        " 1 , OFF , ON , OFF , a , r1 ,,, 10 , 1 ,zzz\r\n"
+        "result_variable,rationale,title,order,extra\r\n"
+        " 1 , OFF , ON , OFF , a , r1 ,,, 1 ,zzz\r\n"
     )
     (tmp_path / "S.csv").write_bytes(text.encode("utf-8"))
     (tmp_path / "master.csv").write_bytes(
-        "﻿file_name,type,order\r\nS.csv,state_machine,1\r\n".encode("utf-8")
+        "﻿file_name,type,order,band\r\nS.csv,state_machine,1, 10 \r\n".encode("utf-8")
     )
     model = load_model(tmp_path / "master.csv")
     sm = model.state_machines[0]
@@ -119,8 +136,9 @@ def test_master_order_and_fraction_orders(tmp_path):
 def test_paths_relative_to_master_dir(tmp_path):
     sub = tmp_path / "cfg"
     sub.mkdir()
-    (sub / "AP.csv").write_text(GOOD_SM, encoding="utf-8")
-    (sub / "m.csv").write_text("file_name,type,order\nAP.csv,state_machine,1\n", encoding="utf-8")
+    write(sub, "AP.csv", GOOD_SM)
+    (sub / "m.csv").write_text("file_name,type,order,band\nAP.csv,state_machine,1,20\n",
+                               encoding="utf-8")
     assert load_model(str(sub / "m.csv")).state_machines[0].name == "AP"
 
 
@@ -294,18 +312,23 @@ def test_two_default_states(tmp_path):
     assert err(tmp_path, sm_model(tmp_path, bad)).source == "AP.csv:3"
 
 
-def test_mixed_bands_in_sm(tmp_path):
-    bad = SM_HDR + (
-        "1,OFF,ON,OFF,a,r1,,,20,1\n"
-        "2,ON,OFF,,b,r2,,,10,2\n"
-    )
-    assert err(tmp_path, sm_model(tmp_path, bad)).source == "AP.csv:3"
+def test_band_column_in_sm_file_is_rejected(tmp_path):
+    (tmp_path / "AP.csv").write_text(SM_HDR + "1,OFF,ON,OFF,a,r1,,,20,1\n", encoding="utf-8")
+    e = err(tmp_path, master(tmp_path, ["AP.csv,state_machine,1,20"]))
+    assert e.source == "AP.csv:1" and "master CSV" in str(e)
+
+
+def test_sm_band_comes_from_master(tmp_path):
+    write(tmp_path, "AP.csv", GOOD_SM)
+    m = master(tmp_path, ["AP.csv,state_machine,1,7.5"])
+    assert load_model(m).state_machines[0].band_hz == Fraction(15, 2)
 
 
 @pytest.mark.parametrize("band", ["0", "-5", "abc", "", "1/0"])
 def test_bad_band(tmp_path, band):
-    bad = SM_HDR + f"1,OFF,ON,OFF,a,r1,,,{band},1\n"
-    assert err(tmp_path, sm_model(tmp_path, bad)).source == "AP.csv:2"
+    write(tmp_path, "AP.csv", SM_HDR + "1,OFF,ON,OFF,a,r1,,,20,1\n")
+    e = err(tmp_path, master(tmp_path, [f"AP.csv,state_machine,1,{band}"]))
+    assert e.source == "master.csv:2"
 
 
 def test_bad_band_standalone_and_bad_order(tmp_path):

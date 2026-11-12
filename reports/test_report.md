@@ -4,11 +4,11 @@
 
 | Category | Total | Pass | Fail | Error | Skip |
 |---|---:|---:|---:|---:|---:|
-| Unit | 231 | 231 | 0 | 0 | 0 |
-| Requirement | 105 | 105 | 0 | 0 | 0 |
-| Total | 336 | 336 | 0 | 0 | 0 |
+| Unit | 232 | 232 | 0 | 0 | 0 |
+| Requirement | 106 | 106 | 0 | 0 | 0 |
+| Total | 338 | 338 | 0 | 0 | 0 |
 
-Requirements (137): PASS 131, FAIL 0, UNTESTED 0, NOT-AUTOMATED 6, SKIP 0
+Requirements (138): PASS 132, FAIL 0, UNTESTED 0, NOT-AUTOMATED 6, SKIP 0
 
 ## 2. Failures
 
@@ -24,10 +24,10 @@ No failures or errors.
 | REQ-004 | master | The engine shall use the master CSV order column to order state machines within their band | use_case_test | tests.requirements.test_behavior::test_master_order_orders_state_machines (pass) | PASS |
 | REQ-005 | master | The engine shall share one ordering space within a band between state machines and equations | use_case_test | tests.requirements.test_behavior::test_state_machines_and_equations_share_ordering_space (pass) | PASS |
 | REQ-006 | master | The engine shall ignore the master CSV order column for equations and inputs rows | unit_test | tests.requirements.test_loader_api::test_order_ignored_for_equations_and_inputs_rows (pass) | PASS |
-| REQ-007 | master | The engine shall take execution rate from the band column of the definition files and not from the master CSV | unit_test | tests.requirements.test_loader_api::test_band_comes_from_definition_files (pass) | PASS |
+| REQ-007 | master | The engine shall take a state machine's execution rate from the band column of its master CSV row, and an equation's rate from the band column of the equations file | unit_test | tests.requirements.test_loader_api::test_band_of_state_machines_from_master_and_of_equations_from_their_file (pass) | PASS |
 | REQ-008 | loader | The engine shall read all definition files including the master file as CSV with no YAML or JSON inputs | review | - | NOT-AUTOMATED |
 | REQ-009 | loader | The engine shall build an immutable Model from the master CSV and the files it references | unit_test | tests.requirements.test_loader_api::test_load_builds_model_from_master (pass) | PASS |
-| REQ-010 | loader | The engine shall read state machine CSV columns transition_id, current_state, next_state, default_state, equation, result_variable, rationale, title, band and order | unit_test | tests.requirements.test_loader_api::test_load_builds_model_from_master (pass) | PASS |
+| REQ-010 | loader | The engine shall read state machine CSV columns transition_id, current_state, next_state, default_state, equation, result_variable, rationale, title and order | unit_test | tests.requirements.test_loader_api::test_load_builds_model_from_master (pass) | PASS |
 | REQ-011 | loader | The engine shall read equations CSV columns equation, explanation, rationale, result_variable, band and order | unit_test | tests.requirements.test_loader_api::test_load_builds_model_from_master (pass) | PASS |
 | REQ-012 | loader | The engine shall read inputs CSV columns variable_name, type and default_value | unit_test | tests.requirements.test_loader_api::test_load_builds_model_from_master (pass) | PASS |
 | REQ-013 | equations | The engine shall evaluate equations as Python-syntax Boolean expressions over context variable names | use_case_test | tests.requirements.test_behavior::test_boolean_expression_over_inputs (pass); tests.requirements.test_behavior::test_comprehension_sees_context_names (pass); tests.requirements.test_behavior::test_runtime_error_is_wrapped_with_location (pass) | PASS |
@@ -57,7 +57,7 @@ No failures or errors.
 | REQ-037 | inputs | The engine shall reject a result_variable (equation or transition row) named like an input so that only set_input writes inputs (assignment inside expressions is not checked: known limitation) | unit_test | tests.requirements.test_loader_api::test_result_variables_cannot_shadow_inputs (pass) | PASS |
 | REQ-038 | inputs | The engine shall make input variables usable by name in equations | use_case_test | tests.requirements.test_behavior::test_boolean_expression_over_inputs (pass); tests.requirements.test_scenarios::test_run_scenario[ap_engage] (pass) | PASS |
 | REQ-039 | inputs | The engine shall convert input default_value at load according to the type column (bool accepts true/false/1/0 case-insensitively; int; float; str) and reject an unknown type or a value that fails to convert | unit_test | tests.requirements.test_loader_api::test_input_defaults_converted (pass); tests.requirements.test_loader_api::test_input_default_conversion_failure_rejected[bool-maybe] (pass); tests.requirements.test_loader_api::test_input_default_conversion_failure_rejected[int-1.5] (pass); tests.requirements.test_loader_api::test_input_default_conversion_failure_rejected[float-x] (pass); tests.requirements.test_loader_api::test_input_default_conversion_failure_rejected[list-[1]] (pass); tests.requirements.test_loader_api::test_input_default_conversion_failure_rejected[-1] (pass) | PASS |
-| REQ-040 | bands | The engine shall treat each band as an explicit frequency in Hz | unit_test | tests.requirements.test_loader_api::test_band_comes_from_definition_files (pass) | PASS |
+| REQ-040 | bands | The engine shall treat each band as an explicit frequency in Hz | unit_test | tests.requirements.test_loader_api::test_band_of_state_machines_from_master_and_of_equations_from_their_file (pass) | PASS |
 | REQ-041 | bands | The engine shall not require any integer multiple or factor relationship between bands | use_case_test | tests.requirements.test_behavior::test_20hz_and_30hz_coexist (pass); tests.requirements.test_behavior::test_non_multiple_and_fractional_bands (pass); tests.requirements.test_scenarios::test_run_scenario[multirate] (pass) | PASS |
 | REQ-042 | bands | The engine shall support bands such as 20 Hz and 30 Hz coexisting | use_case_test | tests.requirements.test_behavior::test_20hz_and_30hz_coexist (pass); tests.requirements.test_scenarios::test_run_scenario[multirate] (pass) | PASS |
 | REQ-043 | bands | The engine shall evaluate each item at the rate of its band | use_case_test | tests.requirements.test_behavior::test_20hz_and_30hz_coexist (pass); tests.requirements.test_rate::test_every_item_runs_exactly_at_its_band_rate_over_long_run (pass); tests.requirements.test_rate::test_state_machine_reacts_only_on_its_band_passes (pass); tests.requirements.test_rate::test_input_pulse_between_passes_is_not_seen_by_slow_band (pass); tests.requirements.test_rate::test_item_evaluation_times_independent_of_other_bands (pass); tests.requirements.test_scenarios::test_run_scenario[multirate] (pass) | PASS |
@@ -65,7 +65,7 @@ No failures or errors.
 | REQ-045 | bands | The engine shall use a tick rate equal to the least common multiple of all band frequencies | unit_test | tests.requirements.test_loader_api::test_tick_rate_is_lcm_and_periods_are_whole (pass) | PASS |
 | REQ-046 | bands | The engine shall make every band period a whole number of ticks | unit_test | tests.requirements.test_loader_api::test_tick_rate_is_lcm_and_periods_are_whole (pass) | PASS |
 | REQ-047 | bands | The engine shall use exact integer arithmetic for scheduling with no floating-point accumulation | static_check | tests.requirements.test_static::test_scheduling_uses_exact_arithmetic (pass) | PASS |
-| REQ-048 | bands | The engine shall support band and order columns in every state machine file and the equations file | unit_test | tests.requirements.test_loader_api::test_load_builds_model_from_master (pass) | PASS |
+| REQ-048 | bands | The engine shall read band and order columns in the equations file, an order column in every state machine file, and order and band columns on master CSV state machine rows | unit_test | tests.requirements.test_loader_api::test_load_builds_model_from_master (pass) | PASS |
 | REQ-049 | execution | The engine shall run items within a band in their manual order each time the band is scheduled | use_case_test | tests.requirements.test_behavior::test_later_item_sees_earlier_result_same_pass (pass); tests.requirements.test_scenarios::test_run_scenario[order_visibility] (pass) | PASS |
 | REQ-050 | execution | The engine shall let a later item see the result of an earlier item in the same pass | use_case_test | tests.requirements.test_behavior::test_later_item_sees_earlier_result_same_pass (pass); tests.requirements.test_scenarios::test_run_scenario[order_visibility] (pass) | PASS |
 | REQ-051 | execution | The engine shall let an earlier item see the previous pass value of a later item result | use_case_test | tests.requirements.test_behavior::test_earlier_item_sees_previous_pass_value (pass); tests.requirements.test_scenarios::test_run_scenario[order_visibility] (pass) | PASS |
@@ -87,7 +87,7 @@ No failures or errors.
 | REQ-067 | loadcheck | The engine shall reject a transition referencing an unknown state at load | unit_test | tests.requirements.test_loader_api::test_unknown_state_rejected (pass); tests.requirements.test_scenarios::test_error_scenario[bad_unknown_state] (pass) | PASS |
 | REQ-068 | loadcheck | The engine shall reject a state machine file with zero default_state rows at load | unit_test | tests.requirements.test_loader_api::test_default_state_and_band_rules (pass); tests.requirements.test_scenarios::test_error_scenario[bad_no_default] (pass) | PASS |
 | REQ-069 | loadcheck | The engine shall reject a state machine file with more than one default_state row at load | unit_test | tests.requirements.test_loader_api::test_default_state_and_band_rules (pass); tests.requirements.test_scenarios::test_error_scenario[bad_dup_default] (pass) | PASS |
-| REQ-070 | loadcheck | The engine shall reject a state machine file whose rows use more than one band at load | unit_test | tests.requirements.test_loader_api::test_default_state_and_band_rules (pass); tests.requirements.test_scenarios::test_error_scenario[bad_mixed_band] (pass) | PASS |
+| REQ-070 | loadcheck | The engine shall reject at load a state machine file that has a band column (its band is set in the master CSV) | unit_test | tests.requirements.test_loader_api::test_default_state_and_band_rules (pass); tests.requirements.test_scenarios::test_error_scenario[bad_band_in_sm_file] (pass) | PASS |
 | REQ-071 | loadcheck | The engine shall reject at load rows sharing a transition_id that disagree on current_state or next_state | unit_test | tests.requirements.test_loader_api::test_rows_of_one_transition_must_agree[second0] (pass); tests.requirements.test_loader_api::test_rows_of_one_transition_must_agree[second1] (pass); tests.requirements.test_scenarios::test_error_scenario[bad_inconsistent_transition_id] (pass) | PASS |
 | REQ-072 | loadcheck | The engine shall reject at load a non-empty current_state that can never be entered (neither the default_state nor any transition next_state) | unit_test | tests.requirements.test_loader_api::test_current_state_that_can_never_be_entered_rejected (pass) | PASS |
 | REQ-073 | loadcheck | The engine shall reject a total equation count above MAX_EQUATIONS at load | unit_test | tests.requirements.test_loader_api::test_max_equations_counts_transition_rows (pass) | PASS |
@@ -155,6 +155,7 @@ No failures or errors.
 | REQ-135 | frontend | Momentary push-buttons shall have a light grey fill and a dark outline; every push-button shall show visible feedback while held and for 0.3 s after each press | use_case_test | tests.frontend.test_browser::test_push_button_look_and_press_feedback (pass) | PASS |
 | REQ-136 | frontend | The master CSV shall accept an optional name column giving a state machine's display name; the page shall title each machine with it, or with the file name when it is empty | use_case_test | tests.frontend.test_browser::test_layout_built_from_model (pass); tests.unit.test_inputs_display::test_master_name_column_sets_state_machine_display_name (pass) | PASS |
 | REQ-137 | frontend | The page shall remember the divider position in the browser and restore it, within the pane limits, when the page is opened again; without stored data it shall use 440 px | use_case_test | tests.frontend.test_browser::test_divider_position_is_remembered (pass) | PASS |
+| REQ-138 | loadcheck | The engine shall reject at load a master CSV state_machine row whose band is empty, not a number or not positive | use_case_test | tests.requirements.test_loader_api::test_bad_band_rejected[0] (pass); tests.requirements.test_loader_api::test_bad_band_rejected[-5] (pass); tests.requirements.test_loader_api::test_bad_band_rejected[abc] (pass); tests.requirements.test_loader_api::test_bad_band_rejected[] (pass); tests.requirements.test_scenarios::test_error_scenario[bad_no_sm_band] (pass) | PASS |
 
 ## 4. Orphan tests (no requirement property)
 
@@ -221,7 +222,8 @@ No failures or errors.
 - `tests.unit.test_loader::test_no_default_state` (unit, pass)
 - `tests.unit.test_loader::test_empty_sm_file_fails` (unit, pass)
 - `tests.unit.test_loader::test_two_default_states` (unit, pass)
-- `tests.unit.test_loader::test_mixed_bands_in_sm` (unit, pass)
+- `tests.unit.test_loader::test_band_column_in_sm_file_is_rejected` (unit, pass)
+- `tests.unit.test_loader::test_sm_band_comes_from_master` (unit, pass)
 - `tests.unit.test_loader::test_bad_band[0]` (unit, pass)
 - `tests.unit.test_loader::test_bad_band[-5]` (unit, pass)
 - `tests.unit.test_loader::test_bad_band[abc]` (unit, pass)

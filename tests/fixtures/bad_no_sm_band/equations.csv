@@ -1,0 +1,2 @@
+equation,explanation,rationale,result_variable,band,order
+M == 'B',True when M is in B,Monitor,in_b,10,2

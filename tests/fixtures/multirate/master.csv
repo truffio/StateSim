@@ -1,2 +1,2 @@
-file_name,type,order
-equations.csv,equations,
+file_name,type,order,band
+equations.csv,equations,,
