@@ -31,7 +31,7 @@ def pulse(eng, name):
 
 def fly(eng, plant_step, ticks):
     for _ in range(ticks):
-        plant_step(eng, 0.05)
+        plant_step(eng, 0.1)            # one tick = 100 ms at 10 Hz
         eng.step()
 
 

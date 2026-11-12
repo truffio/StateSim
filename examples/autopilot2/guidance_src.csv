@@ -1,14 +1,14 @@
-transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
-T1,DMC,IFCC,DMC,appr_selected == True,guidance_src_t1_1,,IFCC Taking guidance control of the approach.,20,3
-T1,DMC,IFCC,,dmc_tracking_loc == True,guidance_src_t1_2,,IFCC Taking guidance control of the approach.,20,4
-T1,DMC,IFCC,,dmc_tracking_gs == True,guidance_src_t1_3,,IFCC Taking guidance control of the approach.,20,5
-T1,DMC,IFCC,,radio_altitude < 1500,guidance_src_t1_4,,IFCC Taking guidance control of the approach.,20,6
-T1,DMC,IFCC,,radio_altitude > 200,guidance_src_t1_5,,IFCC Taking guidance control of the approach.,20,7
-T1,DMC,IFCC,,law_loc == True,guidance_src_t1_6,,IFCC Taking guidance control of the approach.,20,8
-T1,DMC,IFCC,,law_gs == True,guidance_src_t1_7,,IFCC Taking guidance control of the approach.,20,9
-T2,IFCC,DMC,,radio_altitude > 200 and toga == True or (on_ground == True and ground_speed < 30),guidance_src_t2_1,,DMC taking control of guidance.,20,10
-T3,IFCC,DMC,,radio_altitude > 1000,guidance_src_t3_1,,DMC taking control of guidance.,20,11
-T3,IFCC,DMC,,"state_vert in ['Go_Around', 'Windshear', 'Pitch']",guidance_src_t3_2,,DMC taking control of guidance.,20,12
-T4,IFCC,DMC,,state_lat == 'LocTrk' and law_loc == False or (state_vert == 'GsTrk' and law_gs == False),guidance_src_t4_1,,"Lost IFCC mode, Dropping to DMC.",20,13
-G1,,DMC,,ifcc_in_control == False,guidance_src_g1_1,,resetting ifcc_in_control_prev to False,20,1
-G1,,DMC,,ifcc_in_control_prev == True,guidance_src_g1_2,,resetting ifcc_in_control_prev to False,20,2
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order
+T1,DMC,IFCC,DMC,appr_selected == True,guidance_src_t1_1,,IFCC Taking guidance control of the approach.,3
+T1,DMC,IFCC,,dmc_tracking_loc == True,guidance_src_t1_2,,IFCC Taking guidance control of the approach.,4
+T1,DMC,IFCC,,dmc_tracking_gs == True,guidance_src_t1_3,,IFCC Taking guidance control of the approach.,5
+T1,DMC,IFCC,,radio_altitude < 1500,guidance_src_t1_4,,IFCC Taking guidance control of the approach.,6
+T1,DMC,IFCC,,radio_altitude > 200,guidance_src_t1_5,,IFCC Taking guidance control of the approach.,7
+T1,DMC,IFCC,,law_loc == True,guidance_src_t1_6,,IFCC Taking guidance control of the approach.,8
+T1,DMC,IFCC,,law_gs == True,guidance_src_t1_7,,IFCC Taking guidance control of the approach.,9
+T2,IFCC,DMC,,radio_altitude > 200 and toga == True or (on_ground == True and ground_speed < 30),guidance_src_t2_1,,DMC taking control of guidance.,10
+T3,IFCC,DMC,,radio_altitude > 1000,guidance_src_t3_1,,DMC taking control of guidance.,11
+T3,IFCC,DMC,,"state_vert in ['Go_Around', 'Windshear', 'Pitch']",guidance_src_t3_2,,DMC taking control of guidance.,12
+T4,IFCC,DMC,,state_lat == 'LocTrk' and law_loc == False or (state_vert == 'GsTrk' and law_gs == False),guidance_src_t4_1,,"Lost IFCC mode, Dropping to DMC.",13
+G1,,DMC,,ifcc_in_control == False,guidance_src_g1_1,,resetting ifcc_in_control_prev to False,1
+G1,,DMC,,ifcc_in_control_prev == True,guidance_src_g1_2,,resetting ifcc_in_control_prev to False,2

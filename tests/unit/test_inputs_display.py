@@ -81,11 +81,12 @@ def test_lit_by_may_name_an_equation_result(tmp_path):
 @R("REQ-136")
 def test_master_name_column_sets_state_machine_display_name(tmp_path):
     sm = ("transition_id,current_state,next_state,default_state,equation,result_variable,"
-          "rationale,title,band,order\n1,A,B,A,False,r,,,10,1\n")
+          "rationale,title,order\n1,A,B,A,False,r,,,1\n")
     (tmp_path / "S.csv").write_text(sm, encoding="utf-8")
     (tmp_path / "T.csv").write_text(sm.replace(",r,", ",r2,"), encoding="utf-8")
     (tmp_path / "master.csv").write_text(
-        "file_name,type,order,name\nS.csv,state_machine,1,Speed modes\nT.csv,state_machine,2,\n",
+        "file_name,type,order,band,name\nS.csv,state_machine,1,10,Speed modes\n"
+        "T.csv,state_machine,2,10,\n",
         encoding="utf-8")
     s, t = load_model(tmp_path / "master.csv").state_machines
     assert (s.name, s.display_name, s.label) == ("S", "Speed modes", "Speed modes")

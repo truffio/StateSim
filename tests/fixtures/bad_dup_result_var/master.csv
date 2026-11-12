@@ -1,4 +1,4 @@
-file_name,type,order
-M.csv,state_machine,1
-equations.csv,equations,
-inputs.csv,inputs,
+file_name,type,order,band
+M.csv,state_machine,1,10
+equations.csv,equations,,
+inputs.csv,inputs,,

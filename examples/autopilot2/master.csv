@@ -1,8 +1,8 @@
-file_name,type,order,name
-state_ac.csv,state_machine,20,Aircraft phase of flight
-state_vert.csv,state_machine,30,Vertical guidance
-state_lat.csv,state_machine,40,Lateral guidance
-guidance_src.csv,state_machine,10,Guidance source
-state_at.csv,state_machine,50,Autothrust
-equations.csv,equations,,
-inputs.csv,inputs,,
+file_name,type,order,band,name
+state_ac.csv,state_machine,20,10,Aircraft phase of flight
+state_vert.csv,state_machine,30,10,Vertical guidance
+state_lat.csv,state_machine,40,10,Lateral guidance
+guidance_src.csv,state_machine,10,10,Guidance source
+state_at.csv,state_machine,50,10,Autothrust
+equations.csv,equations,,,
+inputs.csv,inputs,,,

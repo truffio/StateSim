@@ -37,8 +37,9 @@ trace.lines()                                 # list of log lines
 | `ModelError`, `EvaluationError` | load error / run-time error (has `.source .tick .item`) |
 
 ## The CSV files
-**Master** (`file_name,type,order`, optional `name`): one row per file. `name`
-is a state machine's display name on the front end. `type` = `state_machine`,
+**Master** (`file_name,type,order,band`, optional `name`): one row per file.
+For `state_machine` rows, `order` and `band` (Hz) are required; `name` is the
+display name on the front end. `type` = `state_machine`,
 `equations` or `inputs`. `order` is used for `state_machine` rows only. Paths
 are relative to the master file. Max one equations row and one inputs row.
 
@@ -54,7 +55,8 @@ one standalone Boolean equation per row. The result is assigned to
 `result_variable` every time the row runs.
 
 **State machine** (one file per machine; the machine name = file name without `.csv`):
-`transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order`
+`transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order`
+(no band column: the machine's band is on its master row)
 
 | Column | Meaning |
 |---|---|
@@ -64,7 +66,6 @@ one standalone Boolean equation per row. The result is assigned to
 | `default_state` | filled on exactly one row: the starting state |
 | `equation` | Python-syntax Boolean expression |
 | `result_variable` | Boolean variable receiving this row's result |
-| `band` | Hz; the same value on every row of the file |
 | `order` | evaluation order within the band (manual) |
 
 ## Writing equations

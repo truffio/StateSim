@@ -71,13 +71,14 @@ def test_websocket_sends_model_then_state_and_applies_messages():
 @R("REQ-128")
 def test_real_time_paces_ticks_to_the_tick_rate():
     async def go():
-        app, server, port = await started()              # 20 Hz
+        app, server, port = await started()
         t0, k0 = time.monotonic(), app.session.engine.tick
         await asyncio.sleep(1.0)
         rate = (app.session.engine.tick - k0) / (time.monotonic() - t0)
         server.close()
-        return rate
-    assert 17 <= run(go()) <= 23
+        return rate, float(app.session.tick_hz)
+    rate, tick_hz = run(go())
+    assert tick_hz == 10 and 0.85 * tick_hz <= rate <= 1.15 * tick_hz
 
 
 @R("REQ-128", "REQ-131")

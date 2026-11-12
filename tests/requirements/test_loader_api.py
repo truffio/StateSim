@@ -35,17 +35,18 @@ def test_load_builds_model_from_master(tmp_path):
 @R("REQ-006")
 def test_order_ignored_for_equations_and_inputs_rows(tmp_path):
     build(tmp_path, sms=[ONE], equations=[E("e", "go")], inputs=GO)
-    _write(tmp_path / "master.csv", ["file_name", "type", "order"],
-           [["S.csv", "state_machine", "1"], ["equations.csv", "equations", "zzz"],
-            ["inputs.csv", "inputs", "-7"]])
+    _write(tmp_path / "master.csv", ["file_name", "type", "order", "band"],
+           [["S.csv", "state_machine", "1", "10"], ["equations.csv", "equations", "zzz", "x"],
+            ["inputs.csv", "inputs", "-7", "-1"]])
     assert load_model(tmp_path / "master.csv").equations
 
 
 @R("REQ-007", "REQ-040")
-def test_band_comes_from_definition_files(tmp_path):
+def test_band_of_state_machines_from_master_and_of_equations_from_their_file(tmp_path):
     model = load_model(build(tmp_path, sms=[("S", [T("1", "OFF", "ON", "go", "r1", default="OFF", band=25)])],
-                             inputs=GO))
-    assert model.state_machines[0].band_hz == Fraction(25)
+                             equations=[E("e", "go", band=4)], inputs=GO))
+    assert model.state_machines[0].band_hz == Fraction(25)        # master CSV band column
+    assert model.equations[0].band_hz == Fraction(4)              # equations file band column
 
 
 @R("REQ-025", "REQ-030")
@@ -221,8 +222,6 @@ def test_default_state_and_band_rules(tmp_path):
     cases = {
         "none": [T("1", "A", "B", "x", "r1")],
         "two": [T("1", "A", "B", "x", "r1", default="A"), T("2", "B", "A", "x", "r2", default="A")],
-        "bands": [T("1", "A", "B", "x", "r1", default="A", band=10),
-                  T("2", "B", "A", "x", "r2", band=20)],
     }
     for name, rows in cases.items():
         d = tmp_path / name
@@ -231,11 +230,14 @@ def test_default_state_and_band_rules(tmp_path):
             load_model(build(d, sms=[("S", rows)]))
 
 
-@R("REQ-077")
+@R("REQ-077", "REQ-138")
 @pytest.mark.parametrize("band", ["0", "-5", "abc", ""])
 def test_bad_band_rejected(tmp_path, band):
     with pytest.raises(ModelError):
         load_model(build(tmp_path, equations=[E("e", "True", band=band)]))
+    with pytest.raises(ModelError) as ei:
+        load_model(build(tmp_path, sms=[("S", [T("1", "A", "B", "x", "r1", default="A", band=band)])]))
+    assert ei.value.source == "master.csv:2"
 
 
 def _patch_limit(monkeypatch, name, value):

@@ -69,12 +69,13 @@ def _write(path: Path, header: list[str], rows: list[list]) -> None:
 
 
 SM_HEADER = ["transition_id", "current_state", "next_state", "default_state",
-             "equation", "result_variable", "rationale", "title", "band", "order"]
+             "equation", "result_variable", "rationale", "title", "order"]
 EQ_HEADER = ["equation", "explanation", "rationale", "result_variable", "band", "order"]
 
 
 def T(tid, cur, nxt, eq, rv, *, default="", order=1, title="", band=10):
-    """One state machine CSV row."""
+    """One state machine CSV row. ``band`` goes to the master CSV (see build);
+    all rows of one machine must give the same band."""
     return [tid, cur, nxt, default, eq, rv, "", title, band, order]
 
 
@@ -95,17 +96,19 @@ def build(tmp_path: Path, sms=(), equations=None, inputs=None,
     for item in sms:
         name, rows = item[0], item[1]
         order = item[2] if len(item) > 2 else 1
-        _write(tmp_path / f"{name}.csv", SM_HEADER, rows)
-        master.append([f"{name}.csv", "state_machine", order])
+        bands = {r[8] for r in rows}
+        assert len(bands) == 1, f"{name}: rows give different bands {bands}"
+        _write(tmp_path / f"{name}.csv", SM_HEADER, [r[:8] + r[9:] for r in rows])
+        master.append([f"{name}.csv", "state_machine", order, bands.pop()])
     if equations is not None:
         _write(tmp_path / "equations.csv", EQ_HEADER, equations)
-        row = ["equations.csv", "equations", ""]
+        row = ["equations.csv", "equations", "", ""]
         master.insert(0, row) if master_order == "eq_first" else master.append(row)
     if inputs is not None:
         _write(tmp_path / "inputs.csv", ["variable_name", "type", "default_value"],
                [list(r) for r in inputs])
-        master.append(["inputs.csv", "inputs", ""])
-    _write(tmp_path / "master.csv", ["file_name", "type", "order"], master)
+        master.append(["inputs.csv", "inputs", "", ""])
+    _write(tmp_path / "master.csv", ["file_name", "type", "order", "band"], master)
     return tmp_path / "master.csv"
 
 

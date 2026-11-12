@@ -1,3 +1,3 @@
-transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order
-1,OFF,ON,OFF,armed_cond,r1,Uses standalone result,Turn on,10,1
-2,ON,OFF,,not sw,r2,Switch released,Turn off,10,2
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order
+1,OFF,ON,OFF,armed_cond,r1,Uses standalone result,Turn on,1
+2,ON,OFF,,not sw,r2,Switch released,Turn off,2

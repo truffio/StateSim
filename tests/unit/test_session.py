@@ -42,9 +42,10 @@ def test_describe_model_layout(ap2):
 @R("REQ-120")
 def test_self_transitions_are_not_next_states(tmp_path):
     (tmp_path / "S.csv").write_text(
-        "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,band,order\n"
-        "1,A,A,A,True,r1,,,10,1\n1b,A,B,,False,r2,,,10,2\n", encoding="utf-8")
-    (tmp_path / "master.csv").write_text("file_name,type,order\nS.csv,state_machine,1\n", encoding="utf-8")
+        "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order\n"
+        "1,A,A,A,True,r1,,,1\n1b,A,B,,False,r2,,,2\n", encoding="utf-8")
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\nS.csv,state_machine,1,10\n",
+                                         encoding="utf-8")
     d = describe_model(load_model(tmp_path / "master.csv"))
     assert d["machines"][0]["next"] == {"A": ["B"], "B": []}
 

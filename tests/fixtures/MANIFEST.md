@@ -35,8 +35,11 @@ SM file with no default_state row. REQ-068.
 ## bad_dup_default
 SM file with two default_state rows. REQ-069.
 
-## bad_mixed_band
-SM file whose rows use 10 and 20 Hz. REQ-070.
+## bad_band_in_sm_file
+SM file that still has a band column (the band belongs in the master CSV). REQ-070.
+
+## bad_no_sm_band
+Master CSV state_machine row with an empty band. REQ-138.
 
 ## bad_unknown_state
 Transition from state C, which is neither the default nor any next_state. REQ-067.
