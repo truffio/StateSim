@@ -27,9 +27,12 @@ first so `ifcc_in_control` is up to date when the other machines read it.
   `G2`, ... the global transitions. Globals get the lowest `order` numbers, so
   they win over the state's own transitions, as in the previous tool.
 - `action` became `title`; `rationale` became `rationale`.
-- Buttons became `bool` inputs; the enum `capa` became a `str` input
-  (default `LAND3`). Min, max, step, choices and button types are not used
-  yet: they wait for the new inputs CSV columns.
+- Buttons became `bool` inputs shown as momentary push-buttons; `capa` is an
+  `enum` input (default `LAND3`). The JSON's min, max, step and choices are in
+  the inputs CSV display columns, and the inputs are grouped into cards like
+  the previous tool's panels.
+
+Run it with the front end: `python -m statesim_server examples/autopilot2/master.csv`.
 
 ## Behaviour that changed
 

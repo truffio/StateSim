@@ -117,3 +117,11 @@ def test_no_event_bus():
             ident = getattr(node, "name", None) or getattr(node, "id", None) or ""
             assert not re.search(r"(?i)event_?bus|subscribe|publish|dispatcher|listener",
                                  str(ident)), f"{name}: {ident}"
+
+
+@R("REQ-118")
+def test_engine_does_not_depend_on_the_server():
+    # The server is a separate package; the engine never imports it or a web library.
+    assert not forbidden_found({"statesim_server", "websockets", "http", "socket", "webbrowser"})
+    server = SRC.parent / "statesim_server"
+    assert (server / "server.py").is_file() and not (SRC / "server.py").exists()

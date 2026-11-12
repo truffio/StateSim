@@ -1,25 +1,25 @@
-variable_name,type,default_value
-ground_speed,int,0
-radio_altitude,int,0
-capa,str,LAND3
-toga,bool,false
-EDM,bool,false
-ATdisc,bool,false
-fd_on,bool,false
-ap_on,bool,false
-appr_selected,bool,false
-dmc_tracking_loc,bool,false
-dmc_tracking_gs,bool,false
-claws_req_flare,bool,false
-ground_time_gt_2s,bool,false
-ws_warning,bool,false
-law_loc,bool,true
-law_gs,bool,true
-law_align,bool,true
-law_rollout,bool,true
-law_flare,bool,true
-law_nd,bool,true
-law_pitch,bool,true
-law_roll,bool,true
-law_ga,bool,true
-law_ws,bool,true
+variable_name,type,default_value,group,widget,label,min,max,step,choices,lit_by,wide
+ground_speed,int,0,Aircraft,slider,ground_speed (kt),0,160,5,,,
+radio_altitude,int,0,Aircraft,slider,radio_altitude (ft),0,2500,5,,,
+capa,enum,LAND3,Aircraft,dropdown,capa,,,,NONE|APPR1|APPR2|LAND2|LAND3,,
+fd_on,bool,false,Flight Control Panel,switch,fd_on,,,,,,
+ap_on,bool,false,Flight Control Panel,switch,ap_on,,,,,,
+appr_selected,bool,false,Flight Control Panel,switch,appr_selected,,,,,,
+toga,bool,false,Stick and Throttle,momentary,TOGA,,,,,,
+EDM,bool,false,Stick and Throttle,momentary,EDM,,,,,,
+ATdisc,bool,false,Stick and Throttle,momentary,AT DISC,,,,,,
+dmc_tracking_loc,bool,false,DMC and CLAWS requests,switch,dmc_tracking_loc,,,,,,
+dmc_tracking_gs,bool,false,DMC and CLAWS requests,switch,dmc_tracking_gs,,,,,,
+claws_req_flare,bool,false,DMC and CLAWS requests,switch,claws_req_flare,,,,,,
+ground_time_gt_2s,bool,false,DMC and CLAWS requests,switch,ground_time_gt_2s,,,,,,
+ws_warning,bool,false,DMC and CLAWS requests,switch,ws_warning,,,,,,
+law_loc,bool,true,CLAWS availability,switch,law_loc,,,,,,
+law_gs,bool,true,CLAWS availability,switch,law_gs,,,,,,
+law_align,bool,true,CLAWS availability,switch,law_align,,,,,,
+law_rollout,bool,true,CLAWS availability,switch,law_rollout,,,,,,
+law_flare,bool,true,CLAWS availability,switch,law_flare,,,,,,
+law_nd,bool,true,CLAWS availability,switch,law_nd,,,,,,
+law_pitch,bool,true,CLAWS availability,switch,law_pitch,,,,,,
+law_roll,bool,true,CLAWS availability,switch,law_roll,,,,,,
+law_ga,bool,true,CLAWS availability,switch,law_ga,,,,,,
+law_ws,bool,true,CLAWS availability,switch,law_ws,,,,,,

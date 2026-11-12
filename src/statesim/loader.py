@@ -117,15 +117,81 @@ def _parse_default(text: str, type_name: str, source: str) -> object:
             return int(text)
         if kind == "float":
             return float(text)
-        if kind == "str":
+        if kind in ("str", "enum"):
             return text
     except (KeyError, ValueError):
         raise ModelError(
             f"cannot convert default_value {text!r} to {kind}", source
         ) from None
     raise ModelError(
-        f"unknown input type {type_name!r} (expected bool, int, float or str)", source
+        f"unknown input type {type_name!r} (expected bool, int, float, str or enum)", source
     )
+
+
+def _num(text: str, what: str, source: str) -> float | None:
+    if text == "":
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        raise ModelError(f"invalid {what} {text!r}", source) from None
+
+
+def _input_def(r: dict[str, str], default: object, src: str) -> InputDef:
+    """Build an InputDef, validating the optional display columns."""
+    kind = r["type"].strip()
+    get = lambda c: r.get(c, "").strip()  # noqa: E731
+    lo, hi, step = _num(get("min"), "min", src), _num(get("max"), "max", src),         _num(get("step"), "step", src)
+    choices = tuple(c.strip() for c in get("choices").split(constants.CHOICES_SEPARATOR)
+                    if c.strip())
+    allowed = constants.INPUT_WIDGETS[kind]
+    widget = get("widget")
+    if widget == "":
+        widget = ("slider" if lo is not None and hi is not None else "number")             if kind in ("int", "float") else allowed[0]
+    if widget not in allowed:
+        raise ModelError(f"widget {widget!r} not allowed for type {kind} "
+                         f"(expected {', '.join(allowed)})", src)
+    if kind in ("int", "float"):
+        if widget == "slider" and (lo is None or hi is None):
+            raise ModelError("a slider needs min and max", src)
+        if lo is not None and hi is not None and lo >= hi:
+            raise ModelError(f"min {lo:g} must be below max {hi:g}", src)
+        if step is not None and step <= 0:
+            raise ModelError(f"step must be > 0, got {step:g}", src)
+        if (lo is not None and default < lo) or (hi is not None and default > hi):
+            raise ModelError(f"default_value {default!r} outside min/max", src)
+    elif get("min") or get("max") or get("step"):
+        raise ModelError("min, max and step apply to int and float inputs only", src)
+    if kind == "enum":
+        if not choices:
+            raise ModelError("an enum input needs choices (separated by '|')", src)
+        if default not in choices:
+            raise ModelError(f"default_value {default!r} is not one of the choices", src)
+    elif choices:
+        raise ModelError("choices apply to enum inputs only", src)
+    lit_by = get("lit_by")
+    if widget == "lit" and not lit_by:
+        raise ModelError("a lit push-button needs lit_by", src)
+    if lit_by and widget != "lit":
+        raise ModelError("lit_by applies to the lit widget only", src)
+    wide = get("wide").lower()
+    if wide not in ("", *_BOOLS):
+        raise ModelError(f"invalid wide {get('wide')!r} (expected true or false)", src)
+    return InputDef(
+        name=r["variable_name"], type_name=kind, default=default, source=src,
+        group=get("group") or constants.DEFAULT_INPUT_GROUP, widget=widget,
+        label=get("label") or r["variable_name"], min=lo, max=hi, step=step,
+        choices=choices, lit_by=lit_by, wide=_BOOLS[wide] if wide else False,
+    )
+
+
+def names_of(inputs, equations, state_machines) -> set[str]:
+    """Every variable name a model defines."""
+    out = {i.name for i in inputs} | {e.result_variable for e in equations}
+    for sm in state_machines:
+        out.add(sm.name)
+        out |= {r.result_variable for t in sm.transitions for r in t.rows}
+    return out
 
 
 def _load_state_machine(
@@ -320,14 +386,13 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
             for line, r in _read_csv(path, fname, constants.INPUTS_COLUMNS):
                 rsrc = f"{fname}:{line}"
                 names.add(r["variable_name"], "input variable_name", rsrc)
-                inputs.append(
-                    InputDef(
-                        name=r["variable_name"],
-                        type_name=r["type"],
-                        default=_parse_default(r["default_value"], r["type"], rsrc),
-                        source=rsrc,
-                    )
-                )
+                default = _parse_default(r["default_value"], r["type"], rsrc)
+                inputs.append(_input_def(r, default, rsrc))
+
+    known = names_of(inputs, equations, state_machines)
+    for i in inputs:
+        if i.lit_by and i.lit_by not in known:
+            raise ModelError(f"lit_by {i.lit_by!r} is not a known variable", i.source)
 
     if len(equations) + sm_rows > constants.MAX_EQUATIONS:
         raise ModelError(

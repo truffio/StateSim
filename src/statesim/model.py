@@ -22,14 +22,29 @@ class InputDef:
     """One row of the inputs CSV.
 
     ``default`` is the ``default_value`` column converted to a Python native
-    value according to ``type_name`` (bool, int, float or str; anything else
-    is a load error). ``type_name`` is the raw ``type`` column.
+    value according to ``type_name`` (bool, int, float, str or enum; anything
+    else is a load error). ``type_name`` is the raw ``type`` column. An enum
+    is a str restricted to ``choices``.
+
+    The display columns (group, widget, label, min, max, step, choices,
+    lit_by, wide) are optional; see constants.INPUT_WIDGETS for the widgets
+    allowed per type and their defaults.
     """
 
     name: str
     type_name: str
     default: object
     source: str
+    # Display columns (all optional in the CSV; used by the front end only).
+    group: str = "Inputs"
+    widget: str = ""
+    label: str = ""
+    min: float | None = None
+    max: float | None = None
+    step: float | None = None
+    choices: tuple[str, ...] = ()
+    lit_by: str = ""
+    wide: bool = False
 
 
 @dataclass(frozen=True)

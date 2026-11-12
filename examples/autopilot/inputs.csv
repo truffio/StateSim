@@ -1,11 +1,11 @@
-variable_name,type,default_value
-ap_engage_pb,bool,false
-ap_disc_pb,bool,false
-alt_arm_pb,bool,false
-vs_pb,bool,false
-warn_ack_pb,bool,false
-on_ground,bool,false
-hyd_ok,bool,true
-alt,float,9000
-sel_alt,float,10000
-vs,float,0
+variable_name,type,default_value,group,widget,label,min,max,step,choices,lit_by,wide
+ap_engage_pb,bool,false,Flight Control Panel,lit,AP,,,,,ap_engaged,
+alt_arm_pb,bool,false,Flight Control Panel,lit,ALT,,,,,fma_alt_star,
+vs_pb,bool,false,Flight Control Panel,momentary,VS,,,,,,
+ap_disc_pb,bool,false,Stick and Warnings,momentary,AP DISC,,,,,,
+warn_ack_pb,bool,false,Stick and Warnings,momentary,WARN ACK,,,,,,
+on_ground,bool,false,Aircraft,switch,on_ground,,,,,,
+hyd_ok,bool,true,Aircraft,switch,hyd_ok,,,,,,
+alt,float,9000,Aircraft,slider,alt (ft),0,41000,10,,,
+sel_alt,float,10000,Aircraft,slider,sel_alt (ft),0,41000,100,,,
+vs,float,0,Aircraft,number,vs (fpm),-6000,6000,100,,,

@@ -1,6 +1,7 @@
 # StateSim user interface spec
 
-Version: draft 1, 2026-11-11. Status: for review; nothing is implemented yet.
+Version: draft 2, 2026-11-11. Status: implemented on branch `frontend`
+(`src/statesim_server/`); requirements REQ-114 to REQ-134.
 
 This spec defines the screen of the StateSim front end: what is on it, what
 can be clicked, what each control does, and which colours change and why.
@@ -80,11 +81,32 @@ generated from the inputs CSV; no screen layout is coded per model.
 - A card is white, with a light grey border and rounded corners.
 - Cards flow in a grid that fills the left pane width, left to right then
   down, as many columns as fit with each column at least 170 px. A card is
-  either one column wide or the full pane width (how this is declared is open,
-  O6).
+  full pane width when any of its inputs has `wide` true or is a slider;
+  otherwise one column wide.
 - Cards and titles are not clickable.
 
-### 4.2 Controls
+### 4.2 Inputs CSV columns
+
+`variable_name, type, default_value` are required. The display columns are
+optional; a file without them still loads.
+
+| Column | Meaning | Default |
+|---|---|---|
+| `type` | `bool`, `int`, `float`, `str` or `enum` | (required) |
+| `group` | Card the input appears in | `Inputs` |
+| `widget` | Control, see the table below | by type: `switch` for bool, `slider` for int/float with min and max (else `number`), `dropdown` for enum, `text` for str |
+| `label` | Text shown on the control | the variable name |
+| `min`, `max`, `step` | Range of an int or float (a slider needs min and max) | step 1 for int, 1/100 of the range for float |
+| `choices` | Enum values separated by `\|` (e.g. `NONE\|APPR1\|LAND3`); the default must be one of them | (required for enum) |
+| `lit_by` | Variable that lights a `lit` push-button (an input or result variable) | (required for `lit`) |
+| `wide` | `true` makes the input's card full width | `false` |
+
+Widgets allowed per type: bool `switch`, `momentary`, `lit`; int and float
+`slider`, `number`; enum `dropdown`; str `text`. Anything else, a default
+outside min/max, or a column that does not apply to the type is a load error
+with its `file:line`.
+
+### 4.3 Controls
 
 Every control shows the **engine's current value** of its input. The value
 changes only when the user operates the control, or when the engine's inputs
@@ -92,17 +114,22 @@ are reset (section 6). The logic never writes inputs.
 
 | Control | Input type | Look | Clickable | What it does | What changes colour |
 |---|---|---|---|---|---|
-| **Momentary push-button** | bool | Full card width, solid red, white bold upper-case label | Yes | A press sends a pulse: the input becomes true, then false after the pulse duration (O1). | Nothing. Its colour is fixed. |
-| **Lit push-button** | bool | Full card width, bold upper-case label | Yes | A press sends the same pulse as a momentary push-button. | The background follows a **linked logic variable**, not the click: green with white text when the variable is true; white with dark border and dark text when false. A press the logic rejects leaves it unlit. |
-| **Slider** | int, float | Input name on the left and its value on the right in blue monospace, slider below across the card | Yes (drag the knob or click the track) | Writes the value while it moves, within the min, max and step of the definition. The value readout follows. | Nothing. |
-| **Switch** | bool | Input name on the left, two-state sliding switch on the right | Yes (switch or name) | Each click toggles the input between true and false. | On: blue track, knob on the right. Off: grey track, knob on the left. |
-| **Drop-down** | enum | Input name on the left, drop-down list on the right | Yes | Writes the chosen value (D4). | Nothing. |
+| **Momentary push-button** (`momentary`) | bool | Full card width, solid red, white bold upper-case label | Yes | A press sends a pulse: the input is true for one period of the slowest band, then false. | Nothing. Its colour is fixed. |
+| **Lit push-button** (`lit`) | bool | Full card width, bold upper-case label | Yes | A press sends the same pulse as a momentary push-button. | The background follows a **linked logic variable**, not the click: green with white text when the variable is true; white with dark border and dark text when false. A press the logic rejects leaves it unlit. |
+| **Slider** (`slider`) | int, float | Input name on the left and its value on the right in blue monospace, slider below across the card | Yes (drag the knob or click the track) | Writes the value while it moves, within the min, max and step of the definition. The value readout follows. | Nothing. |
+| **Switch** (`switch`) | bool | Input name on the left, two-state sliding switch on the right | Yes (switch or name) | Each click toggles the input between true and false. | On: blue track, knob on the right. Off: grey track, knob on the left. |
+| **Drop-down** (`dropdown`) | enum | Input name on the left, drop-down list on the right | Yes | Writes the chosen value (D4). | Nothing. |
+| **Number field** (`number`) | int, float | Input name on the left, number box on the right | Yes | Writes the typed value when it is confirmed (Enter or leaving the field). | Nothing. |
+| **Text field** (`text`) | str | Input name on the left, text box on the right | Yes | Writes the text when it is confirmed. | Nothing. |
 
 - All controls can be reached and used with the keyboard: Tab to focus;
   Enter or Space presses a push-button or toggles a switch; arrow keys move a
   slider by one step or change the drop-down choice.
 - A focused control shows a visible focus ring.
 - Labels show the input name or label as written in the inputs CSV.
+- The server checks every value it receives (type, min/max, choices) and
+  ignores a value that does not fit; the page then shows the engine's value
+  again.
 
 ## 5. State machine grid
 
@@ -159,8 +186,9 @@ the last input card.
 | **Step** | White button, grey border | While paused, runs the engine for one tick. | Disabled (greyed) while running. |
 | **Reset** | White button, grey border | Returns every input, state and result to its start value, keeping the loaded model and the run mode. | Nothing. |
 
-The labels, the paused state and the exact effect of each control are still
-open (O7) and are to be confirmed.
+In real time the server runs the ticks at the model's tick rate against the
+wall clock. If it falls more than 0.5 s behind, it drops the backlog instead
+of catching up.
 
 ## 7. Colours
 
@@ -186,15 +214,28 @@ Font: Inter (falls back to the system sans-serif); values in JetBrains Mono.
   interpreted as HTML.
 - The screen layout is built once when the model is loaded; while running,
   only values, lit states, active states and highlights change.
+- The server sends screen updates after ticks, at most 30 per second.
+- If the connection to the server is lost, a dark message at the bottom of
+  the screen says so and the page reconnects every second; it disappears once
+  connected again.
+- Machines are titled with their file name (e.g. `state_ac`).
 
-## 9. Open points for this spec
+## 9. Starting the front end
+
+```
+pip install -e ".[server]"
+python -m statesim_server examples/autopilot2/master.csv
+```
+
+The server listens on `http://127.0.0.1:8765/` and opens the browser. Options:
+`--port N` (0 = any free port), `--host`, `--no-browser`, `--trace FILE`
+(writes the engine trace).
+
+## 10. Open points for this spec
 
 | # | Point |
 |---|---|
-| O1 | Pulse duration of push-buttons. |
 | O5 | Aircraft panels: definition, content, size and placement. |
-| O6 | Inputs CSV columns: group, widget type, label, min, max, step, choices, linked variable of a lit push-button, card width. |
-| O7 | Run controls: whether "As fast as possible" belongs on the screen (it was described as a back-end-only mode), labels, Pause and Step behaviour, Reset scope. |
-| O12 | Whether the targets of global transitions are highlighted as next states. |
-| O13 | How often the screen updates while running (every tick, or capped at the display refresh rate). |
+| O8b | Reloading edited CSV files without restarting the server. |
 | O14 | Whether the splitter position is remembered between sessions. |
+| O15 | Display names for state machines. |
