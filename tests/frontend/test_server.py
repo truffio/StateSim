@@ -254,3 +254,37 @@ def test_action_writing_t_and_dt_keeps_the_server_running(tmp_path):
         server.close()
         await server.wait_closed()
     run(go())
+
+
+@R("REQ-125")
+def test_malformed_messages_get_an_error_and_keep_the_connection(tmp_path):
+    """#27: wrong field types reply with an error; the socket stays open."""
+    model = _write_model(tmp_path, "1,A,B,A,go and undefined_name > 1,r1,,,1\n",
+                         inputs="variable_name,type,default_value\ngo,bool,false\nn,int,0\n")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            for bad in ({"type": "set", "name": "n", "value": 1e999},
+                        {"type": "set", "name": [], "value": 1},
+                        {"type": "press", "name": {}},
+                        {"type": "toggle", "name": 3}):
+                await ws.send(json.dumps(bad))
+                err = await recv_type(ws, "error")
+                assert err["message"]
+            await ws.send(json.dumps({"type": "pause"}))
+            await ws.send(json.dumps({"type": "set", "name": "go", "value": True}))
+            await ws.send(json.dumps({"type": "step"}))           # the step fails: error, still paused
+            err = await recv_type(ws, "error")
+            while not err["message"].startswith("Paused:"):
+                err = await recv_type(ws, "error")
+            assert "m.csv:2" in err["message"] and app.session.paused
+            await ws.send(json.dumps({"type": "reset"}))
+            st = await recv_type(ws, "state")
+            while st["gen"] == 1:                              # skip messages sent before the reset
+                st = await recv_type(ws, "state")
+            assert st["inputs"]["go"] is False
+        server.close()
+        await server.wait_closed()
+    run(go())

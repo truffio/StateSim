@@ -83,6 +83,8 @@ class App:
                     err = self.session.handle(msg) if isinstance(msg, dict) else "not an object"
                 except json.JSONDecodeError:
                     err = "invalid JSON"
+                except Exception as exc:          # a bad message must not close the connection
+                    err = f"could not apply the message: {exc!r}"
                 if err:
                     await ws.send(json.dumps({"type": "error", "message": err}))
                 self.wake.set()
