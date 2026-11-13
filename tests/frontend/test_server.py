@@ -9,6 +9,8 @@ from urllib.error import HTTPError
 
 import pytest
 from websockets.asyncio.client import connect
+from websockets.datastructures import Headers
+from websockets.http11 import Request
 
 from statesim import load_model
 from statesim_server.server import start
@@ -347,6 +349,35 @@ def test_a_client_that_stops_reading_does_not_stop_the_others(monkeypatch):
                     pass
             assert frozen not in app.clients
             assert app.session.engine.tick > t0 and frames >= 20
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-134")
+def test_websocket_only_from_its_own_page():
+    """#33: another web page (other Origin) or another Host name cannot open the WebSocket."""
+    from websockets.exceptions import InvalidStatus
+
+    async def go():
+        app, server, port = await started()
+        url = f"ws://127.0.0.1:{port}/ws"
+        async with connect(url, origin=f"http://127.0.0.1:{port}") as ws:     # the page itself
+            assert json.loads(await ws.recv())["type"] == "model"
+        async with connect(url) as ws:                                        # no Origin: a script
+            assert json.loads(await ws.recv())["type"] == "model"
+        for kw in ({"origin": "https://evil.example"},
+                   {"origin": f"http://127.0.0.1:{port + 1}"}):
+            with pytest.raises(InvalidStatus) as e:
+                async with connect(url, **kw):
+                    pass
+            assert e.value.response.status_code == 403
+        # DNS rebinding: a page on evil.example resolving to 127.0.0.1 has a matching Origin
+        rebound = Request("/ws", Headers([("Host", f"evil.example:{port}"),
+                                          ("Origin", f"http://evil.example:{port}")]))
+        assert not app._own_page(rebound)
+        assert app._own_page(Request("/ws", Headers([("Host", f"localhost:{port}"),
+                                                     ("Origin", f"http://localhost:{port}")])))
         server.close()
         await server.wait_closed()
     run(go())
