@@ -1,0 +1,3 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order
+1,OFF,ON,OFF,sw,on_req,Switch on turns the lamp on,Turn on,1
+2,ON,OFF,,not sw,off_req,Switch off turns the lamp off,Turn off,2

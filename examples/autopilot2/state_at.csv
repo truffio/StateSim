@@ -1,0 +1,12 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order
+T1,Idle,Active,Idle,ground_speed > 25,state_at_t1_1,,Autoengaging AT,3
+T1,Idle,Active,,state_ac == 'Takeoff',state_at_t1_2,,Autoengaging AT,4
+T2,Active,Hold,,ground_speed > 60,state_at_t2_1,,TQA hold,5
+T2,Active,Hold,,radio_altitude < 400,state_at_t2_2,,TQA hold,6
+T2,Active,Hold,,appr_selected == False,state_at_t2_3,,TQA hold,7
+T3,Active,Retard,,radio_altitude < 50,state_at_t3_1,,To Retard,8
+T3,Active,Retard,,appr_selected == True,state_at_t3_2,,To Retard,9
+T4,Hold,Active,,radio_altitude > 400,state_at_t4_1,,Autoengaging AT,10
+T5,Retard,Idle,,ground_time_gt_2s == True,state_at_t5_1,,Automatic disengage of AT after tourchdown,11
+G1,,Idle,,state_at == 'Active',state_at_g1_1,,resetting ifcc_in_control_prev to False,1
+G1,,Idle,,ATdisc == True,state_at_g1_2,,resetting ifcc_in_control_prev to False,2

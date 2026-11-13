@@ -1,0 +1,376 @@
+abstract: >
+  This document specifies a lightweight software framework intended to make
+  aircraft Autoflight / Autopilot guidance system requirements dynamic and
+  interactive rather than static text. Requirements are modeled as a
+  collection of independent components, each representing a portion of the
+  system (analogous to a Line Replaceable Unit or a software subsystem).
+  Each component may internally use state machines, Boolean equations,
+  a simple timer, or a combination of these to define its behavior. There
+  is no control-loop or real-time performance modeling involved; any effect
+  that would normally result from a control loop is represented as a timer.
+  Components communicate through periodically computed values passed via a
+  shared execution context. There is no event bus and no event mechanism:
+  the system is purely time based, and all logic is expressed as state
+  machines and Boolean equations that are evaluated periodically. Two
+  conceptual layers exist in parallel: a command layer that evaluates its
+  logic each cycle and issues actions, and a monitoring layer that
+  continuously observes system state and evaluates equations that
+  indicate undesirable conditions. The framework is
+  deliberately minimal — it is a short-lived internal tool for requirement exploration and
+  maturation, not a production or public-facing system, and is not intended
+  to be over-engineered with error handling, input validation, or sandboxing
+  beyond what is described below. A Python backend orchestrates simulation
+  execution and exposes state and values to a JavaScript/HTML/CSS
+  web front end (a mock cockpit with panels) over WebSockets, enabling
+  requirements to be observed and manipulated dynamically rather than only
+  read on paper.
+
+framework:
+
+  components:
+    description: >
+      A component is the fundamental unit of the framework, representing a
+      portion of the system (e.g. an LRU or software subsystem/function).
+    composition:
+      state_machine: optional
+      boolean_equations: optional
+      timer: optional
+      note: >
+        A component may be any single one of these, any combination, or
+        none beyond simple pass-through logic. Internal variables and
+        logic are private to the component; only designated outputs are
+        exposed to the rest of the system.
+    definition_source: >
+      All configuration and definition files are CSV, including the master
+      file; there are no YAML or JSON inputs. State machines and Boolean
+      equations are defined in CSV files that the framework loads at start
+      time. The column layouts are described under csv_formats.
+    logic_evaluation: >
+      Equation and transition conditions are written using Python syntax
+      (e.g. "a and not b", "(x or y) and z"), with actual context variable
+      names, and are evaluated directly via Python's eval at runtime. No
+      AST sanitization, sandboxing, or expression validation is performed;
+      the tool is internal-only and equation authors are trusted.
+    layers:
+      command_layer: >
+        Periodically evaluates its state machines and Boolean equations
+        and issues actions/commands (represented abstractly;
+        no real control output).
+      monitoring_layer: >
+        Continuously observes command layer state/output and other
+        context values; evaluates for undesirable combinations of
+        conditions ("situations") using Boolean equations; the result is
+        simply another value in the shared context.
+      note: >
+        Both layers run concurrently within the same framework and use the
+        same underlying mechanisms (state machines, Boolean equations, timers).
+
+  supported_logic:
+    description: >
+      The simulator supports two kinds of logic: state machines and simple
+      Boolean equations. A component may use any number of either, subject
+      to the tool constraints below.
+    state_machines: >
+      Supports multiple state machines (up to MAX_STATE_MACHINES).
+    transitions: >
+      A state machine transition may be conditioned on a single Boolean
+      equation or on multiple Boolean equations, allowing guards and
+      inhibits to be implemented where required. Equations used by
+      transitions count toward MAX_EQUATIONS.
+    boolean_equations: >
+      Supports multiple simple Boolean equations (up to MAX_EQUATIONS),
+      evaluated over context variables.
+    tool_constraints:
+      MAX_EQUATIONS: TBD  # "x"; expected to be a high value
+      MAX_STATE_MACHINES: TBD  # "y"; expected to be a high value
+      note: >
+        These limits are defined as tool constraints (named constants in
+        the tool), not per-component settings. Actual values are TBD and
+        are expected to be set high enough that they are not a practical
+        limitation when modeling requirements.
+
+  master_configuration:
+    description: >
+      A single master CSV file defines the overall simulation composition.
+      Each row is the name of a file that defines something: one row per
+      state machine file, plus one row for the equations file and one row
+      for the external inputs file. A state machine's execution rate
+      (band) and order are set on its row here; equations carry their own
+      band and order in the equations file.
+    columns:
+      file_name: name (path) of a state machine or equations CSV file
+      type: >
+        Kind of file: "state_machine", "equations" or "inputs". Lets the
+        framework tell the formats apart.
+      order: >
+        For state_machine rows: the relative order of execution of that
+        state machine within its band, set manually. It is the same
+        mechanism, and shares the same ordering space within a band, as
+        the order of equations. Not used for equations or inputs rows.
+      band: >
+        For state_machine rows (required): the rate, in Hz, at which that
+        state machine runs. Not used for equations or inputs rows.
+      name: >
+        Optional display name of a state machine, shown by the front end.
+
+  component_configuration:
+    description: >
+      Logic is defined in CSV files: one CSV file per state machine, plus a
+      single CSV file holding all Boolean equations that are not linked to
+      a state machine, plus a single CSV file defining the external
+      inputs. With n state machines there are therefore n + 2 definition
+      files. Every equation row has band and order columns; a state machine
+      file has an order column, and its band is set in the master CSV.
+    standalone_equation_reuse: >
+      An equation defined in the standalone equations file can be used
+      inside a state machine by referring to the Boolean variable assigned
+      to that equation's result.
+    note: >
+      Initial values or parameters needed by a component are TBD.
+
+  csv_formats:
+    common_columns:
+      band: >
+        The rate, in Hertz (Hz), at which the row is evaluated. All rows
+        sharing a band are evaluated at the same rate. A state machine runs
+        at one band, set on its master CSV row (its file has no band
+        column); a state machine is never split across bands. A band is an explicit frequency; bands
+        are not required to be integer multiples or factors of each other
+        (e.g. 20 Hz and 30 Hz may coexist).
+      order: >
+        The relative order of evaluation within the band. Set manually by
+        the author.
+      note: >
+        band: in the equations file and the master CSV (state machine
+        rows). order: in every definition file.
+
+    state_machine_file:
+      description: >
+        One CSV file per state machine. Each row is one equation that
+        participates in a transition. A transition may have one or more
+        equations (rows); the number varies per transition.
+      columns:
+        transition_id: >
+          Unique identifier (e.g. a sequential number) of the transition.
+          All rows sharing a transition_id are the equations that govern
+          that one transition.
+        current_state: >
+          State the transition leaves. Left empty for a global transition
+          (see global_transitions).
+        next_state: state the transition enters
+        default_state: >
+          Identifies the state machine's default (initial) state. Exactly
+          one row in the file has this column filled in, containing the
+          name of the default state; it is empty on all other rows. The
+          state machine starts in this state.
+        equation: >
+          Python-syntax Boolean expression for this row (see
+          components.logic_evaluation).
+        result_variable: >
+          Name of the Boolean variable that receives the result of this
+          row's equation each time it is evaluated.
+        rationale: >
+          String explaining why this transition / equation exists.
+        title: >
+          String giving the transition a short title.
+        order: see common_columns
+      band_note: >
+        A state machine file has no band column; the band is the master
+        CSV band column of its row.
+      multiple_equations: >
+        When a transition has more than one equation (row, grouped by
+        transition_id), the equations are ANDed together: the transition
+        occurs only when all of them are true. This is how a trigger and
+        guard(s) are combined; transitions may therefore have different
+        numbers of equations. There is no explicit negation or inhibit
+        mechanism for now: an equation that needs to be inverted simply
+        expresses its own negation (e.g. "not x"). This may be revisited.
+      global_transitions: >
+        A transition may be global: it has no current_state (empty) and
+        only a next_state. If all of its equations are true, the state
+        machine transitions to next_state regardless of which state it is
+        currently in. Global transitions are defined in the same state
+        machine file, using the same columns and grouping by
+        transition_id. Global and non-global transitions are not given
+        special precedence: if more than one transition is true in the
+        same pass, the manually set order prevails (the one evaluated
+        first, per its band and order, takes effect).
+
+    inputs_file:
+      description: >
+        A single CSV file defining the external inputs: variables whose
+        values come from outside the engine (set via set_input) rather
+        than from an equation or state machine. One variable per row.
+      columns:
+        variable_name: name of the input variable used in equations
+        type: >
+          Data type of the variable (e.g. bool, int, float). Not needed
+          by the engine itself for now; it will be used by a future front
+          end to present an appropriate control for stimulating the
+          variable.
+        default_value: >
+          Value the input has at start, until it is set externally.
+      note: >
+        The default_value column was added so that inputs can start at
+        defaults as required; the type column is kept for future GUI use.
+
+    equations_file:
+      description: >
+        A single CSV file containing all Boolean equations that are not
+        linked to a state machine. One equation per row.
+      columns:
+        equation: Python-syntax Boolean expression.
+        explanation: String explaining what the equation does.
+        rationale: String explaining why the equation exists.
+        result_variable: >
+          Name of the Boolean variable assigned the result of the equation
+          each time it is evaluated.
+        band: see common_columns
+        order: see common_columns
+
+  inter_component_communication:
+    no_events: >
+      There is no event bus and no event mechanism, implicit or explicit.
+      The only logic constructs are Boolean equations (and state machines
+      whose transitions are conditioned on them). Components interact
+      solely through values in the shared context. Only values designated
+      as outputs are visible to other components or the outside world
+      (including the web front end).
+    priority: >
+      Priority is deterministic and is expressed through execution order,
+      not through any dynamic prioritization scheme. See
+      timing_and_execution.execution_order.
+    shared_context:
+      purpose: >
+        Periodically computed values are exposed by components and consumed
+        by others as inputs.
+      mechanism: >
+        Rather than a fully global/shared context (simple but hard to
+        control write-access to), each component is passed a reference to
+        the relevant context at the time it is scheduled for execution.
+        This keeps the orchestrator in control of execution order and
+        makes each component's inputs explicit.
+
+  timing_and_execution:
+    clock: >
+      A simulation clock is maintained by the framework since timer-based
+      logic depends on it.
+    execution_model: >
+      A main execution loop runs as fast as possible (not synchronized to
+      real wall-clock time). At the start of each iteration, simulation
+      time is incremented and both the current time and the delta time
+      since the last iteration are made available to all components.
+    time_based_execution: >
+      Execution is purely time based: components are evaluated on each
+      scheduled pass of the simulation loop, and their values are
+      recomputed every pass.
+    time_in_logic: >
+      Simulation time is not required to be a variable in logic equations,
+      but it may be used as one when a requirement calls for it.
+    scheduling: >
+      Equations and state machines are scheduled for execution at a
+      configured rate, not strictly real-time, but ordered/paced by the
+      simulation loop.
+    execution_order:
+      definition: >
+        The definition of each equation and each state machine specifies
+        its execution rate and its relative order of execution within
+        that rate band (all items sharing the same rate form a band).
+        The order is set manually by the author in the definitions; the
+        framework does not derive or infer it (e.g. from dependencies).
+      determinism: >
+        Execution order is fully deterministic: within a band, items run
+        in their defined relative order every time the band is scheduled,
+        so a given set of inputs always yields the same results. This
+        manually set, deterministic ordering is the system's priority
+        mechanism, e.g. a monitoring equation that must see a command-layer
+        result in the same pass is simply ordered after it by the author.
+
+  architecture:
+    scope: >
+      The current phase implements only the evaluation and execution of
+      equations and state machines. No front end, WebSocket server or
+      orchestration server is part of this phase; they are deferred to a
+      later step.
+    constraints:
+      - Python only.
+      - Fully synchronous and deterministic; no async, threads or
+        wall-clock time, and no randomness.
+      - Simulation time is an integer tick count; bands are explicit
+        frequencies in Hz with no required relationship to each other.
+        The tick rate is the least common multiple of all band
+        frequencies, so every band period is a whole number of ticks
+        (exact arithmetic, no floating-point accumulation). t and dt are
+        derived from the tick.
+      - Execution order is the manual (band, order) schedule; never
+        dependent on dict or set iteration order.
+    design: >
+      Layered engine that compiles expressions at load time:
+      - Loader: reads the master CSV, state machine CSVs and equations
+        CSV into an immutable Model.
+      - Scheduler: builds the execution plan, ordered by (band, order),
+        once at load.
+      - Evaluator: runs expressions pre-compiled with Python's compile()
+        and evaluated against the context. Load-time checks (syntax,
+        duplicate transition_id, unknown states, single default state,
+        single band per state machine) are startup checks only, not
+        sandboxing.
+      - Runtime state: the context (variable values), the current state
+        of each state machine, and the tick.
+      - Trace hook: a logging callback recording each state change or
+        result with the variable values involved (see logging).
+    public_interface:
+      methods:
+        - Engine(model).step()
+        - Engine.run(ticks)
+        - Engine.snapshot()
+        - Engine.set_input(name, value)
+      note: >
+        This interface is the seam a future front end will attach to.
+    initial_values: >
+      At start, every state machine is in its default_state and external
+      input values are set to their default_value from the inputs file.
+
+  outputs: >
+    The following are outputs of the engine, consumable by external
+    software to be defined at a later stage: (1) the current state of
+    every state machine, and (2) every variable assigned the result of an
+    equation or transition equation (result_variable). These are exposed
+    through the Engine.snapshot() interface. External inputs are the
+    only values written from outside.
+
+  frontend_and_communication:
+    status: deferred to a later phase (not part of the current scope)
+    architecture: >
+      Python backend server hosts the orchestrator and all components.
+      A web-based front end (JavaScript, HTML, CSS) presents a mock cockpit
+      with panels representing the system under exploration.
+    transport: >
+      WebSockets connect backend and client(s), allowing values and state
+      to flow bidirectionally in real time and making it straightforward
+      to add additional components or clients to the platform later.
+
+  logging:
+    minimum_implementation: >
+      Plain text log file output.
+    contents:
+      - timestamp
+      - component name
+      - action or state change description
+      - relevant variable values involved in triggering the state change/action
+    scope_note: >
+      Exact logging content/format is to be determined as the framework
+      matures; a basic flat-file approach is sufficient for now. Migration
+      to a more structured or persistent logging solution (e.g. database)
+      may be considered later if needed, but is not required initially.
+
+  explicit_non_goals:
+    - No error handling for component failures/invalid states (deferred).
+    - No context validation before component execution (deferred).
+    - No sandboxing or AST inspection of equation expressions; eval is used
+      directly, trusting internal equation authors.
+    - No real-time / control-loop performance modeling; any such effect is
+      represented as a timer.
+    - No intent to generalize this into a long-lived or public tool; it is
+      a short-lived internal aid for requirement maturation, to be retired
+      once real aircraft software implementation exists.

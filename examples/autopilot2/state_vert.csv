@@ -1,0 +1,93 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order
+T1,Vertical_State_0,No_Vertical_State,Vertical_State_0,ap_on == True or fd_on == True,state_vert_t1_1,,FD or AP On but no vertical mode.,8
+T2,No_Vertical_State,preGsTrk,,appr_selected == True,state_vert_t2_1,,DMC tracking GS,9
+T2,No_Vertical_State,preGsTrk,,dmc_tracking_gs == True,state_vert_t2_2,,DMC tracking GS,10
+T2,No_Vertical_State,preGsTrk,,law_gs == True,state_vert_t2_3,,DMC tracking GS,11
+T2,No_Vertical_State,preGsTrk,,"capa in ['APPR1', 'APPR2', 'LAND2', 'LAND3']",state_vert_t2_4,,DMC tracking GS,12
+T3,preGsTrk,GsTrk,,ifcc_in_control == True,state_vert_t3_1,,IFCC taking guidance control. Engaging GsTrk.,13
+T3,preGsTrk,GsTrk,,law_gs == True,state_vert_t3_2,,IFCC taking guidance control. Engaging GsTrk.,14
+T4,preGsTrk,No_Vertical_State,,appr_selected == False or capa == 'NONE',state_vert_t4_1,,Loss of DMC AL,15
+T5,preGsTrk,No_Vertical_State,,state_vert == 'mp',state_vert_t5_1,,TEST,16
+T5,preGsTrk,No_Vertical_State,,law_gs == False,state_vert_t5_2,,TEST,17
+T6,GsTrk,Flare_Armed,,radio_altitude < 200,state_vert_t6_1,,Below Flare Arm threshold (1500ft). Arming Flare.,18
+T6,GsTrk,Flare_Armed,,"capa in ['LAND2', 'LAND3']",state_vert_t6_2,,Below Flare Arm threshold (1500ft). Arming Flare.,19
+T6,GsTrk,Flare_Armed,,law_flare == True,state_vert_t6_3,,Below Flare Arm threshold (1500ft). Arming Flare.,20
+T7,GsTrk,Pitch,,radio_altitude < 200,state_vert_t7_1,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,21
+T7,GsTrk,Pitch,,law_pitch == True,state_vert_t7_2,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,22
+T7,GsTrk,Pitch,,law_gs == False or capa == 'NONE',state_vert_t7_3,,GS Law Invalid or Capability lost above 50ft. Reverting to Pitch.,23
+T8,GsTrk,No_Vertical_State,,radio_altitude < 50,state_vert_t8_1,,Capability lost below 50ft. Autoland aborted.,24
+T8,GsTrk,No_Vertical_State,,capa == 'NONE',state_vert_t8_2,,Capability lost below 50ft. Autoland aborted.,25
+T9,GsTrk,Go_Around,,radio_altitude < 200,state_vert_t9_1,,TOGA pressed. Initiating Go-Around.,26
+T9,GsTrk,Go_Around,,toga == True,state_vert_t9_2,,TOGA pressed. Initiating Go-Around.,27
+T9,GsTrk,Go_Around,,on_ground == False,state_vert_t9_3,,TOGA pressed. Initiating Go-Around.,28
+T9,GsTrk,Go_Around,,ws_warning == False,state_vert_t9_4,,TOGA pressed. Initiating Go-Around.,29
+T9,GsTrk,Go_Around,,law_ga == True,state_vert_t9_5,,TOGA pressed. Initiating Go-Around.,30
+T10,GsTrk,Windshear,,radio_altitude < 200,state_vert_t10_1,,Windshear Warning + TOGA. Initiating Windshear Escape.,31
+T10,GsTrk,Windshear,,on_ground == False,state_vert_t10_2,,Windshear Warning + TOGA. Initiating Windshear Escape.,32
+T10,GsTrk,Windshear,,toga == True,state_vert_t10_3,,Windshear Warning + TOGA. Initiating Windshear Escape.,33
+T10,GsTrk,Windshear,,ws_warning == True,state_vert_t10_4,,Windshear Warning + TOGA. Initiating Windshear Escape.,34
+T10,GsTrk,Windshear,,law_ws == True,state_vert_t10_5,,Windshear Warning + TOGA. Initiating Windshear Escape.,35
+T11,Flare_Armed,Flare_Active,,claws_req_flare == True,state_vert_t11_1,,CLAWS requesting flare. Engaging Flare.,36
+T11,Flare_Armed,Flare_Active,,law_flare == True,state_vert_t11_2,,CLAWS requesting flare. Engaging Flare.,37
+T12,Flare_Armed,GsTrk,,ifcc_in_control == True,state_vert_t12_1,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,38
+T12,Flare_Armed,GsTrk,,radio_altitude > 50,state_vert_t12_2,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,39
+T12,Flare_Armed,GsTrk,,"capa not in ['LAND2', 'LAND3']",state_vert_t12_3,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,40
+T12,Flare_Armed,GsTrk,,law_gs == True,state_vert_t12_4,,Capability downgraded. Reverting to GsTrk (Disarming Flare).,41
+T13,Flare_Armed,Pitch,,radio_altitude < 200,state_vert_t13_1,,GS Law Invalid or Capability lost. Reverting to Pitch.,42
+T13,Flare_Armed,Pitch,,law_gs == False or capa == 'NONE',state_vert_t13_2,,GS Law Invalid or Capability lost. Reverting to Pitch.,43
+T14,Flare_Armed,No_Vertical_State,,radio_altitude < 50,state_vert_t14_1,,Capability lost below 50ft. Autoland aborted.,44
+T14,Flare_Armed,No_Vertical_State,,capa == 'NONE',state_vert_t14_2,,Capability lost below 50ft. Autoland aborted.,45
+T15,Flare_Armed,Go_Around,,radio_altitude < 200,state_vert_t15_1,,TOGA pressed. Initiating Go-Around.,46
+T15,Flare_Armed,Go_Around,,toga == True,state_vert_t15_2,,TOGA pressed. Initiating Go-Around.,47
+T15,Flare_Armed,Go_Around,,on_ground == False,state_vert_t15_3,,TOGA pressed. Initiating Go-Around.,48
+T15,Flare_Armed,Go_Around,,ws_warning == False,state_vert_t15_4,,TOGA pressed. Initiating Go-Around.,49
+T15,Flare_Armed,Go_Around,,law_ga == True,state_vert_t15_5,,TOGA pressed. Initiating Go-Around.,50
+T16,Flare_Armed,Windshear,,radio_altitude < 200,state_vert_t16_1,,Windshear Warning + TOGA. Initiating Windshear Escape.,51
+T16,Flare_Armed,Windshear,,on_ground == False,state_vert_t16_2,,Windshear Warning + TOGA. Initiating Windshear Escape.,52
+T16,Flare_Armed,Windshear,,toga == True,state_vert_t16_3,,Windshear Warning + TOGA. Initiating Windshear Escape.,53
+T16,Flare_Armed,Windshear,,ws_warning == True,state_vert_t16_4,,Windshear Warning + TOGA. Initiating Windshear Escape.,54
+T16,Flare_Armed,Windshear,,law_ws == True,state_vert_t16_5,,Windshear Warning + TOGA. Initiating Windshear Escape.,55
+T17,Flare_Active,Nosedown,,on_ground == True,state_vert_t17_1,,Touchdown confirmed (>2s). Engaging Nosedown.,56
+T17,Flare_Active,Nosedown,,ground_time_gt_2s == True,state_vert_t17_2,,Touchdown confirmed (>2s). Engaging Nosedown.,57
+T17,Flare_Active,Nosedown,,rollout_active == True,state_vert_t17_3,,Touchdown confirmed (>2s). Engaging Nosedown.,58
+T17,Flare_Active,Nosedown,,law_nd == True,state_vert_t17_4,,Touchdown confirmed (>2s). Engaging Nosedown.,59
+T18,Flare_Active,Pitch,,radio_altitude < 200,state_vert_t18_1,,Flare Law Invalid or Capability lost. Reverting to Pitch.,60
+T18,Flare_Active,Pitch,,law_flare == False or capa == 'NONE',state_vert_t18_2,,Flare Law Invalid or Capability lost. Reverting to Pitch.,61
+T19,Flare_Active,No_Vertical_State,,radio_altitude < 50,state_vert_t19_1,,Capability lost below 50ft. Autoland aborted.,62
+T19,Flare_Active,No_Vertical_State,,capa == 'NONE',state_vert_t19_2,,Capability lost below 50ft. Autoland aborted.,63
+T20,Flare_Active,Go_Around,,radio_altitude < 200,state_vert_t20_1,,TOGA pressed. Initiating Go-Around.,64
+T20,Flare_Active,Go_Around,,toga == True,state_vert_t20_2,,TOGA pressed. Initiating Go-Around.,65
+T20,Flare_Active,Go_Around,,on_ground == False,state_vert_t20_3,,TOGA pressed. Initiating Go-Around.,66
+T20,Flare_Active,Go_Around,,ws_warning == False,state_vert_t20_4,,TOGA pressed. Initiating Go-Around.,67
+T20,Flare_Active,Go_Around,,law_ga == True,state_vert_t20_5,,TOGA pressed. Initiating Go-Around.,68
+T21,Flare_Active,Windshear,,radio_altitude < 200,state_vert_t21_1,,Windshear Warning + TOGA. Initiating Windshear Escape.,69
+T21,Flare_Active,Windshear,,on_ground == False,state_vert_t21_2,,Windshear Warning + TOGA. Initiating Windshear Escape.,70
+T21,Flare_Active,Windshear,,toga == True,state_vert_t21_3,,Windshear Warning + TOGA. Initiating Windshear Escape.,71
+T21,Flare_Active,Windshear,,ws_warning == True,state_vert_t21_4,,Windshear Warning + TOGA. Initiating Windshear Escape.,72
+T21,Flare_Active,Windshear,,law_ws == True,state_vert_t21_5,,Windshear Warning + TOGA. Initiating Windshear Escape.,73
+T22,Nosedown,No_Vertical_State,,on_ground == True,state_vert_t22_1,,Rollout complete (Speed < 30kts). Disengaging vertical mode.,74
+T22,Nosedown,No_Vertical_State,,ground_speed < 30 or law_nd == False,state_vert_t22_2,,Rollout complete (Speed < 30kts). Disengaging vertical mode.,75
+T23,Pitch,Go_Around,,radio_altitude < 200,state_vert_t23_1,,TOGA pressed. Initiating Go-Around from Pitch.,76
+T23,Pitch,Go_Around,,toga == True,state_vert_t23_2,,TOGA pressed. Initiating Go-Around from Pitch.,77
+T23,Pitch,Go_Around,,on_ground == False,state_vert_t23_3,,TOGA pressed. Initiating Go-Around from Pitch.,78
+T23,Pitch,Go_Around,,ws_warning == False,state_vert_t23_4,,TOGA pressed. Initiating Go-Around from Pitch.,79
+T23,Pitch,Go_Around,,law_ga == True,state_vert_t23_5,,TOGA pressed. Initiating Go-Around from Pitch.,80
+T24,Pitch,Windshear,,radio_altitude < 200,state_vert_t24_1,,Windshear Warning + TOGA. Initiating Windshear Escape from Pitch.,81
+T24,Pitch,Windshear,,on_ground == False,state_vert_t24_2,,Windshear Warning + TOGA. Initiating Windshear Escape from Pitch.,82
+T24,Pitch,Windshear,,toga == True,state_vert_t24_3,,Windshear Warning + TOGA. Initiating Windshear Escape from Pitch.,83
+T24,Pitch,Windshear,,ws_warning == True,state_vert_t24_4,,Windshear Warning + TOGA. Initiating Windshear Escape from Pitch.,84
+T24,Pitch,Windshear,,law_ws == True,state_vert_t24_5,,Windshear Warning + TOGA. Initiating Windshear Escape from Pitch.,85
+T25,Go_Around,Windshear,,radio_altitude < 200,state_vert_t25_1,,Windshear detected during Go-Around. Transitioning to Windshear mode.,86
+T25,Go_Around,Windshear,,on_ground == False,state_vert_t25_2,,Windshear detected during Go-Around. Transitioning to Windshear mode.,87
+T25,Go_Around,Windshear,,toga == True,state_vert_t25_3,,Windshear detected during Go-Around. Transitioning to Windshear mode.,88
+T25,Go_Around,Windshear,,ws_warning == True,state_vert_t25_4,,Windshear detected during Go-Around. Transitioning to Windshear mode.,89
+T25,Go_Around,Windshear,,law_ws == True,state_vert_t25_5,,Windshear detected during Go-Around. Transitioning to Windshear mode.,90
+T26,Go_Around,Pitch,,law_ga == False,state_vert_t26_1,,Go-Around Law Invalid. Reverting to Pitch.,91
+T27,Windshear,Pitch,,law_ws == False,state_vert_t27_1,,Windshear Law Invalid. Reverting to Pitch.,92
+G1,,Vertical_State_0,,ap_on == False,state_vert_g1_1,Because this is a good idea.,AP/FD turned off. Resetting to Vertical State 0.,1
+G1,,Vertical_State_0,,fd_on == False,state_vert_g1_2,Because this is a good idea.,AP/FD turned off. Resetting to Vertical State 0.,2
+G2,,No_Vertical_State,,law_pitch == False,state_vert_g2_1,Because this is another good idea.,"Loss of Pitch law, revert to No vertical State.",3
+G3,,No_Vertical_State,,radio_altitude > 200,state_vert_g3_1,,IFCC releasing control to DMC,4
+G3,,No_Vertical_State,,ifcc_in_control == False,state_vert_g3_2,,IFCC releasing control to DMC,5
+G3,,No_Vertical_State,,ifcc_in_control_prev == True,state_vert_g3_3,,IFCC releasing control to DMC,6
+G3,,No_Vertical_State,,"state_vert in ['preGsTrk', 'GsTrk', 'Flare_Armed', 'Pitch', 'Go_Around', 'Windshear']",state_vert_g3_4,,IFCC releasing control to DMC,7

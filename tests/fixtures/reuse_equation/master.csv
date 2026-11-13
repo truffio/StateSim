@@ -1,0 +1,4 @@
+file_name,type,order,band
+R.csv,state_machine,2,10
+equations.csv,equations,,
+inputs.csv,inputs,,

@@ -1,0 +1,9 @@
+{"description":"Global transition to FAULT from IDLE and RUN; global to current state is a no-op that still wins over later reset transition.",
+"steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{"G":"IDLE"},"outputs":{"t1_start":false,"t3_fault":false}}},
+{"set_inputs":{"fault":true},"expect":{"tick":2,"states":{"G":"FAULT"},"outputs":{"t3_fault":true,"t4_reset":false}}},
+{"set_inputs":{"reset":true},"expect":{"tick":3,"states":{"G":"FAULT"},"outputs":{"t3_fault":true,"t4_reset":true}}},
+{"set_inputs":{"fault":false},"expect":{"tick":4,"states":{"G":"IDLE"},"outputs":{"t3_fault":false,"t4_reset":true}}},
+{"set_inputs":{"reset":false,"start":true},"expect":{"tick":5,"states":{"G":"RUN"},"outputs":{"t1_start":true,"t4_reset":false}}},
+{"set_inputs":{"fault":true},"expect":{"tick":6,"states":{"G":"FAULT"},"outputs":{"t1_start":true,"t3_fault":true}}}
+]}

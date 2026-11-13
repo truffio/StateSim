@@ -1,0 +1,4 @@
+variable_name,type,default_value
+a,bool,False
+b,bool,False
+c,bool,False

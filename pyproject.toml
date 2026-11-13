@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "statesim"
+version = "0.1.0"
+description = "Deterministic, time-based state machine / Boolean equation engine for requirement exploration."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+server = ["websockets>=13"]
+dev = ["pytest", "pytest-cov", "websockets>=13", "playwright"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+statesim_server = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--strict-markers"
+junit_family = "xunit1"
+markers = [
+    "req(*ids): links a test to one or more requirement IDs from docs/requirements.csv",
+]

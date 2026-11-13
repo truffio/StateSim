@@ -1,0 +1,10 @@
+{"description":"Transition with three ANDed rows; turns on only when a, b and c are all true.",
+"steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{"L":"OFF"},"outputs":{"ra":false,"rb":false,"rc":false,"rn":true}}},
+{"set_inputs":{"a":true},"expect":{"tick":2,"states":{"L":"OFF"},"outputs":{"ra":true,"rb":false,"rc":false,"rn":false}}},
+{"set_inputs":{"b":true},"expect":{"tick":3,"states":{"L":"OFF"},"outputs":{"ra":true,"rb":true,"rc":false}}},
+{"set_inputs":{"b":false,"c":true},"expect":{"tick":4,"states":{"L":"OFF"},"outputs":{"ra":true,"rb":false,"rc":true}}},
+{"set_inputs":{"b":true},"expect":{"tick":5,"states":{"L":"ON"},"outputs":{"ra":true,"rb":true,"rc":true,"rn":false}}},
+{"set_inputs":{"a":false},"expect":{"tick":6,"states":{"L":"OFF"},"outputs":{"ra":false,"rn":true}}},
+{"set_inputs":{"a":true},"expect":{"tick":7,"states":{"L":"ON"},"outputs":{"ra":true,"rb":true,"rc":true,"rn":false}}}
+]}

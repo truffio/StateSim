@@ -1,0 +1,5 @@
+equation,explanation,rationale,result_variable,band,order
+x,y sees x same pass,later order,y,10,3
+late,p sees previous pass of late,earlier order,p,10,1
+go,x copies go,middle,x,10,2
+go,late copies go,last,late,10,4

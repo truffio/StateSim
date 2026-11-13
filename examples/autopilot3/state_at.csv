@@ -1,0 +1,17 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order,action_type,action
+G1,,Idle,,state_at =='Active',state_at_g1_1,,resetting ifcc_in_control_prev to False,1,entry,STATE_AT_G1
+G1,,Idle,,ATdisc == True,state_at_g1_2,,resetting ifcc_in_control_prev to False,2,,
+T1,Idle,Hold armed,Idle,on_ground == True,state_at_t1_1,Arming on ground when TOGA pressed or AT button pressed on the ground,Arming AT,3,entry,STATE_AT_T1
+T1,Idle,Hold armed,,(TOGA == True) or (AT_btn == True),state_at_t1_2,Arming on ground when TOGA pressed or AT button pressed on the ground,Arming AT,4,,
+T2,Idle,Active,,radio_altitude > 200,state_at_t2_1,,Engaging AT,5,entry,STATE_AT_T1
+T2,Idle,Active,,AT_btn == True,state_at_t2_2,,Engaging AT,6,,
+T3,Hold armed,Hold,,on_ground == True,state_at_t3_1,Engaging Hold mode at 60 kts,Engaging Hold mode,7,entry,STATE_AT_T1
+T3,Hold armed,Hold,,ground_speed >= 60,state_at_t3_2,Engaging Hold mode at 60 kts,Engaging Hold mode,8,,
+T4,Hold armed,Active,,radio_altitude > 200,state_at_t4_1,,Engaging AT,9,entry,STATE_AT_T1
+T4,Hold armed,Active,,AT_btn == True,state_at_t4_2,,Engaging AT,10,,
+T5,Active,Retard,,radio_altitude < 50,state_at_t5_1,,,11,,
+T5,Active,Retard,,appr_on == True,state_at_t5_2,,,12,,
+T5,Active,Retard,,claws_req_flare == True,state_at_t5_3,,,13,,
+T6,Hold,Active,,radio_altitude > 400,state_at_t6_1,,Autoengaging AT,14,,
+T7,Retard,Idle,,ground_time_gt_2s == True,state_at_t7_1,,Automatic disengage of AT after tourchdown,15,entry,STATE_AT_G1
+T8,Retard,Idle,,TOGA == True,state_at_t8_1,,Go around,16,entry,STATE_AT_G1

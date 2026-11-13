@@ -1,0 +1,6 @@
+{"description":"Single SM A->B on input go at 10 Hz plus one equation ordered after the SM.",
+"steps":[
+{"set_inputs":{},"expect":{"tick":1,"states":{"M":"A"},"outputs":{"t1_go":false,"in_b":false}}},
+{"set_inputs":{"go":true},"expect":{"tick":2,"states":{"M":"B"},"outputs":{"t1_go":true,"in_b":true}}},
+{"set_inputs":{"go":false},"expect":{"tick":3,"states":{"M":"B"},"outputs":{"t1_go":false,"in_b":true}}}
+]}

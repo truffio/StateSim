@@ -1,0 +1,7 @@
+equation,explanation,rationale,result_variable,band,order
+t >= 2000,Slow timer: 2 s elapsed,Evaluated at 1 Hz,slow_2s,1,1
+t >= 2000,Fast timer: 2 s elapsed,Evaluated at 10 Hz,fast_2s,10,1
+dt == 100,Fast band period is 100 ms,dt is the ms since the item last ran,fast_dt_100,10,2
+slow_2s and fast_2s,Both timers elapsed,Equations can read other results,both_2s,10,3
+sig > 0,Signal positive (sampled at 1 Hz),Shows sample-and-hold at a slow rate,sig_pos_1hz,1,2
+sig > 0,Signal positive (sampled at 10 Hz),Same equation at a faster rate,sig_pos_10hz,10,4
