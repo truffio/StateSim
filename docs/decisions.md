@@ -243,3 +243,19 @@ section 11.
   its causes are (A) the transition that entered the state and (B) whatever
   produced the conditions its rows read, which were already waiting. Before,
   such a transition had no cause. Rule in `docs/future_timeline.md` section 1.
+
+## Part F: FMA recording, user-approved 2026-11-13
+
+- Start/Stop recording mark a window only; logging is continuous.
+- One row per input that changed the settled FMA (all changes until the next
+  input merged); inputs that change nothing are left out; the caption names
+  only the cause input, in plain English (inputs CSV description and unit).
+- No blank FMA at the start: a caption only.
+- The real FMA panel is drawn for each row (not a text version); the layout
+  is named "compact": a vertical list indented a little more each row.
+- Stop opens an editable preview (option B) in a new window: title,
+  description, captions (a rewrite replaces the recorded text, nothing kept),
+  notes, times, reorder (not flagged), hide, indent, undo, reset. The FMA
+  snapshots are not editable. Save PNG saves what is shown.
+- The FMA panel is marked by the master CSV role column (role = fma, one at
+  most); the FCP is not shown.

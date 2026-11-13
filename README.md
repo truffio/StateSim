@@ -42,6 +42,9 @@ The **Timeline** button in the run bar shows a pane with one lane per state
 machine, and the input changes, over time. Click a transition to see what it
 caused (a sequence chart). **Save as text** downloads the run as a numbered
 list of input changes and transitions, each with its causes and action writes.
+With an FMA panel (master CSV `role` = `fma`), **Start recording** / **Stop
+recording** make a report of the FMA changes and the crew inputs that caused
+them, in an editable preview that saves as a PNG (UI spec section 12).
 
 Or run it from Python:
 

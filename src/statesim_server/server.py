@@ -24,7 +24,8 @@ from .session import Session, describe_model
 
 STATIC = Path(__file__).resolve().parent / "static"
 PAGES = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/app.css": "app.css",
-         "/panels.js": "panels.js", "/timeline.js": "timeline.js", "/timeline.css": "timeline.css"}
+         "/panels.js": "panels.js", "/recording.js": "recording.js",
+         "/recorder.html": "recorder.html", "/recorder.js": "recorder.js", "/timeline.js": "timeline.js", "/timeline.css": "timeline.css"}
 WS_PATH = "/ws"
 TIMELINE_TEXT = "/timeline.txt"   # the current run's timeline as text (a download)
 SEND_HZ = 30            # at most this many screen updates per second

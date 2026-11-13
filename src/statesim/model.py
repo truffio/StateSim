@@ -46,6 +46,8 @@ class InputDef:
     lit_by: str = ""
     wide: bool = False
     panel: str = ""          # panel file that drives this input (no card), else ""
+    description: str = ""    # plain-English name for reports, e.g. "Approach button"
+    unit: str = ""           # unit for reports, e.g. "ft"
 
 
 @dataclass(frozen=True)
@@ -68,6 +70,7 @@ class PanelDef:
     lines: tuple[tuple[str, str, int], ...] = ()
     scale: float = 1         # master CSV "scale" column: display size factor (display only)
     label: str = ""          # master CSV "name" column: display name (display only)
+    role: str = ""           # master CSV "role" column: "fma" = the FMA recording's panel
 
     def line_of(self, attr: str, var: str) -> int:
         return next((n for a, v, n in self.lines if a == attr and v == var), 1)

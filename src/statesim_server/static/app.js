@@ -17,6 +17,7 @@ let litButtons = []; // [{el, var}]
 let built = false;
 let panels = null;    // StateSimPanels.build() result
 let timeline = null;  // StateSimTimeline.build() result
+let recorder = null;  // StateSimRecorder.build() result (null: no FMA panel)
 let timelineMsg = null; // "timeline" message that came before the model
 
 function send(msg) {
@@ -31,7 +32,10 @@ function connect() {
     const msg = JSON.parse(ev.data);
     if (msg.type === "model") build(msg);
     else if (msg.type === "state") show(msg);
-    else if (msg.type === "timeline") { if (timeline) timeline.reset(msg.gen, msg.items); else timelineMsg = msg; }
+    else if (msg.type === "timeline") {
+      if (timeline) timeline.reset(msg.gen, msg.items); else timelineMsg = msg;
+      if (recorder) recorder.timeline(msg);
+    }
     else if (msg.type === "error") {
       console.warn("StateSim:", msg.message);
       // A failed step pauses the run: keep its message until resumed or reset.
@@ -74,6 +78,7 @@ function build(model) {
   timeline = window.StateSimTimeline ? window.StateSimTimeline.build($("timeline"), model.machines) : null;
   if (timeline && timelineMsg) timeline.reset(timelineMsg.gen, timelineMsg.items);
   timelineMsg = null;
+  recorder = window.StateSimRecorder ? window.StateSimRecorder.build(model, { banner: (m) => banner(m, 6000) }) : null;
   built = true;
   requestAnimationFrame(fitStateText);
 }
@@ -234,7 +239,8 @@ function show(st) {
   }
   if (panels) panels.update(st);
   if (stickyError && !st.paused) { stickyError = false; banner(""); }
-  if (timeline) timeline.state(st);          // optional t, gen and tl (new timeline items)
+  if (timeline) timeline.state(st);
+  if (recorder) recorder.state(st);          // optional t, gen and tl (new timeline items)
   $("pause").textContent = st.paused ? "Resume" : "Pause";
   $("step").disabled = !st.paused;
 }
@@ -247,6 +253,7 @@ $("pause").addEventListener("click", () => send({ type: $("pause").textContent =
 $("step").addEventListener("click", () => send({ type: "step" }));
 $("reset").addEventListener("click", () => {
   if (stickyError) { stickyError = false; banner(""); }
+  if (recorder) recorder.beforeReset();      // a reset ends the recording, like Stop
   send({ type: "reset" });
 });
 
