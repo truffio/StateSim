@@ -159,9 +159,9 @@ REQ-157,actions,"Action writes shall be visible immediately to later items in th
 REQ-158,frontend,"Input controls shall show values written by actions on the next state update",decisions.C,unit_test
 REQ-159,frontend,"Aircraft panels shall be shown side by side on one row in master CSV order; if the row is too wide for the window every panel shall be scaled down by the same factor",frontend_ui_spec.3.1,use_case_test
 REQ-160,timeline,"A TraceEvent shall carry optional structured fields kind (input, result, transition or action), name, old, new, trigger, label, title and phase, all with defaults so existing code keeps working",future_timeline.1,unit_test
-REQ-161,timeline,The trigger of an item shall be the names it read whose value differs from their value at the end of that item's previous run (initial values before its first run),future_timeline.1,unit_test
-REQ-162,timeline,"The names t, tick and dt shall never appear in a trigger, so a timer-only transition has an empty trigger",future_timeline.1,unit_test
-REQ-163,timeline,The trigger of a transition shall use only the names read by that transition's own rows,future_timeline.1,unit_test
+REQ-161,timeline,"The trigger of an equation or a transition row shall be the names it read whose value differs from their value when it last read them (initial values before its first run); a row shall take its copy before it writes its result, so a result written by a later row or a variable written by the machine's own action counts as a change on the next pass",future_timeline.1,unit_test
+REQ-162,timeline,"The names t, tick and dt shall never appear in a trigger, so a transition that only waits for a timer has an empty trigger",future_timeline.1,unit_test
+REQ-163,timeline,"The trigger of a transition shall be the union of the triggers of its own rows in that pass, plus the gate rule of REQ-189",future_timeline.1,unit_test
 REQ-164,timeline,"The trigger shall be exact for state machines running in different bands, because it is relative to the item's own previous run",future_timeline.1,unit_test
 REQ-165,timeline,The text trace output shall be unchanged by the structured fields,future_timeline.1,unit_test
 REQ-166,timeline,"The Timeline recorder shall turn trace events into JSON-ready items with sequential ids: transition items (k tr) with id, t, tick, sm, tid, title, from, to, causes and writes, and input items (k in) with id, t, tick, name and value",future_timeline.2,unit_test
@@ -187,3 +187,4 @@ REQ-185,frontend,"In the sequence chart each cause shall be an arrow from its li
 REQ-186,frontend,A close button and the Escape key shall close the sequence chart,frontend_ui_spec.11.6,use_case_test
 REQ-187,frontend,Reset shall clear the lanes and the sequence chart,frontend_ui_spec.11.7,use_case_test
 REQ-188,frontend,"The Timeline pane shall show the current session only, the same whether driven by hand or by a test",frontend_ui_spec.11.7,use_case_test
+REQ-189,timeline,"When a transition with a current_state fires and its machine entered that state since its previous pass, its trigger shall be the machine's own name plus every name its rows read except t, tick and dt, so its causes are the transition that entered the state and the items that produced the conditions already waiting; the start state shall not count as entered and global transitions shall not be gated",future_timeline.1,unit_test

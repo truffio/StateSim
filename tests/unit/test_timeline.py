@@ -396,8 +396,8 @@ def test_actions_example_end_to_end() -> None:
 
     t1, t2, t3, t4 = trs
     assert t1["causes"] == [1]                      # the TOGA press
-    assert t2["causes"] == [3]                      # radio_altitude 500
-    assert set(t3["causes"]) <= {t2["id"]}          # the climb timer, never an input
+    assert t2["causes"] == [t1["id"], 3]            # radio_altitude 500, one pass after entering Takeoff
+    assert t3["causes"] == [t2["id"]]               # climb_ticks, counted since T2 entered Climb
     assert t4["causes"] == [6]                      # radio_altitude 0
     assert t1["writes"] == [["ground_speed", 140]]  # entry
     assert t2["writes"][0] == ["ground_speed", 0]   # entry

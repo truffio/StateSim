@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import builtins
 from copy import deepcopy
+from operator import itemgetter
 from fractions import Fraction
 
 from . import constants
@@ -86,15 +87,26 @@ class Engine:
     result changes kind="result" with name = result variable; state changes
     kind="transition" with name = SM name, old/new states, label, title;
     action writes kind="action" with name = target, label = action name and
-    phase "init", "exit", "entry" or "during". ``trigger`` (sorted) = the
-    names read by the item (the equation; for a state machine the row, or
-    for a transition all rows of that transition) whose value differs
-    (``!=`` or a different type) from the item's last-seen copy: the values
-    at the end of its previous run (the initial context before its first
-    run), so it is exact across bands. ``t``, ``tick``, ``dt`` and a machine's
-    own name are never triggers; inputs and actions have none. The transition
-    trigger is captured with its values, before the exit action. This
-    bookkeeping runs only when a trace sink is attached.
+    phase "init", "exit", "entry" or "during".
+
+    ``trigger`` (sorted names; inputs and actions have none). Every equation
+    and every transition row keeps a last-seen copy of the names it reads
+    (never ``t``, ``tick``, ``dt``), initially the starting context. Each
+    time the item runs, the names whose value differs (``!=`` or a different
+    type) from that copy are its trigger and the copy is updated: a row does
+    this as it reads, before it writes its result, so a result written by a
+    later row or a counter written by the machine's own action is seen as a
+    change on the next pass. It is exact across bands.
+      * result event: the trigger of that equation or row.
+      * transition event: the union of the triggers of its rows in this pass.
+        Gate rule: if the transition has a current_state and the machine
+        entered that state since its previous pass, the entry is what let it
+        fire, so the trigger is instead the machine's own name plus every
+        name the transition's rows read (the conditions that were waiting).
+        The start state does not count as entered.
+    This bookkeeping runs only when a trace sink is attached. To keep it
+    cheap, every logged write bumps a version number of the written name, and
+    an item compares values only when a version of a name it reads moved.
     """
 
     def __init__(self, model: Model, trace: TraceSink | None = None) -> None:
@@ -153,29 +165,30 @@ class Engine:
         ctx["dt"] = Fraction(0)
         ctx[BUILTINS_KEY] = builtins
         self._ctx = ctx
-        # Trigger bookkeeping (used only when a trace sink is attached):
-        # names each item reads (no t/tick/dt/builtins, no SM's own name) and
-        # the item's last-seen copy of them, initially the starting context.
+        # Trigger bookkeeping (used only when a trace sink is attached).
+        # _ver[name] counts the logged writes of name. Each equation and each
+        # row gets a last-seen copy [names it reads, their values, getter of
+        # their versions, their versions], initially the starting context.
+        # Each transition gets its gate trigger (own machine name + every
+        # name its rows read).
         skip = {"t", "tick", "dt", BUILTINS_KEY}
+        self._ver = dict.fromkeys(ctx, 0)
 
-        def reads(names, own=None):
-            return tuple(n for n in sorted(set(names))
-                         if n in ctx and n not in skip and n != own)
+        def seen(names, own=None):
+            ns = tuple(n for n in sorted(set(names))
+                       if n in ctx and n not in skip and n != own)
+            versions = itemgetter(*ns) if ns else (lambda ver: ())
+            return [ns, [ctx[n] for n in ns], versions, versions(self._ver)]
 
-        self._eq_reads = {rv: reads(used) for rv, (_c, used, _s) in self._eqs.items()}
-        self._row_reads = {}  # (sm, row source) -> names
-        self._tr_reads = {}  # id(transition) -> names
-        self._sm_reads = {}
+        # an equation never has its own result as a trigger
+        self._eq_seen = {rv: seen(used, rv) for rv, (_c, used, _s) in self._eqs.items()}
         for name, trans in self._sms.items():
-            all_names = set()
-            for tr, _label, rows, used in trans:
-                for _rv, _code, row_used, src in rows:
-                    self._row_reads[(name, src)] = reads(row_used, name)
-                self._tr_reads[id(tr)] = reads(used, name)
-                all_names.update(used)
-            self._sm_reads[name] = reads(all_names, name)
-        self._eq_seen = {rv: {n: ctx[n] for n in ns} for rv, ns in self._eq_reads.items()}
-        self._sm_seen = {sm: {n: ctx[n] for n in ns} for sm, ns in self._sm_reads.items()}
+            for i, (tr, label, rows, used) in enumerate(trans):
+                rows = [(rv, code, row_used, src, seen(row_used))
+                        for rv, code, row_used, src in rows]
+                gate = tuple(sorted({name, *seen(used)[0]}))
+                trans[i] = (tr, label, rows, used, gate)
+        self._prev_state = {sm.name: sm.default_state for sm in model.state_machines}
 
     @property
     def tick(self) -> int:
@@ -194,23 +207,24 @@ class Engine:
 
     def _emit(self, component: str, action: str, values: tuple, **fields) -> None:
         if self._trace is not None:
+            self._ver[fields["name"]] += 1  # every event is a write of that name
             self._trace.emit(TraceEvent(self._tick, self._t, component, action, values,
                                         **fields))
 
-    def _trigger(self, names, seen: dict) -> tuple:
-        """The names (already sorted) whose context value differs from ``seen``."""
+    def _changed(self, seen: list) -> tuple:
+        """The names (sorted) whose context value differs from the last-seen
+        copy ``seen``; the copy is updated. Call it only when a version moved
+        (``seen[2](self._ver) != seen[3]``)."""
         ctx = self._ctx
-        out = []
-        for n in names:
-            a, b = ctx[n], seen[n]
+        names, values = seen[0], seen[1]
+        seen[3] = seen[2](self._ver)
+        out = ()
+        for i, n in enumerate(names):
+            a, b = ctx[n], values[i]
             if a != b or type(a) is not type(b):
-                out.append(n)
-        return tuple(out)
-
-    @staticmethod
-    def _remember(seen: dict, ctx: dict) -> None:
-        for n in seen:
-            seen[n] = ctx[n]
+                out += (n,)
+                values[i] = a
+        return out
 
     def _eval(self, code, source: str, item: str) -> bool:
         try:
@@ -229,6 +243,11 @@ class Engine:
             ctx["dt"] = 1000 / item.band_hz
             if item.kind == "equation":
                 code, used, src = self._eqs[item.name]
+                trigger = ()
+                if self._trace is not None:
+                    seen = self._eq_seen[item.name]
+                    if seen[2](self._ver) != seen[3]:
+                        trigger = self._changed(seen)
                 new = self._eval(code, src, item.name)
                 old = ctx[item.name]
                 if new != old:
@@ -237,10 +256,7 @@ class Engine:
                         self._emit(constants.EQUATIONS_COMPONENT,
                                    f"{item.name} {old}->{new}", self._vals(used),
                                    kind="result", name=item.name, old=old, new=new,
-                                   trigger=self._trigger(self._eq_reads[item.name],
-                                                         self._eq_seen[item.name]))
-                if self._trace is not None:
-                    self._remember(self._eq_seen[item.name], ctx)
+                                   trigger=trigger)
             else:
                 self._run_sm(item.name)
 
@@ -261,11 +277,6 @@ class Engine:
                                new=ctx[n], label=action, phase=phase)
 
     def _run_sm(self, name: str) -> None:
-        self._run_sm_pass(name)
-        if self._trace is not None:
-            self._remember(self._sm_seen[name], self._ctx)
-
-    def _run_sm_pass(self, name: str) -> None:
         if name not in self._sm_started:
             self._sm_started.add(name)
             init = self._sm_defs[name].init_action
@@ -277,13 +288,10 @@ class Engine:
             if during:
                 self._run_action(name, during, "during")
             return
-        tr, label, used = fired
+        tr, label, used, trigger = fired
         ctx = self._ctx
         cur = ctx[name]
         values = self._vals(used)  # the values that made the transition fire
-        trigger = ()
-        if self._trace is not None:
-            trigger = self._trigger(self._tr_reads[id(tr)], self._sm_seen[name])
         if tr.exit_action:
             self._run_action(name, tr.exit_action, "exit")
         ctx[name] = tr.next_state
@@ -294,36 +302,51 @@ class Engine:
             self._run_action(name, tr.entry_action, "entry")
 
     def _select(self, name: str):
-        """Evaluate every row; return (transition, label, used names) of the
-        transition that fires, or None when none does (including a global
-        self-transition, which wins the pass but changes nothing)."""
+        """Evaluate every row; return (transition, label, used names,
+        trigger) of the transition that fires, or None when none does
+        (including a global self-transition, which wins the pass but changes
+        nothing). The trigger is () when no trace sink is attached."""
         ctx = self._ctx
         trans = self._sms[name]
+        traced = self._trace is not None
+        ver = self._ver
         results = []
-        for tr, _label, rows, _used in trans:
+        for tr, _label, rows, _used, _gate in trans:
             ok = True
-            for rv, code, used, src in rows:
+            trigger = ()  # the row triggers of this transition, joined
+            for rv, code, used, src, seen in rows:
+                row_trigger = ()
+                if traced and seen[2](ver) != seen[3]:
+                    row_trigger = self._changed(seen)
+                    trigger += row_trigger
                 new = self._eval(code, src, name)
                 old = ctx[rv]
                 if new != old:
                     ctx[rv] = new
-                    if self._trace is not None:
+                    if traced:
                         self._emit(name, f"{rv} {old}->{new}", self._vals(used),
                                    kind="result", name=rv, old=old, new=new,
-                                   trigger=self._trigger(self._row_reads[(name, src)],
-                                                         self._sm_seen[name]))
+                                   trigger=row_trigger)
                 if not new:
                     ok = False
-            results.append(ok)
+            results.append((ok, trigger))
         cur = ctx[name]
-        for (tr, label, rows, used), ok in zip(trans, results):
+        entered = False
+        if traced:
+            entered = cur != self._prev_state[name]
+            self._prev_state[name] = cur
+        for (tr, label, rows, used, gate), (ok, trigger) in zip(trans, results):
             if tr.current_state is not None and tr.current_state != cur:
                 continue
             if not ok:
                 continue
             if tr.current_state is None and tr.next_state == cur:
                 return None  # global self-transition: no-op, still wins
-            return tr, label, used
+            if entered and tr.current_state is not None:
+                trigger = gate  # the state entry let it fire (gate rule)
+            else:
+                trigger = tuple(sorted(set(trigger)))
+            return tr, label, used, trigger
         return None
 
     def run(self, ticks: int) -> None:

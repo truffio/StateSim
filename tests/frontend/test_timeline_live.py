@@ -59,6 +59,7 @@ def drive_autopilot2_to_ifcc(pg):
     pg.locator(".switch", has_text="dmc_tracking_gs").click()
     wait_active(pg, "IFCC", 3)
     wait_active(pg, "LocTrk", 2)
+    wait_active(pg, "GsTrk", 1)
 
 
 @R("REQ-176", "REQ-188")
@@ -139,7 +140,7 @@ def test_reset_clears_lanes_and_chart(open_page):
     assert ticks(pg).count() == 0 and dots(pg).count() == 0
 
 
-@R("REQ-168", "REQ-183", "REQ-184", "REQ-185", "REQ-186")
+@R("REQ-168", "REQ-183", "REQ-184", "REQ-185", "REQ-186", "REQ-189")
 def test_autopilot2_guidance_source_chain_in_sequence_chart(open_page):
     pg = open_page("autopilot2")
     show(pg)
@@ -149,23 +150,25 @@ def test_autopilot2_guidance_source_chain_in_sequence_chart(open_page):
     gs = tick_by_title(pg, "DMC -> IFCC")                          # Guidance source T1
     lat = tick_by_title(pg, "preLocTrk -> LocTrk")                 # Lateral guidance T3
     assert gs.count() == 1 and lat.count() == 1
-    gs_id, lat_id = gs.get_attribute("data-id"), lat.get_attribute("data-id")
-    assert int(gs_id) < int(lat_id)
+    vert = tick_by_title(pg, "preGsTrk -> GsTrk")                  # Vertical guidance T3, one pass later
+    assert vert.count() == 1
+    gs_id, lat_id, vert_id = (x.get_attribute("data-id") for x in (gs, lat, vert))
+    assert int(gs_id) < int(lat_id) < int(vert_id)
 
     gs.click()
     frame(pg)
     chart = pg.locator("#timeline .tl-chart")
     assert chart.is_visible()
     assert "sel" in gs.get_attribute("class").split()
-    # The real chain on autopilot2: Guidance source T1 -> Lateral guidance T3 only. Vertical T3 (GsTrk)
-    # follows one pass later with no cause (see the report), and Phase of flight changes by its own
-    # inputs (dmc_tracking_loc/gs), not by Guidance source.
+    # The real chain on autopilot2: Guidance source T1 -> Lateral guidance T3, and Vertical guidance T3
+    # (GsTrk) one pass later: it was waiting for ifcc_in_control and fired when Vertical entered preGsTrk
+    # (gate rule, REQ-189). Phase of flight changes by its own inputs (dmc_tracking_loc/gs).
     rows = chart.locator(".tl-seq-tr")
-    assert rows.evaluate_all("rs => rs.map(r => r.dataset.id)") == [gs_id, lat_id]
-    assert rows.evaluate_all("rs => rs.map(r => r.querySelector('.tl-seq-tid').textContent)") == ["T1", "T3"]
+    assert rows.evaluate_all("rs => rs.map(r => r.dataset.id)") == [gs_id, lat_id, vert_id]
+    assert rows.evaluate_all("rs => rs.map(r => r.querySelector('.tl-seq-tid').textContent)") == ["T1", "T3", "T3"]
     lifelines = chart.locator(".tl-life-text").all_text_contents()
     assert lifelines[0] == "Inputs"
-    assert sorted(lifelines[1:]) == ["Guidance source", "Lateral guidance"]
+    assert sorted(lifelines[1:]) == ["Guidance source", "Lateral guidance", "Vertical guidance"]
     assert chart.locator(".tl-arrow").count() >= 2                 # an arrow per cause
     assert chart.locator(".tl-seq-row.tl-seq-in").count() == 0       # the chain starts at the clicked tick, no input row
     # the cause lines of the selected tick, and the lines of the chained one
@@ -202,7 +205,8 @@ def test_clicking_an_input_dot_shows_what_it_caused(open_page):
     ids = chart.locator(".tl-seq-tr").evaluate_all("rs => rs.map(r => r.dataset.id)")
     assert gs_id in ids                                            # the input led to Guidance source T1 (and on to Lateral T3)
     got = sorted(pg.locator(f"#timeline .tl-tick[data-id='{i}'] title").text_content().split(" (")[1] for i in ids)
-    assert got == sorted(["No_Vertical_State -> preGsTrk)", "DMC -> IFCC)", "preLocTrk -> LocTrk)"])
+    assert got == sorted(["No_Vertical_State -> preGsTrk)", "DMC -> IFCC)", "preLocTrk -> LocTrk)",
+                          "preGsTrk -> GsTrk)"])
     pg.keyboard.press("Escape")
     assert not chart.is_visible()
 
@@ -221,9 +225,12 @@ def test_hovering_a_transition_with_causes_draws_cause_lines(open_page):
     frame(pg)
     assert "tl-pointing" in pg.locator("#timeline .tl-svg").get_attribute("class")
     lines = pg.locator("#timeline .tl-cause")
-    assert lines.count() == 1
-    assert lines.first.get_attribute("data-to") == lat.get_attribute("data-id")
-    assert lines.first.get_attribute("data-from") == tick_by_title(pg, "DMC -> IFCC").get_attribute("data-id")
+    # one line from Guidance source T1; a second one (from Lateral's own entry into preLocTrk) only when
+    # the two clicks landed in consecutive passes (gate rule, REQ-189)
+    assert lines.count() in (1, 2)
+    assert set(lines.evaluate_all("ls => ls.map(l => l.dataset.to)")) == {lat.get_attribute("data-id")}
+    assert tick_by_title(pg, "DMC -> IFCC").get_attribute("data-id") in \
+        lines.evaluate_all("ls => ls.map(l => l.dataset.from)")
     assert pg.locator("#timeline .tl-tip").text_content().startswith("T3")
     pg.mouse.move(5, 5)
     frame(pg)

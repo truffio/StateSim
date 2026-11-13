@@ -238,3 +238,8 @@ section 11.
 - **Time axis:** the view shows the last 30 s and follows the run.
 - **Limits:** at most 20,000 timeline items (the oldest are dropped). A
   broadcast with more than 2,000 new items sends the whole timeline instead.
+- **State entry counts as a cause ("A + B", issue #20):** when a transition
+  fires one pass after its machine entered the transition's `current_state`,
+  its causes are (A) the transition that entered the state and (B) whatever
+  produced the conditions its rows read, which were already waiting. Before,
+  such a transition had no cause. Rule in `docs/future_timeline.md` section 1.
