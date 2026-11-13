@@ -70,6 +70,8 @@ def test_set_writes_valid_values(ap2):
     ("radio_altitude", 3000), ("radio_altitude", -5), ("radio_altitude", 2.5),
     ("radio_altitude", "high"), ("radio_altitude", True), ("capa", "LAND9"),
     ("fd_on", 1), ("nope", True), ("toga", True),
+    ("radio_altitude", "7"), ("radio_altitude", float("nan")), ("radio_altitude", float("inf")),
+    ("radio_altitude", 1e999), ("radio_altitude", " 1_0 "), ("radio_altitude", None),
 ])
 def test_set_rejects_invalid_values(ap2, name, value):
     before = ap2.state()["inputs"]
@@ -259,3 +261,17 @@ def test_fma_display_changes_are_in_the_text_timeline():
     lines = text.splitlines()
     i = next(k for k, line in enumerate(lines) if "(fma_ap_visible) on" in line)
     assert "AP engage T1 -> AP-engaged" in lines[i + 1]
+
+
+@R("REQ-125")
+@pytest.mark.parametrize("value", ["nan", "inf", float("nan"), float("-inf"), "2.5", True])
+def test_float_input_needs_a_finite_number(tmp_path, value):
+    """#28: NaN would pass min/max and Infinity is not valid JSON."""
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\nm.csv,state_machine,1,10\ninputs.csv,inputs,,\n")
+    (tmp_path / "inputs.csv").write_text("variable_name,type,default_value\nf,float,0\n")
+    (tmp_path / "m.csv").write_text("transition_id,current_state,next_state,default_state,equation,"
+                                    "result_variable,rationale,title,order\n1,A,B,A,f > 1,r,,,1\n")
+    s = Session(load_model(tmp_path / "master.csv"))
+    assert s.handle({"type": "set", "name": "f", "value": value})
+    assert s.handle({"type": "set", "name": "f", "value": 2.5}) is None
+    assert s.state()["inputs"]["f"] == 2.5

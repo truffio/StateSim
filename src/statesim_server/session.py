@@ -4,6 +4,7 @@ the server (server.py) decides when to call step()."""
 
 from __future__ import annotations
 
+import math
 from fractions import Fraction
 from html.parser import HTMLParser
 
@@ -229,14 +230,17 @@ class Session:
             if kind == "bool":
                 if not isinstance(value, bool):
                     raise ValueError
-            elif kind == "int":
-                if isinstance(value, bool) or float(value) != int(float(value)):
+            elif kind in ("int", "float"):
+                # a JSON number only (not a bool, not text), and finite: NaN would
+                # pass min/max and Infinity is not valid JSON in the state messages
+                if isinstance(value, bool) or not isinstance(value, (int, float))                         or not math.isfinite(value):
                     raise ValueError
-                value = int(float(value))
-            elif kind == "float":
-                if isinstance(value, bool):
-                    raise ValueError
-                value = float(value)
+                if kind == "int":
+                    if value != int(value):
+                        raise ValueError
+                    value = int(value)
+                else:
+                    value = float(value)
             elif kind == "enum":
                 if value not in i.choices:
                     raise ValueError
