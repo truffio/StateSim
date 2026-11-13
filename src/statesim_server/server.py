@@ -38,6 +38,8 @@ class App:
         self.clients: set[ServerConnection] = set()
         self.wake = asyncio.Event()
         self._last_sent = ""
+        self._sent_gen = self.session.timeline.gen
+        self._lock = asyncio.Lock()   # one sender at a time keeps message order per client
 
     # -------------------------------------------------------------- http
     def process_request(self, connection: ServerConnection, request: Request):
@@ -57,10 +59,16 @@ class App:
 
     # --------------------------------------------------------- websocket
     async def handler(self, ws: ServerConnection) -> None:
-        self.clients.add(ws)
         try:
-            await ws.send(self.model_msg)
-            await ws.send(json.dumps(self.session.state()))
+            async with self._lock:
+                # Hand pending items to the existing clients first, so the
+                # timeline sent below holds exactly the items already taken
+                # and every later item arrives once, in a broadcast.
+                await self._broadcast()
+                await ws.send(self.model_msg)
+                await ws.send(json.dumps(self.session.timeline_message()))
+                await ws.send(json.dumps({**self.session.state(), "tl": []}))
+                self.clients.add(ws)
             async for raw in ws:
                 try:
                     msg = json.loads(raw)
@@ -70,20 +78,41 @@ class App:
                 if err:
                     await ws.send(json.dumps({"type": "error", "message": err}))
                 self.wake.set()
-                await self.broadcast(force=True)
+                async with self._lock:
+                    if self.session.timeline.gen != self._sent_gen:     # Reset
+                        self.session.take_new_items()                  # the message holds them
+                        await self._send_all(json.dumps(self.session.timeline_message()))
+                        self._sent_gen = self.session.timeline.gen
+                    await self._broadcast(force=True)
         finally:
             self.clients.discard(ws)
 
-    async def broadcast(self, force: bool = False) -> None:
-        text = json.dumps(self.session.state())
-        if not self.clients or (text == self._last_sent and not force):
-            return
-        self._last_sent = text
+    async def _send_all(self, text: str) -> None:
         for ws in list(self.clients):
             try:
                 await ws.send(text)
             except Exception:  # connection closing; its handler cleans up
                 self.clients.discard(ws)
+
+    async def broadcast(self, force: bool = False) -> None:
+        async with self._lock:
+            await self._broadcast(force)
+
+    async def _broadcast(self, force: bool = False) -> None:
+        """Send the state with the new timeline items (caller holds the lock)."""
+        state = self.session.state()
+        items, too_many = self.session.take_new_items()     # always taken, even with no clients
+        if not self.clients:
+            return
+        if too_many:
+            await self._send_all(json.dumps(self.session.timeline_message()))
+            items = []
+        key = json.dumps(state)                              # duplicate detection ignores tl
+        if not items and key == self._last_sent and not force:
+            return
+        self._last_sent = key
+        state["tl"] = items
+        await self._send_all(json.dumps(state))
 
     # ------------------------------------------------------------- pacing
     async def run(self) -> None:

@@ -91,11 +91,7 @@ def test_fast_mode_runs_faster_and_updates_at_most_30_per_second():
             await ws.send(json.dumps({"type": "set", "name": "fd_on", "value": True}))
             await ws.send(json.dumps({"type": "set", "name": "fd_on", "value": False}))
             await asyncio.sleep(0.3)                      # replies to the messages above
-            while True:                                   # drain
-                try:
-                    await asyncio.wait_for(ws.recv(), 0.05)
-                except asyncio.TimeoutError:
-                    break
+            await drain(ws, 0.3)                          # state carries t, so it never goes quiet
             # make every update different so none is skipped as unchanged
             t0, k0, count = time.monotonic(), app.session.engine.tick, 0
             end = t0 + 1.0
@@ -112,3 +108,72 @@ def test_fast_mode_runs_faster_and_updates_at_most_30_per_second():
     count, ticks = run(go())
     assert count <= 32
     assert ticks > 1000                                   # far above 20 ticks/s
+
+
+async def drain(ws, seconds):
+    """All messages arriving in the next `seconds`."""
+    out = []
+    end = time.monotonic() + seconds
+    while (left := end - time.monotonic()) > 0:
+        try:
+            out.append(json.loads(await asyncio.wait_for(ws.recv(), left)))
+        except asyncio.TimeoutError:
+            break
+    return out
+
+
+@R("REQ-172", "REQ-173")
+def test_connect_sends_model_timeline_state_then_tl_deltas_without_duplicates():
+    async def go():
+        app, server, port = await started()
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            kinds = [json.loads(await ws.recv())["type"] for _ in range(3)]
+            assert kinds == ["model", "timeline", "state"]
+            await ws.send(json.dumps({"type": "press", "name": "toga"}))
+            msgs = await drain(ws, 1.0)
+        server.close()
+        return msgs
+    msgs = run(go())
+    states = [m for m in msgs if m["type"] == "state"]
+    assert all("tl" in m and "t" in m and m["gen"] == 1 for m in states)
+    ids = [i["id"] for m in states for i in m["tl"]]
+    assert ids and ids == sorted(set(ids))
+
+
+@R("REQ-174")
+def test_reset_sends_timeline_with_new_gen():
+    async def go():
+        app, server, port = await started()
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            await ws.send(json.dumps({"type": "press", "name": "toga"}))
+            await drain(ws, 0.3)
+            await ws.send(json.dumps({"type": "reset"}))
+            msgs = await drain(ws, 0.5)
+        server.close()
+        return msgs
+    msgs = run(go())
+    tl = [m for m in msgs if m["type"] == "timeline"]
+    assert tl and tl[0]["gen"] == 2
+    later = [m for m in msgs if m["type"] == "state" and m["gen"] == 2]
+    assert later
+    seen = {i["id"] for i in tl[0]["items"]}
+    assert not any(i["id"] in seen for m in later for i in m["tl"])
+
+
+@R("REQ-172", "REQ-173")
+def test_second_client_mid_run_sees_no_gaps_or_duplicates():
+    async def go():
+        app, server, port = await started()
+        async with connect(f"ws://127.0.0.1:{port}/ws") as a:
+            await a.send(json.dumps({"type": "press", "name": "toga"}))
+            await drain(a, 0.3)
+            async with connect(f"ws://127.0.0.1:{port}/ws") as b:
+                await b.send(json.dumps({"type": "set", "name": "capa", "value": "bogus"}))
+                msgs = await drain(b, 0.8)
+        server.close()
+        return msgs
+    msgs = run(go())
+    assert [m["type"] for m in msgs[:3]] == ["model", "timeline", "state"]
+    ids = [i["id"] for i in msgs[1]["items"]]
+    ids += [i["id"] for m in msgs[3:] if m["type"] == "state" for i in m["tl"]]
+    assert ids == list(range(ids[0], ids[0] + len(ids)))   # contiguous, no repeats

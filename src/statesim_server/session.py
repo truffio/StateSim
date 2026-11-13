@@ -7,9 +7,24 @@ from __future__ import annotations
 from fractions import Fraction
 
 from statesim import Engine, Model
+from statesim.timeline import Timeline
 from statesim.scheduler import build_schedule
 
 MODES = ("realtime", "fast")
+MAX_DELTA = 2_000   # more new timeline items than this in one broadcast: send them all as a full timeline
+
+
+class _FanOut:
+    """Trace sink that passes every event to the user's sink (if any) and the timeline."""
+
+    def __init__(self, user, timeline: Timeline) -> None:
+        self.user = user
+        self.timeline = timeline
+
+    def emit(self, event) -> None:
+        if self.user is not None:
+            self.user.emit(event)
+        self.timeline.emit(event)
 
 
 def describe_model(model: Model) -> dict:
@@ -64,8 +79,10 @@ class Session:
         self.shown_vars = sorted({v for p in model.panels for v in p.shows})
         self.mode = "realtime"
         self.paused = False
-        self.engine = Engine(model, trace)
+        self.timeline = Timeline(gen=1)
+        self.engine = Engine(model, _FanOut(trace, self.timeline))
         self.releases: dict[str, int] = {}
+        self._taken = (self.timeline.gen, 0)   # (gen, last item id already handed out)
 
     # ------------------------------------------------------------- running
     @property
@@ -83,7 +100,8 @@ class Session:
 
     def reset(self) -> None:
         """Back to start values; keeps the model, run mode and pause state."""
-        self.engine = Engine(self.model, self.trace)
+        self.timeline = Timeline(gen=self.timeline.gen + 1)
+        self.engine = Engine(self.model, _FanOut(self.trace, self.timeline))
         self.releases.clear()
 
     # ------------------------------------------------------------ messages
@@ -167,6 +185,21 @@ class Session:
         self.engine.set_input(name, value)
         return None
 
+    def timeline_message(self) -> dict:
+        """The whole timeline so far, for a client that connects or after a reset."""
+        return {"type": "timeline", "gen": self.timeline.gen, "items": self.timeline.all()}
+
+    def take_new_items(self) -> tuple[list[dict], bool]:
+        """Items added since the previous call (each is returned once, in order),
+        and whether there are too many (more than MAX_DELTA) for a delta."""
+        tl = self.timeline
+        gen, last = self._taken
+        if gen != tl.gen:
+            last = 0
+        items = tl.items_since(last)
+        self._taken = (tl.gen, tl.last_id)
+        return items, len(items) > MAX_DELTA
+
     def state(self) -> dict:
         """The changing values the browser shows."""
         snap = self.engine.snapshot()
@@ -178,6 +211,8 @@ class Session:
             "values": {v: self._value(snap, v) for v in self.shown_vars},
             "mode": self.mode,
             "paused": self.paused,
+            "t": snap["t"],
+            "gen": self.timeline.gen,
         }
 
     @staticmethod

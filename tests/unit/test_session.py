@@ -171,3 +171,70 @@ def test_knob_values_are_checked_and_shown(ap2):
     st = ap2.state()
     assert st["inputs"]["hdg_sel"] == 359 and isinstance(st["inputs"]["hdg_sel"], int)
     assert st["values"] == {"alt_sel": 15000, "hdg_sel": 359, "spd_sel": 250, "vs_sel": 0}
+
+
+class _Sink:
+    def __init__(self):
+        self.events = []
+
+    def emit(self, event):
+        self.events.append(event)
+
+
+def _press_toga(s):
+    s.handle({"type": "press", "name": "toga"})
+    for _ in range(50):
+        s.step()
+
+
+@R("REQ-172", "REQ-173")
+def test_timeline_and_user_trace_both_receive_events():
+    sink = _Sink()
+    s = Session(load_model(EXAMPLES / "autopilot2" / "master.csv"), sink)
+    _press_toga(s)
+    assert sink.events
+    assert any(i["k"] == "tr" for i in s.timeline.all())
+    msg = s.timeline_message()
+    assert msg["type"] == "timeline" and msg["gen"] == 1 and msg["items"] == s.timeline.all()
+    st = s.state()
+    assert st["gen"] == 1 and isinstance(st["t"], float) and "states" in st
+
+
+@R("REQ-174")
+def test_reset_starts_a_new_timeline_with_next_gen(ap2):
+    _press_toga(ap2)
+    old = ap2.timeline
+    assert old.all()
+    ap2.reset()
+    assert ap2.timeline is not old and ap2.timeline.gen == 2
+    assert ap2.state()["gen"] == 2
+    assert ap2.timeline_message()["gen"] == 2
+    items, _ = ap2.take_new_items()
+    assert items == ap2.timeline.all()          # nothing carried over from gen 1
+
+
+@R("REQ-173")
+def test_take_new_items_returns_each_item_once_in_order(ap2):
+    ap2.handle({"type": "press", "name": "toga"})
+    ap2.step()
+    first, too_many = ap2.take_new_items()
+    assert not too_many and first
+    assert ap2.take_new_items() == ([], False)
+    for _ in range(50):
+        ap2.step()
+    second, _ = ap2.take_new_items()
+    ids = [i["id"] for i in first + second]
+    assert ids == [i["id"] for i in ap2.timeline.all()]
+    assert ids == sorted(set(ids))
+
+
+@R("REQ-175")
+def test_too_many_items_flagged(ap2, monkeypatch):
+    import statesim_server.session as mod
+    monkeypatch.setattr(mod, "MAX_DELTA", 2)
+    _press_toga(ap2)
+    n = len(ap2.timeline.all())
+    assert n > 2
+    items, too_many = ap2.take_new_items()
+    assert too_many and len(items) == n
+    assert ap2.take_new_items() == ([], False)
