@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import socket
 import time
 import urllib.request
 from urllib.error import HTTPError
@@ -310,6 +311,42 @@ def test_realtime_never_blocks_the_event_loop_for_long(tmp_path):
             worst, last = max(worst, now - last), now
         assert app.session.engine.tick > 0
         assert worst < 0.3, f"event loop stalled {worst:.2f} s"
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-117")
+def test_a_client_that_stops_reading_does_not_stop_the_others(monkeypatch):
+    """#32: a client whose sends never complete (a frozen tab) is dropped after
+    the send timeout; the run and the other clients go on."""
+    import statesim_server.server as srv
+    monkeypatch.setattr(srv, "SEND_TIMEOUT_S", 0.3, raising=False)
+
+    class Frozen:                                   # send() never completes
+        transport = None
+        aborted = False
+
+        async def send(self, text):
+            await asyncio.Event().wait()
+
+    async def go():
+        app, server, port = await started("autopilot3")
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            await ws.send(json.dumps({"type": "mode", "mode": "fast"}))
+            frozen = Frozen()
+            app.clients.add(frozen)
+            t0, frames = app.session.engine.tick, 0
+            loop = asyncio.get_running_loop()
+            end = loop.time() + 2
+            while loop.time() < end:
+                try:
+                    await asyncio.wait_for(ws.recv(), 0.5)
+                    frames += 1
+                except asyncio.TimeoutError:
+                    pass
+            assert frozen not in app.clients
+            assert app.session.engine.tick > t0 and frames >= 20
         server.close()
         await server.wait_closed()
     run(go())
