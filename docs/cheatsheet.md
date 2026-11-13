@@ -169,9 +169,10 @@ from statesim.timeline import Timeline
 model = load_model("examples/actions/master.csv")
 tl = Timeline()                    # a TraceSink; Timeline(cap=...) sets the item cap
 eng = Engine(model, trace=tl)
-eng.run(100)
+eng.set_input("toga", True)        # Ground -> Takeoff, caused by this input
+eng.run(5)
 items = tl.all()                   # every kept item, oldest first
-tl.items_since(last_id)            # only the items after an id
+tl.items_since(tl.last_id)         # only the items after an id (here: none)
 ```
 
 Two item shapes, with sequential `id`s and `t` in ms:
