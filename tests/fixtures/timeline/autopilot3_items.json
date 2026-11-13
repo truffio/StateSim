@@ -317,7 +317,9 @@
    "title": "FD or AP On but no vertical mode.",
    "from": "Vertical_State_0",
    "to": "No_Vertical_State",
-   "causes": [],
+   "causes": [
+    3
+   ],
    "writes": []
   },
   {
@@ -330,7 +332,9 @@
    "title": "FD or AP On but no lateral mode.",
    "from": "Lateral_State_0",
    "to": "No_Lateral_State",
-   "causes": [],
+   "causes": [
+    3
+   ],
    "writes": []
   },
   {
@@ -403,7 +407,6 @@
    "from": "Takeoff",
    "to": "Climb",
    "causes": [
-    8,
     10
    ],
    "writes": [
@@ -592,7 +595,8 @@
    "from": "No_Lateral_State",
    "to": "preLocTrk",
    "causes": [
-    24
+    24,
+    25
    ],
    "writes": []
   },
@@ -615,7 +619,6 @@
    "from": "Approach",
    "to": "Final Approach",
    "causes": [
-    24,
     27
    ],
    "writes": []
@@ -646,7 +649,6 @@
    "from": "DMC",
    "to": "IFCC",
    "causes": [
-    24,
     27
    ],
    "writes": [
@@ -674,7 +676,9 @@
    "title": "IFCC taking guidance control. Engaging GsTrk.",
    "from": "preGsTrk",
    "to": "GsTrk",
-   "causes": [],
+   "causes": [
+    30
+   ],
    "writes": []
   },
   {
@@ -687,7 +691,9 @@
    "title": "IFCC taking guidance control. Engaging LocTrk.",
    "from": "preLocTrk",
    "to": "LocTrk",
-   "causes": [],
+   "causes": [
+    30
+   ],
    "writes": []
   },
   {
@@ -824,7 +830,6 @@
    "from": "Active",
    "to": "Retard",
    "causes": [
-    40,
     42
    ],
    "writes": []
@@ -1005,7 +1010,6 @@
    "from": "Rollout",
    "to": "No_Lateral_State",
    "causes": [
-    49,
     54
    ],
    "writes": [
@@ -1026,7 +1030,6 @@
    "from": "IFCC",
    "to": "DMC",
    "causes": [
-    46,
     54
    ],
    "writes": [
