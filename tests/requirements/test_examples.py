@@ -208,3 +208,227 @@ def test_autopilot3_autoland_with_actions():
     assert (st["state_lat"], st["state_vert"]) == ("No_Lateral_State", "No_Vertical_State")
     st, _, _ = run(ground_speed=0)
     assert st["state_ac"] == "Waiting TOGA"
+
+
+# ---- timeline: the cause chain on the real examples (Session + Timeline) ----
+
+def _session(example):
+    from statesim_server.session import Session
+    return Session(load_model(EXAMPLES / example / "master.csv"))
+
+
+def _press(s, name):
+    """A push-button pulse as the UI does it: the engine sees it for one pass."""
+    assert s.handle({"type": "press", "name": name}) is None
+    s.step()
+
+
+def _run(s, n):
+    for _ in range(n):
+        s.step()
+
+
+def _find(items, **kw):
+    out = [i for i in items if all(i.get(k) == v for k, v in kw.items())]
+    assert len(out) == 1, (kw, out)
+    return out[0]
+
+
+def _autopilot3_scenario():
+    """AP_btn pressed first on autopilot3, then ten more passes."""
+    s = _session("autopilot3")
+    s.step()
+    _press(s, "AP_btn")
+    _run(s, 10)
+    return s.timeline.all()
+
+
+@R("REQ-166", "REQ-168", "REQ-169")
+def test_timeline_autopilot3_ap_press_engages_ap_then_fd_through_ap_on():
+    items = _autopilot3_scenario()
+    btn = _find(items, k="in", name="AP_btn", value=True)
+    ap = _find(items, k="tr", sm="state_ap", tid="T1")
+    fd = _find(items, k="tr", sm="state_fd", tid="T2")      # FD engaged by the AP, not by FD_btn/TOGA
+    assert btn["id"] < ap["id"] < fd["id"]
+    assert ap["causes"] == [btn["id"]]                      # the AP_btn input item
+    assert ap["writes"] == [["ap_on", True]]                # entry action STATE_AP_T1
+    assert fd["causes"] == [ap["id"]]                       # read ap_on, written by the AP transition
+    assert fd["writes"] == [["fd_on", True]]
+    # Vertical and Lateral leave their start states because the AP engaged
+    for sm, to in (("state_vert", "No_Vertical_State"), ("state_lat", "No_Lateral_State")):
+        tr = _find(items, k="tr", sm=sm, tid="T1")
+        assert (tr["to"], tr["causes"]) == (to, [ap["id"]])
+
+
+@R("REQ-166", "REQ-168", "REQ-169")
+def test_timeline_autopilot3_toga_engages_fd_and_unlocks_vertical_lateral():
+    s = _session("autopilot3")
+    s.step()
+    _press(s, "TOGA")
+    _run(s, 5)
+    items = s.timeline.all()
+    toga = _find(items, k="in", name="TOGA", value=True)
+    assert _find(items, k="tr", sm="state_ac", tid="T1")["causes"] == [toga["id"]]
+    fd = _find(items, k="tr", sm="state_fd", tid="T3")      # FD already on from TOGA ...
+    assert fd["causes"] == [toga["id"]] and fd["writes"] == [["fd_on", True]]
+    for sm in ("state_vert", "state_lat"):                  # ... so those leave their start state by it
+        assert _find(items, k="tr", sm=sm, tid="T1")["causes"] == [fd["id"]]
+    _press(s, "AP_btn")                                     # AP press later: AP engages, FD does not move again
+    _run(s, 5)
+    items = s.timeline.all()
+    btn = _find(items, k="in", name="AP_btn", value=True)
+    ap = _find(items, k="tr", sm="state_ap", tid="T1")
+    assert ap["causes"] == [btn["id"]]
+    assert [i for i in items if i["k"] == "tr" and i["sm"] == "state_fd"] == [fd]
+
+
+@R("REQ-167", "REQ-166")
+def test_timeline_same_value_input_gives_no_item():
+    s = _session("autopilot3")
+    s.step()
+    s.handle({"type": "set", "name": "capa", "value": "LAND3"})     # already its default
+    s.step()
+    assert s.timeline.all() == []
+    s.handle({"type": "set", "name": "capa", "value": "APPR1"})
+    s.step()
+    assert [(i["k"], i["name"], i["value"]) for i in s.timeline.all()] == [("in", "capa", "APPR1")]
+
+
+@R("REQ-161", "REQ-166", "REQ-170")
+def test_timeline_self_driven_transition_is_caused_by_the_machines_last_transition():
+    s = _session("actions")                    # T3 reads climb_ticks, counted by the machine's own during action
+    s.step()
+    _press(s, "toga")
+    s.handle({"type": "set", "name": "radio_altitude", "value": 500})
+    _run(s, 60)
+    items = s.timeline.all()
+    t1 = _find(items, k="tr", sm="phase", tid="T1")
+    t2 = _find(items, k="tr", sm="phase", tid="T2")
+    t3 = _find(items, k="tr", sm="phase", tid="T3")
+    assert t1["id"] < t2["id"] < t3["id"]
+    assert t1["causes"] != [] and t2["causes"] != []        # the driven ones are caused by inputs
+    assert t3["causes"] == [t2["id"]]          # 5 s of climb, counted since T2 entered Climb
+    assert t2["writes"] == [["ground_speed", 0]]            # climb_ticks = 0 changes nothing: no write
+    assert not any(i["k"] == "in" and i["name"] == "climb_ticks" for i in items)   # during writes: no item
+
+
+@R("REQ-161", "REQ-162", "REQ-163")
+def test_timeline_timer_only_transition_has_no_causes(tmp_path):
+    (tmp_path / "M.csv").write_text(
+        "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order\n"
+        "T1,Idle,Done,Idle,t >= 500,m_t1_1,,Timer elapsed,1\n", encoding="utf-8")
+    (tmp_path / "inputs.csv").write_text("variable_name,type,default_value\nx,int,0\n", encoding="utf-8")
+    (tmp_path / "master.csv").write_text(
+        "file_name,type,order,band,name\nM.csv,state_machine,1,10,M\ninputs.csv,inputs,,,\n", encoding="utf-8")
+    from statesim_server.session import Session
+    s = Session(load_model(tmp_path / "master.csv"))
+    _run(s, 10)
+    tr = _find(s.timeline.all(), k="tr", sm="M", tid="T1")
+    assert (tr["from"], tr["to"], tr["causes"]) == ("Idle", "Done", [])
+
+
+@R("REQ-166")
+def test_timeline_same_scenario_twice_gives_identical_items():
+    a, b = _autopilot3_scenario(), _autopilot3_scenario()
+    assert a == b and len(a) >= 6
+    assert [i["id"] for i in a] == list(range(1, len(a) + 1))       # sequential ids
+
+
+@R("REQ-172", "REQ-173", "REQ-174")
+def test_session_hands_out_each_item_once_and_reset_starts_a_new_gen():
+    s = _session("autopilot3")
+    s.step()
+    _press(s, "AP_btn")
+    _run(s, 5)
+    items, too_many = s.take_new_items()
+    assert items == s.timeline.all() and not too_many
+    assert s.take_new_items() == ([], False)                        # nothing twice
+    msg = s.timeline_message()
+    assert (msg["type"], msg["gen"], msg["items"]) == ("timeline", 1, items)
+    assert s.state()["gen"] == 1 and s.state()["t"] == s.engine.snapshot()["t"]
+    s.handle({"type": "reset"})
+    assert s.timeline_message() == {"type": "timeline", "gen": 2, "items": []}
+    assert s.state()["gen"] == 2
+
+
+def _autopilot2_flight():
+    """A scripted flight on autopilot2, take-off to landing; three passes after every input."""
+    s = _session("autopilot2")
+
+    def setv(name, value):
+        assert s.handle({"type": "set", "name": name, "value": value}) is None
+        _run(s, 3)
+
+    _run(s, 2)
+    setv("fd_on", True)
+    setv("ground_speed", 100)
+    _press(s, "toga")
+    _run(s, 3)
+    setv("radio_altitude", 500)
+    setv("ap_on", True)
+    setv("radio_altitude", 2500)
+    setv("radio_altitude", 2000)
+    setv("appr_selected", True)
+    setv("radio_altitude", 1400)
+    setv("dmc_tracking_loc", True)
+    setv("dmc_tracking_gs", True)
+    for alt in (700, 150, 40):
+        setv("radio_altitude", alt)
+    setv("claws_req_flare", True)
+    setv("radio_altitude", 0)
+    setv("ground_time_gt_2s", True)
+    setv("ground_speed", 20)
+    setv("ground_speed", 0)
+    _run(s, 20)
+    return s.timeline.all()
+
+
+@R("REQ-189", "REQ-168")
+def test_timeline_autopilot2_gate_transitions_have_causes():
+    items = _autopilot2_flight()
+    trs = [i for i in items if i["k"] == "tr"]
+    assert len(trs) >= 30 and all(i["causes"] for i in trs)        # no transition without a cause
+    by_id = {i["id"]: i for i in items}
+
+    def last(sm, tid, before=None):
+        return [i for i in trs if i["sm"] == sm and i["tid"] == tid
+                and (before is None or i["id"] < before["id"])][-1]
+
+    def causes(item):
+        return {(c["sm"], c["tid"]) if c["k"] == "tr" else c["name"]
+                for c in (by_id[x] for x in item["causes"])}
+
+    # Vertical preGsTrk -> GsTrk: it entered preGsTrk (own T2) while ifcc_in_control was already
+    # true, set by Guidance source DMC -> IFCC
+    gs = _find(items, k="tr", sm="guidance_src", tid="T1")
+    assert (gs["from"], gs["to"]) == ("DMC", "IFCC")
+    gstrk = _find(items, k="tr", sm="state_vert", tid="T3")
+    assert (gstrk["from"], gstrk["to"]) == ("preGsTrk", "GsTrk")
+    assert gs["id"] in gstrk["causes"]
+    assert causes(gstrk) == {("guidance_src", "T1"), ("state_vert", "T2")}
+    # the other four that fired one pass after their machine entered the state
+    hold = _find(items, k="tr", sm="state_at", tid="T2")            # Active -> Hold
+    assert causes(hold) == {("state_at", "T1"), "ground_speed"}
+    landed = _find(items, k="tr", sm="state_ac", tid="T14")         # Touchdown -> Landed
+    assert causes(landed) == {("state_ac", "T12"), "radio_altitude"}
+    for sm, leave, waiting in (("state_vert", "T22", "dmc_tracking_gs"),
+                               ("state_lat", "T10", "dmc_tracking_loc")):
+        rearm = last(sm, "T2")                                      # re-armed after the roll-out
+        assert rearm["id"] > last(sm, leave)["id"]
+        assert causes(rearm) == {(sm, leave), "appr_selected", waiting}
+
+
+@R("REQ-189")
+def test_timeline_actions_condition_set_before_the_state_is_entered():
+    s = _session("actions")
+    s.step()
+    s.handle({"type": "set", "name": "radio_altitude", "value": 500})   # T2's condition, true too early
+    s.step()
+    _press(s, "toga")
+    _run(s, 4)
+    items = s.timeline.all()
+    alt = _find(items, k="in", name="radio_altitude")
+    t1 = _find(items, k="tr", sm="phase", tid="T1")
+    t2 = _find(items, k="tr", sm="phase", tid="T2")
+    assert t2["tick"] == t1["tick"] + 1
+    assert t2["causes"] == sorted([alt["id"], t1["id"]])            # the waiting condition and the entry

@@ -22,6 +22,21 @@ class TraceEvent:
     equations, or constants.INPUT_COMPONENT for set_input. ``action`` is the
     description text (see Engine for the exact forms). ``values`` are
     (name, value) pairs sorted by name.
+
+    Structured fields (for the timeline, docs/timeline_plan.md; not part of
+    the text line, so ``format_event`` ignores them). All have defaults:
+
+    * ``kind``: ``"input"`` (set_input), ``"result"`` (equation or row
+      result), ``"transition"`` (state change) or ``"action"`` (action write).
+    * ``name``: the variable written; for a transition, the state machine.
+    * ``old`` / ``new``: value before / after (states for a transition).
+    * ``trigger``: sorted names read by the item whose value changed since
+      that item last ran (``t``, ``tick``, ``dt`` excluded). For a transition,
+      only the names its own rows read; for an input, empty.
+    * ``label`` / ``title``: transition label (``T2``) and title; for an
+      action write, ``label`` is the action name.
+    * ``phase``: for an action write, ``"init"``, ``"exit"``, ``"entry"`` or
+      ``"during"``.
     """
 
     tick: int
@@ -29,6 +44,14 @@ class TraceEvent:
     component: str
     action: str
     values: tuple[tuple[str, object], ...]
+    kind: str = ""
+    name: str = ""
+    old: object = None
+    new: object = None
+    trigger: tuple[str, ...] = ()
+    label: str = ""
+    title: str = ""
+    phase: str = ""
 
 
 class TraceSink(Protocol):

@@ -67,6 +67,7 @@ class PanelDef:
     source: str
     lines: tuple[tuple[str, str, int], ...] = ()
     scale: float = 1         # master CSV "scale" column: display size factor (display only)
+    label: str = ""          # master CSV "name" column: display name (display only)
 
     def line_of(self, attr: str, var: str) -> int:
         return next((n for a, v, n in self.lines if a == attr and v == var), 1)

@@ -1,7 +1,8 @@
 # StateSim user interface spec
 
-Version: 5, 2026-11-12. Status: implemented (`src/statesim_server/`);
-requirements REQ-114 to REQ-147 and REQ-159 in `docs/requirements.csv`.
+Version: 6, 2026-11-12. Status: sections 1-10 implemented (`src/statesim_server/`),
+section 11 specified; requirements REQ-114 to REQ-147, REQ-159 and REQ-176 to
+REQ-188 in `docs/requirements.csv`.
 
 This spec defines the screen of the StateSim front end: what is on it, what
 can be clicked, what each control does, and which colours change and why.
@@ -27,9 +28,16 @@ actions to it. It never evaluates logic itself.
 | | INPUT CARD (wide)     | |#| +--------+ +--------+                     |
 | +-----------------------+ |#|                                          |
 |                           |#|                                          |
-| [Real time|Fast] [Pause] [Step] [Reset]                                |
+| [Real time|Fast] [Pause] [Step] [Reset] [Timeline]                     |
 +---------------------------+-+------------------------------------------+
    left pane               splitter        right pane
++========================================================================+  <- splitter
+| Inputs | . .   .     .                                                 |
+| Lock   | [Locked  ][Unlocked    ]|                                     |
+| Alarm  | [Off][Armed     ][Off  ]|                                     |
+|        +---- time axis (s) ------------------- cursor ----[Live]----+  |
++------------------------------------------------------------------------+
+   optional Timeline pane (section 11), hidden by default
 ```
 
 - A **top pane** spans the full window width and holds the aircraft panels
@@ -40,6 +48,8 @@ actions to it. It never evaluates logic itself.
 - **Left pane**, top to bottom: input cards (section 4), run controls
   (section 6).
 - **Right pane:** the state machine grid (section 5), and nothing else.
+- An optional **Timeline pane** (section 11) spans the full width below the
+  left and right panes. It is hidden by default.
 - Each pane scrolls vertically on its own when its content is taller than the
   window. The page never scrolls horizontally.
 
@@ -237,6 +247,7 @@ the last input card.
 | **Pause** | White button, grey border | Stops the engine; it keeps all values. | The label changes to **Resume** while paused; Resume restarts it. |
 | **Step** | White button, grey border | While paused, runs the engine for one tick. | Disabled (greyed) while running. |
 | **Reset** | White button, grey border | Returns every input, state and result to its start value, keeping the loaded model and the run mode. | Nothing. |
+| **Timeline** | White button, grey border | Shows or hides the Timeline pane (section 11). | Pressed look (light blue fill, as a pressed push-button) while the pane is shown. |
 
 In real time the server runs the ticks at the model's tick rate against the
 wall clock. If it falls more than 0.5 s behind, it drops the backlog instead
@@ -288,3 +299,101 @@ The server listens on `http://127.0.0.1:8765/` and opens the browser. Options:
 | O5b | Aircraft panels: light equations for the other FCP buttons. |
 | O8b | Reloading edited CSV files without restarting the server. |
 
+## 11. Timeline pane
+
+An optional pane showing the current session as lanes over time, with the
+causes of each transition and a sequence chart. Requirements REQ-176 to
+REQ-188; the design is in `docs/future_timeline.md`.
+
+### 11.1 Pane and splitter
+
+| Property | Behaviour |
+|---|---|
+| Place | At the bottom of the page, full width, below the left and right panes. |
+| Default | Hidden. |
+| Show / hide | The **Timeline** button in the run bar (section 6). It looks pressed while the pane is shown. Showing or hiding changes nothing else on the page. |
+| Splitter | A horizontal bar on top of the pane, like the vertical one in section 1.1. Drag it, or focus it and press ArrowUp / ArrowDown to move it by 20 px. |
+| Height | Default 260 px; at least 120 px; at most 70% of the window. |
+| Memory | Visibility and height are remembered in the browser. |
+
+### 11.2 Lanes
+
+- A 140 px label column on the left.
+- First row **Inputs**, then one lane per state machine in master order,
+  labelled with its display name.
+- Each state is a bar from when it was entered to when it was left (or to
+  now).
+- A state's colour is fixed by its position in the machine's file, from a
+  palette of 8 muted colours, so it never changes during the session.
+- The state name is drawn in the bar when it fits.
+
+### 11.3 Transitions and inputs
+
+| Item | Drawn as | Label | Hover |
+|---|---|---|---|
+| Transition | Vertical tick at the boundary between two state bars | Transition id | Title and "from -> to" |
+| Input change | Dot in the Inputs row | Input name | name = value |
+
+Inputs set to the value they already have are not shown.
+
+### 11.4 Time axis
+
+- At the bottom, in seconds.
+- The view shows the last 30 s and follows the run, with a cursor line at the
+  current time.
+- Scrolling back (wheel or drag) stops following.
+- A **Live** button, shown only while not following, resumes following.
+
+### 11.5 Cause lines
+
+- Hovering or selecting a transition draws dashed lines to each of its
+  causes: an input dot or another machine's transition.
+- Equations are never shown; their effect is folded into the links.
+
+### 11.6 Sequence chart
+
+- Clicking a transition or an input dot opens a chart below the lanes,
+  inside the pane.
+- Lifelines: Inputs, plus each state machine involved.
+- It shows the clicked item and everything it caused, in time order:
+  - an arrow from each cause's lifeline to the machine, labelled with the
+    transition id (title on hover);
+  - each action write as an arrow back to Inputs, labelled `var = value`.
+- A close button and the Escape key close it.
+
+### 11.7 Reset and data source
+
+- Reset clears the lanes and the chart.
+- The data is the current session only, the same whether it is driven by
+  hand or by a test.
+
+### 11.8 Save as text
+
+- While the pane is shown, a **Save as text** button sits in the run bar
+  next to the Timeline button. It downloads `statesim-timeline.txt`: the
+  current run as plain text, also served at `/timeline.txt`.
+- The file is a reconstruction of the run in time order. Each entry starts
+  with its number (`#12`) and time in seconds:
+  - an input change: `INPUT  name = value`;
+  - a transition: machine (display name and file name), transition id,
+    `from -> to` and title, then `caused by:` the numbered input changes and
+    transitions that led to it (through any equations), or `no recorded
+    cause`, then `writes:` its action writes.
+  - a display change: a result variable shown on a panel (lit by
+    `data-lit-by` or shown by `data-show`), such as an FMA mode text, as
+    `DISPLAY  <panel>: <text lit> (<variable>) on` or `off`, then what caused
+    it. Inputs and states shown on panels are already listed as input changes
+    and transitions. The pane does not draw display changes.
+- It holds the same items as the pane (the most recent 20,000), and says so
+  when older ones have been dropped.
+
+```
+#1     0.100 s  INPUT  TOGA = True
+#2     0.200 s  Aircraft (state_ac)  T1  Waiting TOGA -> Takeoff  "Ac accelerating to VR"
+                caused by: #1 input TOGA = True
+#3     0.200 s  FD engage (state_fd)  T3  FD-disengaged -> FD-engaged  "Automatic engaging of FD"
+                caused by: #1 input TOGA = True
+                writes: fd_on = True
+#7     0.200 s  DISPLAY  Flight mode annunciator: AT (fma_at_color_white) on
+                caused by: #6 Autothrottle T1 -> Hold armed
+```

@@ -36,6 +36,8 @@ body.resizing { cursor: col-resize; user-select: none; }
 .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; font-weight: 600; }
 .btn { font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line-strong); border-radius: 6px;
        padding: 8px 10px; background: var(--card); color: var(--ink); cursor: pointer; }
+a.btn { text-decoration: none; display: inline-block; }
+a.btn[hidden] { display: none; }
 .btn:disabled { color: #9aa3ae; background: #f3f5f8; cursor: default; }
 
 /* input cards */

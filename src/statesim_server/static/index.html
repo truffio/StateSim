@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StateSim</title>
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="timeline.css">
 </head>
 <body>
 <header class="top" id="top" aria-label="Aircraft panels" hidden></header>
@@ -20,6 +21,9 @@
       <button type="button" class="btn" id="pause">Pause</button>
       <button type="button" class="btn" id="step" disabled>Step</button>
       <button type="button" class="btn" id="reset">Reset</button>
+      <button type="button" class="btn" id="timeline-toggle" aria-pressed="false" aria-controls="timeline">Timeline</button>
+      <a class="btn" id="timeline-save" href="timeline.txt" download="statesim-timeline.txt" hidden
+         title="Save the current run's timeline as a text file">Save as text</a>
     </div>
   </div>
 
@@ -30,8 +34,12 @@
     <section class="machines" id="machines" aria-label="State machines"></section>
   </div>
 </div>
+<div class="tl-splitter" id="timeline-splitter" role="separator" aria-orientation="horizontal"
+     aria-label="Resize timeline" aria-valuemin="120" aria-valuenow="260" tabindex="0" hidden></div>
+<section class="timeline" id="timeline" aria-label="Timeline" hidden></section>
 <div class="banner" id="banner" role="status" hidden></div>
 <script src="panels.js"></script>
+<script src="timeline.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
