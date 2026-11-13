@@ -103,13 +103,13 @@ def test_hover_active_highlights_next_states_without_moving_anything(open_page):
     card.locator(".st", has_text="Cruise").hover()               # inactive: nothing
     assert pg.locator(".st.next").count() == 0
     card.locator(".st.active").hover()
-    assert card.locator(".st.next").all_text_contents() == ["Climb", "EDM", "Touchdown"]
-    assert card.locator(".st.next-global").all_text_contents() == ["EDM", "Touchdown"]
+    assert card.locator(".st.next").all_text_contents() == ["Climb"]   # not global targets
+    assert card.locator(".st.next-global").count() == 0
     assert boxes(pg) == before
     pg.mouse.move(5, 5)
     assert pg.locator(".st.next").count() == 0
     card.locator(".st.active").focus()                           # keyboard
-    assert card.locator(".st.next").count() == 3
+    assert card.locator(".st.next").count() == 1
 
 
 @R("REQ-125")
@@ -286,6 +286,27 @@ def test_panel_scale_and_narrow_windows(browser, server_url):
     assert sizes[450][0] < sizes[1000][0]                        # too narrow: smaller still
     ratio = lambda wh: wh[0] / wh[1]                              # noqa: E731
     assert ratio(sizes[450]) == pytest.approx(ratio(sizes[1000]), rel=0.03)   # proportions kept
+
+
+@R("REQ-159")
+def test_panels_stay_on_one_row(browser, server_url):
+    """autopilot3: the FMA stays to the right of the FCP at any width."""
+    url = server_url(EXAMPLES / "autopilot3" / "master.csv")
+    widths = {}
+    for vw in (1600, 900):
+        pg = browser.new_page(viewport={"width": vw, "height": 900})
+        pg.goto(url)
+        pg.wait_for_selector(".st.active")
+        pg.wait_for_timeout(300)
+        fcp, fma = (h.bounding_box() for h in pg.locator(".panel-host").all())
+        assert fma["x"] >= fcp["x"] + fcp["width"]                 # on the right
+        assert fma["y"] == pytest.approx(fcp["y"], abs=1)           # same row, top-aligned
+        assert fma["x"] + fma["width"] <= vw - 12 + 1               # never overflows
+        widths[vw] = (fcp["width"], fma["width"])
+        pg.close()
+    assert widths[900][0] < widths[1600][0]                         # narrow: both smaller,
+    assert widths[900][0] / widths[900][1] == pytest.approx(        # by the same factor
+        widths[1600][0] / widths[1600][1], rel=0.03)
 
 
 @R("REQ-142")

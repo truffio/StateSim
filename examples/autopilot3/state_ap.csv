@@ -1,0 +1,6 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order,action_type,action
+T1,AP-disengaged,AP-engaged,AP-disengaged,AP_btn == True,state_ap_t1_1,Manual engagement,Manual engaging of AP,1,entry,STATE_AP_T1
+T1,AP-disengaged,AP-engaged,,law_AP == True,state_ap_t1_2,Manual engagement,Manual engaging of AP,2,,
+T2,AP-engaged,AP-disengaged,,APdisc == True,state_ap_t2_1,Manual disengagement,Manual disengagement,3,entry,STATE_AP_T2
+T3,AP-engaged,AP-disengaged,,law_AP == False,state_ap_t3_1,Automatic disengagement caused by CLAWS not available,Automatic disengagement,4,entry,STATE_AP_T2
+T4,AP-engaged,AP-disengaged,,law_AP == False,state_ap_t4_1,Automatic disengagement caused by CLAWS not available,Automatic disengagement,5,entry,STATE_AP_T2

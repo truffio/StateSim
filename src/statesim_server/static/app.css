@@ -3,7 +3,6 @@
   --ink: #1c2430; --muted: #4a5565; --line: #d9dee5; --line-strong: #c3cad4;
   --bg: #eef1f5; --card: #ffffff; --state-bg: #f6f8fa;
   --green: #00a37d; --green-dark: #007a5e; --red: #c62a3a;
-  --global: #b35c00; --global-tint: #fff1de; --global-ink: #6b3600;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -12,7 +11,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, 
 
 /* layout: two panes and a splitter */
 /* top pane: aircraft panels, full width, always shown when the model has panels */
-.top { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+.top { flex: 0 0 auto; display: flex; flex-wrap: nowrap; justify-content: center; align-items: flex-start; gap: 12px;
        padding: 12px; border-bottom: 1px solid var(--line-strong); background: #dde2e8; overflow: hidden; }
 .top[hidden] { display: none; }
 .panel-host { flex: 0 0 auto; }
@@ -87,7 +86,6 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 .st.small { font-size: 10px; }
 .st.active { border-color: var(--blue); background: var(--blue); color: #fff; font-weight: 700; }
 .st.next { border-color: var(--blue); background: var(--blue-tint); color: var(--blue-dark); }
-.st.next-global { border-style: dashed; border-color: var(--global); background: var(--global-tint); color: var(--global-ink); }
 
 .banner { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--ink); color: #fff;
           font-size: 13px; padding: 8px 14px; border-radius: 6px; }

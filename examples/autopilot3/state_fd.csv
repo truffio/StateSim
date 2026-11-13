@@ -1,0 +1,6 @@
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order,action_type,action
+T1,FD-disengaged,FD-engaged,FD-disengaged,FD_btn == True,state_fd_t1_1,Manual engagement,Manual engaging of FD,1,entry,STATE_FD_T1
+T2,FD-disengaged,FD-engaged,,ap_on == True,state_fd_t2_1,Engagement of FD inducde by AP engagement,Automatic engaging of FD,2,entry,STATE_FD_T1
+T3,FD-disengaged,FD-engaged,,TOGA == True,state_fd_t3_1,Engagement of FD inducde by TOGA command,Automatic engaging of FD,3,entry,STATE_FD_T1
+T4,FD-engaged,FD-disengaged,,FD_btn == True,state_fd_t4_1,Manual disengagement,Manual disengagement,4,entry,STATE_FD_T4
+T4,FD-engaged,FD-disengaged,,ap_on == False,state_fd_t4_2,Manual disengagement,Manual disengagement,5,,
