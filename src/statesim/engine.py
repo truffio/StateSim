@@ -80,6 +80,21 @@ class Engine:
     Sets ctx[name] = value (no type coercion) and always emits TraceEvent at
     the current tick/t with component = constants.INPUT_COMPONENT, action =
     f"set {name} {old!r}->{value!r}", values = ((name, value),).
+
+    Structured fields (TraceEvent.kind etc., for the timeline; the text line
+    above does not change): input events have kind="input", name, old, new;
+    result changes kind="result" with name = result variable; state changes
+    kind="transition" with name = SM name, old/new states, label, title;
+    action writes kind="action" with name = target, label = action name and
+    phase "init", "exit", "entry" or "during". ``trigger`` (sorted) = the
+    names read by the item (the equation; for a state machine the row, or
+    for a transition all rows of that transition) whose value differs
+    (``!=`` or a different type) from the item's last-seen copy: the values
+    at the end of its previous run (the initial context before its first
+    run), so it is exact across bands. ``t``, ``tick``, ``dt`` and a machine's
+    own name are never triggers; inputs and actions have none. The transition
+    trigger is captured with its values, before the exit action. This
+    bookkeeping runs only when a trace sink is attached.
     """
 
     def __init__(self, model: Model, trace: TraceSink | None = None) -> None:
@@ -138,6 +153,29 @@ class Engine:
         ctx["dt"] = Fraction(0)
         ctx[BUILTINS_KEY] = builtins
         self._ctx = ctx
+        # Trigger bookkeeping (used only when a trace sink is attached):
+        # names each item reads (no t/tick/dt/builtins, no SM's own name) and
+        # the item's last-seen copy of them, initially the starting context.
+        skip = {"t", "tick", "dt", BUILTINS_KEY}
+
+        def reads(names, own=None):
+            return tuple(n for n in sorted(set(names))
+                         if n in ctx and n not in skip and n != own)
+
+        self._eq_reads = {rv: reads(used) for rv, (_c, used, _s) in self._eqs.items()}
+        self._row_reads = {}  # (sm, row source) -> names
+        self._tr_reads = {}  # id(transition) -> names
+        self._sm_reads = {}
+        for name, trans in self._sms.items():
+            all_names = set()
+            for tr, _label, rows, used in trans:
+                for _rv, _code, row_used, src in rows:
+                    self._row_reads[(name, src)] = reads(row_used, name)
+                self._tr_reads[id(tr)] = reads(used, name)
+                all_names.update(used)
+            self._sm_reads[name] = reads(all_names, name)
+        self._eq_seen = {rv: {n: ctx[n] for n in ns} for rv, ns in self._eq_reads.items()}
+        self._sm_seen = {sm: {n: ctx[n] for n in ns} for sm, ns in self._sm_reads.items()}
 
     @property
     def tick(self) -> int:
@@ -154,9 +192,25 @@ class Engine:
         ctx = self._ctx
         return tuple((n, ctx[n]) for n in sorted(set(names)) if n in ctx and n != BUILTINS_KEY)
 
-    def _emit(self, component: str, action: str, values: tuple) -> None:
+    def _emit(self, component: str, action: str, values: tuple, **fields) -> None:
         if self._trace is not None:
-            self._trace.emit(TraceEvent(self._tick, self._t, component, action, values))
+            self._trace.emit(TraceEvent(self._tick, self._t, component, action, values,
+                                        **fields))
+
+    def _trigger(self, names, seen: dict) -> tuple:
+        """The names (already sorted) whose context value differs from ``seen``."""
+        ctx = self._ctx
+        out = []
+        for n in names:
+            a, b = ctx[n], seen[n]
+            if a != b or type(a) is not type(b):
+                out.append(n)
+        return tuple(out)
+
+    @staticmethod
+    def _remember(seen: dict, ctx: dict) -> None:
+        for n in seen:
+            seen[n] = ctx[n]
 
     def _eval(self, code, source: str, item: str) -> bool:
         try:
@@ -179,12 +233,18 @@ class Engine:
                 old = ctx[item.name]
                 if new != old:
                     ctx[item.name] = new
-                    self._emit(constants.EQUATIONS_COMPONENT,
-                               f"{item.name} {old}->{new}", self._vals(used))
+                    if self._trace is not None:
+                        self._emit(constants.EQUATIONS_COMPONENT,
+                                   f"{item.name} {old}->{new}", self._vals(used),
+                                   kind="result", name=item.name, old=old, new=new,
+                                   trigger=self._trigger(self._eq_reads[item.name],
+                                                         self._eq_seen[item.name]))
+                if self._trace is not None:
+                    self._remember(self._eq_seen[item.name], ctx)
             else:
                 self._run_sm(item.name)
 
-    def _run_action(self, sm: str, action: str) -> None:
+    def _run_action(self, sm: str, action: str, phase: str) -> None:
         """Run the statements of ``action`` in order; log each changed target
         under the state machine's name."""
         ctx = self._ctx
@@ -197,30 +257,41 @@ class Engine:
             for n, before in zip(targets, old):
                 if ctx[n] != before or type(ctx[n]) is not type(before):
                     self._emit(sm, f"{action}: set {n} {before!r}->{ctx[n]!r}",
-                               self._vals(used))
+                               self._vals(used), kind="action", name=n, old=before,
+                               new=ctx[n], label=action, phase=phase)
 
     def _run_sm(self, name: str) -> None:
+        self._run_sm_pass(name)
+        if self._trace is not None:
+            self._remember(self._sm_seen[name], self._ctx)
+
+    def _run_sm_pass(self, name: str) -> None:
         if name not in self._sm_started:
             self._sm_started.add(name)
             init = self._sm_defs[name].init_action
             if init:
-                self._run_action(name, init)
+                self._run_action(name, init, "init")
         fired = self._select(name)
         if fired is None:
             during = self._sm_defs[name].during_action(self._ctx[name])
             if during:
-                self._run_action(name, during)
+                self._run_action(name, during, "during")
             return
         tr, label, used = fired
         ctx = self._ctx
         cur = ctx[name]
         values = self._vals(used)  # the values that made the transition fire
+        trigger = ()
+        if self._trace is not None:
+            trigger = self._trigger(self._tr_reads[id(tr)], self._sm_seen[name])
         if tr.exit_action:
-            self._run_action(name, tr.exit_action)
+            self._run_action(name, tr.exit_action, "exit")
         ctx[name] = tr.next_state
-        self._emit(name, f'{label} {cur}->{tr.next_state} "{tr.title}"', values)
+        self._emit(name, f'{label} {cur}->{tr.next_state} "{tr.title}"', values,
+                   kind="transition", name=name, old=cur, new=tr.next_state,
+                   label=label, title=tr.title, trigger=trigger)
         if tr.entry_action:
-            self._run_action(name, tr.entry_action)
+            self._run_action(name, tr.entry_action, "entry")
 
     def _select(self, name: str):
         """Evaluate every row; return (transition, label, used names) of the
@@ -236,7 +307,11 @@ class Engine:
                 old = ctx[rv]
                 if new != old:
                     ctx[rv] = new
-                    self._emit(name, f"{rv} {old}->{new}", self._vals(used))
+                    if self._trace is not None:
+                        self._emit(name, f"{rv} {old}->{new}", self._vals(used),
+                                   kind="result", name=rv, old=old, new=new,
+                                   trigger=self._trigger(self._row_reads[(name, src)],
+                                                         self._sm_seen[name]))
                 if not new:
                     ok = False
             results.append(ok)
@@ -276,4 +351,4 @@ class Engine:
         old = self._ctx[name]
         self._ctx[name] = value
         self._emit(constants.INPUT_COMPONENT, f"set {name} {old!r}->{value!r}",
-                   ((name, value),))
+                   ((name, value),), kind="input", name=name, old=old, new=value)
