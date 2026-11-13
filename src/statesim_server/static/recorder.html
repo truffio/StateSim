@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FMA recording</title>
+<style>
+  :root { --blue: #005c99; --blue-tint: #dcf0fa; --ink: #1c2430; --muted: #4a5565; --line: #d9dee5;
+          --line-strong: #c3cad4; --bg: #eef1f5; --card: #fff; --red: #c62a3a; }
+  .rc-bar, .rc-bar * { box-sizing: border-box; }   /* not the report: it must lay out as in the PNG */
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  .rc-bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+            padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--line-strong); font-size: 13px; }
+  .rc-bar .btn { font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line-strong); border-radius: 6px;
+                 padding: 7px 10px; background: var(--card); color: var(--ink); cursor: pointer; text-decoration: none; }
+  .rc-bar .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .rc-bar .btn:disabled { color: #9aa3ae; cursor: default; }
+  .rc-bar label { display: inline-flex; align-items: center; gap: 5px; }
+  .rc-bar input[type=number] { width: 56px; font: inherit; padding: 4px 6px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .rc-status { color: var(--muted); margin-left: auto; }
+  .rc-stage { padding: 20px; overflow: auto; }
+  .rc-wait { padding: 40px; color: var(--muted); }
+  button:focus-visible, [contenteditable]:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="rc-bar rc-ui" id="bar" hidden>
+  <button type="button" class="btn primary" id="save">Save PNG</button>
+  <button type="button" class="btn" id="undo" disabled>Undo</button>
+  <button type="button" class="btn" id="reset">Reset to recording</button>
+  <label><input type="checkbox" id="times" checked> Show times</label>
+  <label>Indent step <input type="number" id="step" min="0" max="120" step="4" value="28"> px</label>
+  <span class="rc-status" id="status">Click a text to edit it. Drag &#x2807; to move a row.</span>
+</div>
+<div class="rc-stage" id="stage"><div class="rc-wait" id="wait">Waiting for the recording…</div></div>
+<script src="recorder.js"></script>
+</body>
+</html>

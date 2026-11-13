@@ -198,6 +198,14 @@ Server messages (`statesim_server`, WebSocket):
 
 See `docs/frontend_ui_spec.md` section 11 for the pane.
 
+## FMA recording
+Master CSV panel row: `fma.html,panel,,,Flight mode annunciator,0.75,fma` (last
+column `role` = `fma`, one panel at most). Inputs CSV optional columns
+`description` ("Approach button") and `unit` ("ft") word the captions:
+"Approach button pressed", "Radio altitude set to 2500 ft". Start/Stop
+recording in the run bar; Stop opens an editable preview (title, captions,
+notes, order, hide, indent) with Save PNG. See UI spec section 12.
+
 ## Tests and report
 ```
 python -m pytest --junitxml=reports/junit.xml -q
