@@ -216,6 +216,7 @@ class Model:
     equations_master_row: int = 1 << 60
     panels: tuple[PanelDef, ...] = ()
     actions: tuple[ActionDef, ...] = ()   # actions CSV, by first appearance
+    aircraft: str = ""                     # master CSV aircraft row: the type (e.g. "A220")
 
 
 def transition_sort_key(transition_id: str) -> tuple[int, int | str]:

@@ -25,8 +25,14 @@ TYPE_EQUATIONS = "equations"
 TYPE_INPUTS = "inputs"
 TYPE_PANEL = "panel"
 TYPE_ACTIONS = "actions"
+TYPE_AIRCRAFT = "aircraft"   # file_name = an aircraft type (e.g. A220): brings in its panel set
 FILE_TYPES: tuple[str, ...] = (TYPE_STATE_MACHINE, TYPE_EQUATIONS, TYPE_INPUTS, TYPE_PANEL,
-                               TYPE_ACTIONS)
+                               TYPE_ACTIONS, TYPE_AIRCRAFT)
+# Aircraft types: a folder aircraft/<TYPE>/ with its panel HTML files and
+# aircraft.csv listing them (same columns as master panel rows). Searched next
+# to the master CSV first, then in the package (src/statesim/aircraft/).
+AIRCRAFT_DIR = "aircraft"
+AIRCRAFT_FILE = "aircraft.csv"
 # Optional master column on state_machine rows: an action run once, on the
 # machine's first pass, before its transitions (empty: nothing runs).
 MASTER_INIT_ACTION_COLUMN = "init_action"

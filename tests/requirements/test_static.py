@@ -60,7 +60,10 @@ def test_no_randomness():
 @R("REQ-106")
 def test_python_only():
     files = [p for p in SRC.rglob("*") if p.is_file() and "__pycache__" not in p.parts]
-    assert files and all(p.suffix == ".py" for p in files)
+    # code is Python only; the aircraft panel sets (HTML and CSV data) are not code
+    data = [p for p in files if "aircraft" in p.relative_to(SRC).parts]
+    assert files and all(p.suffix == ".py" for p in files if p not in data)
+    assert all(p.suffix in (".html", ".csv") for p in data)
 
 
 @R("REQ-081")

@@ -200,7 +200,9 @@ See `docs/frontend_ui_spec.md` section 11 for the pane.
 
 ## FMA recording
 Master CSV panel row: `fma.html,panel,,,Flight mode annunciator,0.75,fma` (last
-column `role` = `fma`, one panel at most). Inputs CSV optional columns
+column `role` = `fma`, one panel at most), or an aircraft type row `A220,aircraft,,,,,`
+that brings in the type's panels from `aircraft/A220/aircraft.csv` (next to the
+master CSV, else built in under `src/statesim/aircraft/`). Inputs CSV optional columns
 `description` ("Approach button") and `unit` ("ft") word the captions:
 "Approach button pressed", "Radio altitude set to 2500 ft". Start/Stop
 recording in the run bar; Stop opens an editable preview (title, captions,
