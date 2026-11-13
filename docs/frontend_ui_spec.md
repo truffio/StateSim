@@ -209,8 +209,7 @@ are reset (section 6). The logic never writes inputs.
 |---|---|---|
 | Inactive | Light grey fill, grey border, grey text | A state the machine is not in. |
 | **Active** | Solid blue fill and border, white bold text | The machine's current state. Exactly one per machine. |
-| Next (hover) | Light blue fill, blue border, dark blue text | A state reachable from the active state by one of its transitions. Shown only while the active state is hovered or focused. |
-| Next, global (hover) | Light orange fill, dashed orange border, dark orange text | A target of a global transition. Shown only while the active state is hovered or focused, if global targets are included (O12). |
+| Next (hover) | Light blue fill, blue border, dark blue text | A state reachable from the active state by one of its own transitions (current_state = the active state). Targets of global transitions are not shown: their conditions often limit the states they can fire from. Shown only while the active state is hovered or focused. |
 
 ### 5.3 Interaction
 
@@ -250,7 +249,6 @@ of catching up.
 | Dark blue | #003d66 | Text of a next state and of a pressed push-button |
 | Light blue | #dcf0fa | Fill of a next state and of a pressed push-button, splitter highlight |
 | Green / dark green | #00a37d / #007a5e | Lit push-button fill / border |
-| Orange / light orange / dark orange | #b35c00 / #fff1de / #6b3600 | Global next state border / fill / text |
 | Grey track | #b9c1cc | Switch off |
 | Page background | #eef1f5 | Page and splitter |
 | Light grey | #f6f8fa | Inactive state, momentary push-button |

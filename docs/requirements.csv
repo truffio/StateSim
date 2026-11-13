@@ -120,7 +120,7 @@ REQ-118,frontend,The server shall be a separate package so the engine package st
 REQ-119,frontend,"The page shall build its input cards and state machine cards from the loaded model, with no per-model code",frontend_ui_spec.4,use_case_test
 REQ-120,frontend,"The page shall show the state machines in master CSV row order, and each machine's states in the order of its CSV file",frontend_ui_spec.5,use_case_test
 REQ-121,frontend,"The page shall highlight the active state of every state machine, exactly one per machine, and follow state changes while running",frontend_ui_spec.5.2,use_case_test
-REQ-122,frontend,"Hovering over or focusing the active state shall highlight its next states (global transition targets dashed); hovering over an inactive state shall do nothing; highlighting shall not move or resize anything",frontend_ui_spec.5.3,use_case_test
+REQ-122,frontend,"Hovering over or focusing the active state shall highlight the targets of its own transitions (not global transition targets); hovering over an inactive state shall do nothing; highlighting shall not move or resize anything",frontend_ui_spec.5.3,use_case_test
 REQ-123,frontend,"The page shall not show equations, conditions, transitions, band rates, simulation time or tick",frontend_ui_spec.2,use_case_test
 REQ-124,frontend,"The page shall show one input card per input group, titled with the group name, with the group's inputs in CSV order",frontend_ui_spec.4.1,use_case_test
 REQ-125,frontend,"Switches, sliders, number fields, drop-downs and text fields shall write their input; the server shall check type, min/max and choices and reject other values",frontend_ui_spec.4.2,use_case_test

@@ -103,13 +103,13 @@ def test_hover_active_highlights_next_states_without_moving_anything(open_page):
     card.locator(".st", has_text="Cruise").hover()               # inactive: nothing
     assert pg.locator(".st.next").count() == 0
     card.locator(".st.active").hover()
-    assert card.locator(".st.next").all_text_contents() == ["Climb", "EDM", "Touchdown"]
-    assert card.locator(".st.next-global").all_text_contents() == ["EDM", "Touchdown"]
+    assert card.locator(".st.next").all_text_contents() == ["Climb"]   # not global targets
+    assert card.locator(".st.next-global").count() == 0
     assert boxes(pg) == before
     pg.mouse.move(5, 5)
     assert pg.locator(".st.next").count() == 0
     card.locator(".st.active").focus()                           # keyboard
-    assert card.locator(".st.next").count() == 3
+    assert card.locator(".st.next").count() == 1
 
 
 @R("REQ-125")

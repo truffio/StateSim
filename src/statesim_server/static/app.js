@@ -12,7 +12,7 @@ const el = (tag, cls, text) => {
 
 let ws = null;
 let controls = {};   // input name -> {kind, update(value)}
-let machines = {};   // machine name -> {boxes, next, global, active, shown}
+let machines = {};   // machine name -> {boxes, next, active, shown}
 let litButtons = []; // [{el, var}]
 let built = false;
 let panels = null;    // StateSimPanels.build() result
@@ -148,7 +148,7 @@ function machineCard(m) {
   card.append(el("h3", null, m.label));
   const grid = el("div", "states");
   const boxes = {};
-  const info = { boxes, next: m.next, global: m.global, active: null, shown: false };
+  const info = { boxes, next: m.next, active: null, shown: false };
   for (const s of m.states) {
     const b = el("div", "st");
     breakable(b, s);
@@ -177,10 +177,10 @@ function breakable(node, text) {
 function highlight(info, on) {
   info.shown = on;
   const targets = on ? (info.next[info.active] || []) : [];
-  const globals = on ? info.global : [];
+  // Only the active state's own transitions: a global transition's target is
+  // not shown (its condition often limits the states it can fire from).
   for (const [s, b] of Object.entries(info.boxes)) {
-    b.classList.toggle("next", s !== info.active && (targets.includes(s) || globals.includes(s)));
-    b.classList.toggle("next-global", s !== info.active && globals.includes(s) && !targets.includes(s));
+    b.classList.toggle("next", s !== info.active && targets.includes(s));
   }
 }
 
