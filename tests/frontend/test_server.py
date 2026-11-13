@@ -2,12 +2,15 @@
 
 import asyncio
 import json
+import socket
 import time
 import urllib.request
 from urllib.error import HTTPError
 
 import pytest
 from websockets.asyncio.client import connect
+from websockets.datastructures import Headers
+from websockets.http11 import Request
 
 from statesim import load_model
 from statesim_server.server import start
@@ -187,3 +190,194 @@ def test_timeline_text_download(server_url):
     assert "attachment" in resp.headers["Content-Disposition"]
     text = resp.read().decode("utf-8")
     assert text.startswith("StateSim timeline: ") and "(run 1)" in text.splitlines()[0]
+
+
+def _write_model(d, rows, inputs="variable_name,type,default_value\ngo,bool,false\n", actions=None):
+    master = "file_name,type,order,band\nm.csv,state_machine,1,10\ninputs.csv,inputs,,\n"
+    if actions:
+        master += "actions.csv,actions,,\n"
+        (d / "actions.csv").write_text(actions, encoding="utf-8")
+    (d / "master.csv").write_text(master, encoding="utf-8")
+    (d / "inputs.csv").write_text(inputs, encoding="utf-8")
+    head = "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order"
+    if actions:
+        head += ",action_type,action"
+        rows = "".join(r if r.count(",") > 8 else r.rstrip("\n") + ",,\n" for r in rows.splitlines(True))
+    (d / "m.csv").write_text(head + "\n" + rows, encoding="utf-8")
+    return load_model(d / "master.csv")
+
+
+@R("REQ-117")
+def test_runtime_error_pauses_reports_and_reset_recovers(tmp_path):
+    """#25: a failing step pauses the run and tells the client; Reset + Resume work again."""
+    model = _write_model(tmp_path, "1,A,B,A,go and undefined_name > 1,r1,,,1\n")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            await ws.send(json.dumps({"type": "set", "name": "go", "value": True}))
+            err = await recv_type(ws, "error")
+            assert err["message"].startswith("Paused:") and "m.csv:2" in err["message"]
+            st = await recv_type(ws, "state")
+            while not st["paused"]:
+                st = await recv_type(ws, "state")
+            await ws.send(json.dumps({"type": "reset"}))
+            await ws.send(json.dumps({"type": "resume"}))
+            t0 = app.session.engine.tick
+            await asyncio.sleep(0.4)
+            assert app.session.engine.tick > t0 and not app.session.paused
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-117")
+def test_action_writing_t_and_dt_keeps_the_server_running(tmp_path):
+    """#26: t and dt are Fractions; an action storing them must not break the state messages."""
+    model = _write_model(
+        tmp_path,
+        "1,A,B,A,go,r1,,,1,entry,STAMP\n2,B,A,,not go,r2,,,2,during,COUNT\n",
+        inputs="variable_name,type,default_value\ngo,bool,false\nstarted,float,0\nelapsed,int,0\n",
+        actions="action,statement\nSTAMP,started = t\nCOUNT,elapsed += dt\n")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            await ws.send(json.dumps({"type": "set", "name": "go", "value": True}))
+            await asyncio.sleep(0.4)
+            st = await recv_type(ws, "state")
+            while st["inputs"]["elapsed"] == 0:
+                st = await recv_type(ws, "state")
+            assert isinstance(st["inputs"]["started"], float) and isinstance(st["inputs"]["elapsed"], float)
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws2:          # new clients still connect
+            assert json.loads(await ws2.recv())["type"] == "model"
+        assert not app.session.paused
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-125")
+def test_malformed_messages_get_an_error_and_keep_the_connection(tmp_path):
+    """#27: wrong field types reply with an error; the socket stays open."""
+    model = _write_model(tmp_path, "1,A,B,A,go and undefined_name > 1,r1,,,1\n",
+                         inputs="variable_name,type,default_value\ngo,bool,false\nn,int,0\n")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            for bad in ({"type": "set", "name": "n", "value": 1e999},
+                        {"type": "set", "name": [], "value": 1},
+                        {"type": "press", "name": {}},
+                        {"type": "toggle", "name": 3}):
+                await ws.send(json.dumps(bad))
+                err = await recv_type(ws, "error")
+                assert err["message"]
+            await ws.send(json.dumps({"type": "pause"}))
+            await ws.send(json.dumps({"type": "set", "name": "go", "value": True}))
+            await ws.send(json.dumps({"type": "step"}))           # the step fails: error, still paused
+            err = await recv_type(ws, "error")
+            while not err["message"].startswith("Paused:"):
+                err = await recv_type(ws, "error")
+            assert "m.csv:2" in err["message"] and app.session.paused
+            await ws.send(json.dumps({"type": "reset"}))
+            st = await recv_type(ws, "state")
+            while st["gen"] == 1:                              # skip messages sent before the reset
+                st = await recv_type(ws, "state")
+            assert st["inputs"]["go"] is False
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-128")
+def test_realtime_never_blocks_the_event_loop_for_long(tmp_path):
+    """#31: with a huge tick rate, each real-time batch is bounded in wall time."""
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\na.csv,state_machine,1,1000\n"
+                                         "b.csv,state_machine,2,999.999\n", encoding="utf-8")
+    head = "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order\n"
+    for n in "ab":
+        (tmp_path / f"{n}.csv").write_text(head + f"1,A,B,A,False,{n}1,,,1\n", encoding="utf-8")
+    model = load_model(tmp_path / "master.csv")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        loop = asyncio.get_running_loop()
+        worst, last, stop = 0.0, loop.time(), loop.time() + 1.5
+        while loop.time() < stop:
+            await asyncio.sleep(0.01)
+            now = loop.time()
+            worst, last = max(worst, now - last), now
+        assert app.session.engine.tick > 0
+        assert worst < 0.3, f"event loop stalled {worst:.2f} s"
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-117")
+def test_a_client_that_stops_reading_does_not_stop_the_others(monkeypatch):
+    """#32: a client whose sends never complete (a frozen tab) is dropped after
+    the send timeout; the run and the other clients go on."""
+    import statesim_server.server as srv
+    monkeypatch.setattr(srv, "SEND_TIMEOUT_S", 0.3, raising=False)
+
+    class Frozen:                                   # send() never completes
+        transport = None
+        aborted = False
+
+        async def send(self, text):
+            await asyncio.Event().wait()
+
+    async def go():
+        app, server, port = await started("autopilot3")
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            await ws.send(json.dumps({"type": "mode", "mode": "fast"}))
+            frozen = Frozen()
+            app.clients.add(frozen)
+            t0, frames = app.session.engine.tick, 0
+            loop = asyncio.get_running_loop()
+            end = loop.time() + 2
+            while loop.time() < end:
+                try:
+                    await asyncio.wait_for(ws.recv(), 0.5)
+                    frames += 1
+                except asyncio.TimeoutError:
+                    pass
+            assert frozen not in app.clients
+            assert app.session.engine.tick > t0 and frames >= 20
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-134")
+def test_websocket_only_from_its_own_page():
+    """#33: another web page (other Origin) or another Host name cannot open the WebSocket."""
+    from websockets.exceptions import InvalidStatus
+
+    async def go():
+        app, server, port = await started()
+        url = f"ws://127.0.0.1:{port}/ws"
+        async with connect(url, origin=f"http://127.0.0.1:{port}") as ws:     # the page itself
+            assert json.loads(await ws.recv())["type"] == "model"
+        async with connect(url) as ws:                                        # no Origin: a script
+            assert json.loads(await ws.recv())["type"] == "model"
+        for kw in ({"origin": "https://evil.example"},
+                   {"origin": f"http://127.0.0.1:{port + 1}"}):
+            with pytest.raises(InvalidStatus) as e:
+                async with connect(url, **kw):
+                    pass
+            assert e.value.response.status_code == 403
+        # DNS rebinding: a page on evil.example resolving to 127.0.0.1 has a matching Origin
+        rebound = Request("/ws", Headers([("Host", f"evil.example:{port}"),
+                                          ("Origin", f"http://evil.example:{port}")]))
+        assert not app._own_page(rebound)
+        assert app._own_page(Request("/ws", Headers([("Host", f"localhost:{port}"),
+                                                     ("Origin", f"http://localhost:{port}")])))
+        server.close()
+        await server.wait_closed()
+    run(go())

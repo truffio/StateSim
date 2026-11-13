@@ -45,6 +45,7 @@ How the recorder works (all state is per ``Timeline``; nothing is global):
 
 from __future__ import annotations
 
+import math
 from collections import deque
 from collections.abc import Iterable
 from fractions import Fraction
@@ -57,13 +58,20 @@ MAX_ORIGINS = 64
 _NO_ORIGIN: frozenset[int] = frozenset()
 
 
-def _json_value(value: object) -> object:
-    """bool/int/float/str/None unchanged, Fraction -> float, else str()."""
-    if value is None or isinstance(value, (bool, int, float, str)):
-        return value
+def json_value(value: object) -> object:
+    """A value that JSON can carry: bool/int/str/None and finite floats
+    unchanged, Fraction -> float (``t`` and ``dt`` written by an action),
+    NaN/Infinity -> their str() (not valid JSON), anything else -> str()."""
     if isinstance(value, Fraction):
-        return float(value)
+        value = float(value)
+    if isinstance(value, float):
+        return value if math.isfinite(value) else str(value)
+    if value is None or isinstance(value, (bool, int, str)):
+        return value
     return str(value)
+
+
+_json_value = json_value
 
 
 class Timeline:

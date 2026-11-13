@@ -4,11 +4,12 @@ the server (server.py) decides when to call step()."""
 
 from __future__ import annotations
 
+import math
 from fractions import Fraction
 from html.parser import HTMLParser
 
-from statesim import Engine, Model, format_text
-from statesim.timeline import Timeline
+from statesim import Engine, EvaluationError, Model, format_text
+from statesim.timeline import Timeline, json_value
 from statesim.scheduler import build_schedule
 
 MODES = ("realtime", "fast")
@@ -174,6 +175,8 @@ class Session:
         {"type": "resume"}, {"type": "step"}, {"type": "reset"}.
         """
         kind = msg.get("type")
+        if kind in ("set", "toggle", "press") and not isinstance(msg.get("name"), str):
+            return f"{kind}: name must be a string, not {msg.get('name')!r}"
         if kind == "set":
             return self._set(msg.get("name"), msg.get("value"))
         if kind == "toggle":
@@ -206,7 +209,10 @@ class Session:
         if kind == "step":
             if not self.paused:
                 return "step is only available while paused"
-            self.step()
+            try:
+                self.step()
+            except EvaluationError as exc:        # stays paused; Reset gives a working run
+                return f"Paused: {exc}"
             return None
         if kind == "reset":
             self.reset()
@@ -224,20 +230,23 @@ class Session:
             if kind == "bool":
                 if not isinstance(value, bool):
                     raise ValueError
-            elif kind == "int":
-                if isinstance(value, bool) or float(value) != int(float(value)):
+            elif kind in ("int", "float"):
+                # a JSON number only (not a bool, not text), and finite: NaN would
+                # pass min/max and Infinity is not valid JSON in the state messages
+                if isinstance(value, bool) or not isinstance(value, (int, float))                         or not math.isfinite(value):
                     raise ValueError
-                value = int(float(value))
-            elif kind == "float":
-                if isinstance(value, bool):
-                    raise ValueError
-                value = float(value)
+                if kind == "int":
+                    if value != int(value):
+                        raise ValueError
+                    value = int(value)
+                else:
+                    value = float(value)
             elif kind == "enum":
                 if value not in i.choices:
                     raise ValueError
             elif not isinstance(value, str):
                 raise ValueError
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             return f"invalid value {value!r} for {kind} input {name!r}"
         if kind in ("int", "float"):
             if (i.min is not None and value < i.min) or (i.max is not None and value > i.max):
@@ -272,9 +281,9 @@ class Session:
         return {
             "type": "state",
             "states": snap["states"],
-            "inputs": snap["inputs"],
+            "inputs": {n: json_value(v) for n, v in snap["inputs"].items()},
             "lit": {v: bool(self._value(snap, v)) for v in self.lit_vars},
-            "values": {v: self._value(snap, v) for v in self.shown_vars},
+            "values": {v: json_value(self._value(snap, v)) for v in self.shown_vars},
             "mode": self.mode,
             "paused": self.paused,
             "t": snap["t"],

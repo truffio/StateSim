@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import ast
 import csv
+import io
+import math
 from dataclasses import replace
 from html.parser import HTMLParser
 from fractions import Fraction
@@ -32,10 +34,16 @@ def _read_csv(
 ) -> list[tuple[int, dict[str, str]]]:
     """Return (line, row) pairs; cells stripped, blank rows skipped."""
     try:
-        fh = open(path, encoding="utf-8-sig", newline="")
+        data = path.read_bytes()
     except OSError as e:
         raise ModelError(f"cannot read file: {e.strerror or e}", display) from None
-    with fh:
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as e:          # e.g. saved by Excel as ANSI / cp1252
+        line = data[:e.start].count(b"\n") + 1
+        raise ModelError(f"not UTF-8 (byte 0x{data[e.start]:02x}); save the file as CSV UTF-8",
+                         f"{display}:{line}") from None
+    with io.StringIO(text, newline="") as fh:
         reader = csv.reader(fh)
         header: list[str] | None = None
         rows: list[tuple[int, dict[str, str]]] = []
@@ -195,7 +203,10 @@ def _parse_default(text: str, type_name: str, source: str) -> object:
         if kind == "int":
             return int(text)
         if kind == "float":
-            return float(text)
+            value = float(text)
+            if not math.isfinite(value):          # nan/inf: no min/max check, invalid JSON
+                raise ValueError
+            return value
         if kind in ("str", "enum"):
             return text
     except (KeyError, ValueError):
@@ -211,9 +222,12 @@ def _num(text: str, what: str, source: str) -> float | None:
     if text == "":
         return None
     try:
-        return float(text)
+        value = float(text)
     except ValueError:
         raise ModelError(f"invalid {what} {text!r}", source) from None
+    if not math.isfinite(value):
+        raise ModelError(f"invalid {what} {text!r} (must be a finite number)", source)
+    return value
 
 
 def _input_def(r: dict[str, str], default: object, src: str) -> InputDef:
@@ -299,8 +313,8 @@ def _panel_scale(text: str, source: str) -> float:
         value = float(text)
     except ValueError:
         raise ModelError(f"invalid scale {text!r}", source) from None
-    if not value > 0:
-        raise ModelError(f"scale must be > 0, got {text}", source)
+    if not (value > 0 and math.isfinite(value)):
+        raise ModelError(f"scale must be > 0 and finite, got {text}", source)
     return value
 
 
