@@ -59,8 +59,7 @@ The display names on the front end are the JSON machine names.
   the machines), one per line of each field. For example, `fma_tm_engaged_spd`
   is true while the TM engaged field shows "SPD". The first matching line wins,
   as in the previous tool: each line is ANDed with "no earlier line of this
-  field". The front end doesn't show these yet; they're in the trace and the
-  snapshot outputs.
+  field". The FMA panel shows them (see below).
 
 ## Flight control panel (`fcp.html`)
 
@@ -81,6 +80,25 @@ light follows. These four buttons therefore have no card on the left.
 The other buttons (HDG, NAV, XFR, EDM, FLC, ALT, VNAV, VS, FPA) and the four
 knobs (SPD, HDG, ALT, VS) are inputs the logic does not use, as in
 `autopilot2`.
+
+## Flight mode annunciator (`fma.html`)
+
+The previous tool's FMA strip, on the right of the FCP in the top pane (also
+at 3/4 size). It is generated from `fma_logic`. Each mode text is lit by its
+FMA equation and is shown only while lit; because each field is first-match,
+at most one text shows per slot.
+
+| Thrust | Lateral | Engage | Vertical |
+|---|---|---|---|
+| `TM_engaged` | `LNAV_engaged_1`, `LNAV_engaged_2` | AP (`ap_visible`) | `VNAV_engaged_1` |
+| `TM_armed` | `LNAV_armed_1`, `LNAV_armed_2` | AT (`at_color`) | `VNAV_armed_1`, `_2`, `_3` |
+
+- **Colours:** engaged modes (top row) are green and armed modes (bottom row)
+  white. AP is green. AT is green, or white when `at_color` says white
+  (autothrottle Hold armed).
+- **The arrow:** the white AP <- AT arrow between AP and AT has no rule in
+  `fma_logic`. It's the extra equation `fma_ap_at_arrow`, true while both AP
+  and AT are shown.
 
 ## Behaviour that changed
 
