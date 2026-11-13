@@ -288,3 +288,28 @@ def test_malformed_messages_get_an_error_and_keep_the_connection(tmp_path):
         server.close()
         await server.wait_closed()
     run(go())
+
+
+@R("REQ-128")
+def test_realtime_never_blocks_the_event_loop_for_long(tmp_path):
+    """#31: with a huge tick rate, each real-time batch is bounded in wall time."""
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\na.csv,state_machine,1,1000\n"
+                                         "b.csv,state_machine,2,999.999\n", encoding="utf-8")
+    head = "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order\n"
+    for n in "ab":
+        (tmp_path / f"{n}.csv").write_text(head + f"1,A,B,A,False,{n}1,,,1\n", encoding="utf-8")
+    model = load_model(tmp_path / "master.csv")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        loop = asyncio.get_running_loop()
+        worst, last, stop = 0.0, loop.time(), loop.time() + 1.5
+        while loop.time() < stop:
+            await asyncio.sleep(0.01)
+            now = loop.time()
+            worst, last = max(worst, now - last), now
+        assert app.session.engine.tick > 0
+        assert worst < 0.3, f"event loop stalled {worst:.2f} s"
+        server.close()
+        await server.wait_closed()
+    run(go())

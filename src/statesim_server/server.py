@@ -28,6 +28,7 @@ WS_PATH = "/ws"
 TIMELINE_TEXT = "/timeline.txt"   # the current run's timeline as text (a download)
 SEND_HZ = 30            # at most this many screen updates per second
 FAST_SLICE_S = 0.02     # "as fast as possible": run ticks for this long, then yield
+REALTIME_SLICE_S = 0.05  # real time: run at most this long before yielding (catch-up batches)
 MAX_LAG_S = 0.5         # real time: a backlog longer than this is dropped, not caught up
 
 
@@ -160,9 +161,12 @@ class App:
                     due = int((now - anchor) * tick_hz) + 1 - done
                     if due * 1.0 / tick_hz > MAX_LAG_S:   # overrun: drop the backlog
                         anchor, done, due = now, 0, 1
+                    end = now + REALTIME_SLICE_S
                     for _ in range(max(due, 0)):
                         s.step()
                         done += 1
+                        if loop.time() >= end:   # slow steps: yield; a lag over MAX_LAG_S is dropped
+                            break
             except Exception as exc:        # e.g. EvaluationError: an undefined name
                 await self.stopped(exc)
                 continue
