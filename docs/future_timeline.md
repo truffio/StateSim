@@ -1,6 +1,6 @@
 # Future feature: live timeline and sequence chart
 
-Status: **designed, not implemented** (recorded 2026-11-12 on branch `vis`).
+Status: **designed, not implemented** (recorded 2026-11-12).
 
 Two views of the current session, built live while the tool runs:
 

@@ -1,7 +1,7 @@
 # Decisions: authoritative behavior spec
 
 This file is the authoritative behavior specification for the engine. Where
-it is more specific than `requirements_simulation_framework_spec.yaml`, this
+it is more specific than `docs/requirements_simulation_framework_spec.yaml`, this
 file wins. Part A is user-approved and recorded verbatim. Part B records
 contract details resolved while writing the package skeleton (T0); the
 module docstrings in `src/statesim/` repeat them next to each signature.
@@ -170,3 +170,52 @@ transition's `set_vars`.
 - **Front end.** Controls redraw from the engine's input values every step,
   so a slider written by an action moves by itself; the user can still move
   it afterwards (last writer wins).
+
+## Part D: front end, user-approved 2026-11-11 and 2026-11-12
+
+The front end decisions behind `docs/frontend_ui_spec.md`. The numbers are
+the ones the requirements (`decisions.Dn`) and the UI spec refer to; gaps are
+decisions later merged into others.
+
+| # | Topic | Decision |
+|---|---|---|
+| D1 | Architecture | A local Python server (`statesim_server`) runs the `statesim` engine and serves a web front end (HTML/CSS/JavaScript) over a WebSocket. The engine exists only in Python; the page never evaluates logic. The server listens on 127.0.0.1 by default. |
+| D2 | Model files | CSV only (plus HTML files for aircraft panels). No system JSON file. |
+| D3 | Input display | Widget type, min, max, step, choices, grouping and similar live in the inputs CSV. |
+| D4 | Enum type | An `enum` input type: a string restricted to the `choices` list. |
+| D5 | Execution | Time-based: items run periodically at their band rates, so values settle over time. There is no "run until settled" step. |
+| D6 | Run modes | **Real time** (the server paces the ticks against the wall clock, as closely as the OS allows) and **as fast as possible**. The engine itself stays free of wall-clock time and async code; the server is a separate package. |
+| D7 | Push-button pulse | A press holds the input true for one period of the slowest band, then false, so slow-band logic sees it. |
+| D8 | Lit buttons | A button can be lit by a logic variable (`lit_by`, `data-lit-by`). Lights follow the variable, never the click. |
+| D9 | Priority | Every state machine and equation has an order number. Global transitions get lower numbers when they must win. No implicit precedence. |
+| D10 | Rationale and titles | Kept in the state machine files and used in the trace; not shown on the screen. |
+| D11 | Equations on screen | Not shown. They work in the background, driving state machines and panel lights and readouts. |
+| D12 | Rates on screen | Not shown; no staleness indicator. |
+| D13 | Ordering | Machine order and transition order come from the definition files. |
+| D16 | Log | No log panel on the screen; the engine trace still exists (`--trace FILE`). |
+| D17 | Writing variables | Equations and transitions never write variables. Actions (Part C) write inputs; internal variables are inputs with widget `none` and get no card. |
+| D18 | Condition display | No conditions on screen, so no green/red colouring of rows or terms. |
+| D19 | Machine order | State machines appear in the order of their master CSV rows. |
+| D20 | State order | A machine's states appear in the order they appear in its CSV file. |
+| D21 | Transitions on screen | Not shown. The active state is strongly highlighted; hovering it (or focusing it) highlights the targets of its own transitions. Global transition targets are not highlighted (revised 2026-11-12): their conditions often limit the states they can fire from. |
+| D22 | Inputs CSV columns | Optional display columns `group, widget, label, min, max, step, choices, lit_by, wide, panel`; files without them still load. |
+| D24 | Run controls | Real time or as fast as possible, Pause/Resume, Step (only while paused), Reset (keeps the model, run mode and pause state). In real time, a backlog longer than 0.5 s is dropped rather than caught up. |
+| D26 | Screen updates | Sent after ticks, at most 30 per second. |
+| D27 | Loading | Model path on the command line: `python -m statesim_server MASTER_CSV`. Reset restores start values without reloading files. |
+| D28 | Clients | Designed for one browser tab. Several tabs share the same session and see the same values. |
+| D29 | Front end tests | Session unit tests, server tests over real HTTP and WebSocket connections, and browser tests with Playwright (skipped when Playwright or Chromium is missing). |
+| D30 | Machine display names | Optional master CSV `name` column; a machine card is titled with it, or with the file name when empty. Equations still use the file name (e.g. `state_ac`). |
+| D32 | Load errors | The first load error stops loading, with its `file:line`. |
+| D33 | Divider position | Remembered in the browser's local storage and restored when the page is opened again. |
+| D34 | Aircraft panels | A panel is an HTML file listed in the master CSV (type `panel`), wired by `data-input`, `data-show`, `data-format` and `data-lit-by` attributes. Its scripts never run. |
+| D35 | Panel placement | A full-width top pane above the left and right panes, always shown. Panels sit side by side on one row in master order (revised 2026-11-12); if the row is too wide, all are scaled down by one common factor. |
+| D36 | Panel inputs | Inputs CSV `panel` column: the input is driven by that panel and gets no card. Panel widgets: `momentary`, `toggle` (each press flips the bool) and `knob` (int/float within min/max, no wrap). |
+| D39 | Panel size | Master CSV `scale` column on panel rows (default 1); the example FCPs use 0.75. |
+| D40 | Knob handling | Dragging a knob sets the angle under the pointer (absolute). |
+
+### Open
+
+| # | Topic | Question |
+|---|---|---|
+| O5b | Aircraft panels | Light equations for the remaining FCP buttons. |
+| O8b | Reloading | Reload edited CSV files without restarting the server. Postponed. |

@@ -113,10 +113,10 @@ REQ-111,bands,"The engine shall evaluate each state machine at the rate of its b
 REQ-112,bands,An item shall see an input only when its band runs; an input change that is reverted between two passes of the band is not seen by that item,framework.timing_and_execution.time_based_execution,use_case_test
 REQ-113,execution,"The engine shall keep evaluating every item at its band rate for the whole run, with no drift in evaluation times over long runs",framework.timing_and_execution.time_based_execution,use_case_test
 REQ-114,frontend,"The inputs CSV shall accept the optional display columns group, widget, label, min, max, step, choices, lit_by and wide; files without them shall still load",frontend_ui_spec.4,unit_test
-REQ-115,frontend,"The engine shall support an enum input type whose value is one of the choices column values ('|'-separated), with the default one of them",frontend_decisions.D4,unit_test
+REQ-115,frontend,"The engine shall support an enum input type whose value is one of the choices column values ('|'-separated), with the default one of them",decisions.D4,unit_test
 REQ-116,frontend,"The loader shall reject invalid display definitions: a widget not allowed for the type, a slider without min and max, min not below max, a default outside min/max, choices on a non-enum, a lit push-button without lit_by, an unknown lit_by",frontend_ui_spec.4.2,unit_test
-REQ-117,frontend,"A local Python server shall run a model given its master CSV on the command line, serve the page over HTTP and exchange values with it over a WebSocket; the engine runs only in Python",frontend_decisions.D1,use_case_test
-REQ-118,frontend,The server shall be a separate package so the engine package stays free of async code and wall-clock time,frontend_decisions.D6,static_check
+REQ-117,frontend,"A local Python server shall run a model given its master CSV on the command line, serve the page over HTTP and exchange values with it over a WebSocket; the engine runs only in Python",decisions.D1,use_case_test
+REQ-118,frontend,The server shall be a separate package so the engine package stays free of async code and wall-clock time,decisions.D6,static_check
 REQ-119,frontend,"The page shall build its input cards and state machine cards from the loaded model, with no per-model code",frontend_ui_spec.4,use_case_test
 REQ-120,frontend,"The page shall show the state machines in master CSV row order, and each machine's states in the order of its CSV file",frontend_ui_spec.5,use_case_test
 REQ-121,frontend,"The page shall highlight the active state of every state machine, exactly one per machine, and follow state changes while running",frontend_ui_spec.5.2,use_case_test
@@ -124,18 +124,18 @@ REQ-122,frontend,"Hovering over or focusing the active state shall highlight the
 REQ-123,frontend,"The page shall not show equations, conditions, transitions, band rates, simulation time or tick",frontend_ui_spec.2,use_case_test
 REQ-124,frontend,"The page shall show one input card per input group, titled with the group name, with the group's inputs in CSV order",frontend_ui_spec.4.1,use_case_test
 REQ-125,frontend,"Switches, sliders, number fields, drop-downs and text fields shall write their input; the server shall check type, min/max and choices and reject other values",frontend_ui_spec.4.2,use_case_test
-REQ-126,frontend,A push-button press shall hold its input true for one period of the slowest band and then set it false,frontend_decisions.D7,use_case_test
+REQ-126,frontend,A push-button press shall hold its input true for one period of the slowest band and then set it false,decisions.D7,use_case_test
 REQ-127,frontend,A lit push-button shall be lit while its lit_by variable is true and unlit otherwise; the click alone shall not light it,frontend_ui_spec.4.2,use_case_test
 REQ-128,frontend,"The run controls shall offer real time and as fast as possible; in real time the server shall run ticks at the model tick rate against the wall clock",frontend_ui_spec.6,use_case_test
 REQ-129,frontend,"Pause shall stop the engine and become Resume; Step shall run one tick and be available only while paused",frontend_ui_spec.6,use_case_test
 REQ-130,frontend,"Reset shall return every input, state and result to its start value, keeping the loaded model, the run mode and the pause state",frontend_ui_spec.6,use_case_test
-REQ-131,frontend,The server shall send screen updates at most 30 times per second while running,frontend_decisions.O13,use_case_test
+REQ-131,frontend,The server shall send screen updates at most 30 times per second while running,decisions.D26,use_case_test
 REQ-132,frontend,"The splitter shall resize the two panes by dragging or with the arrow keys (20 px), keeping the left pane at least 280 px and the right pane at least 240 px",frontend_ui_spec.1.1,use_case_test
 REQ-133,frontend,"Names from the CSV files shall be shown as text, never interpreted as HTML",frontend_ui_spec.8,use_case_test
-REQ-134,frontend,The server shall listen on 127.0.0.1 by default,frontend_decisions.D1,unit_test
+REQ-134,frontend,The server shall listen on 127.0.0.1 by default,decisions.D1,unit_test
 REQ-135,frontend,"Momentary push-buttons shall have a light grey fill and a dark outline; every push-button shall show visible feedback while held and for 0.3 s after each press",frontend_ui_spec.4.3,use_case_test
-REQ-136,frontend,"The master CSV shall accept an optional name column giving a state machine's display name; the page shall title each machine with it, or with the file name when it is empty",frontend_decisions.D30,use_case_test
-REQ-137,frontend,"The page shall remember the divider position in the browser and restore it, within the pane limits, when the page is opened again; without stored data it shall use 440 px",frontend_decisions.D33,use_case_test
+REQ-136,frontend,"The master CSV shall accept an optional name column giving a state machine's display name; the page shall title each machine with it, or with the file name when it is empty",decisions.D30,use_case_test
+REQ-137,frontend,"The page shall remember the divider position in the browser and restore it, within the pane limits, when the page is opened again; without stored data it shall use 440 px",decisions.D33,use_case_test
 REQ-138,loadcheck,"The engine shall reject at load a master CSV state_machine row whose band is empty, not a number or not positive",framework.master_configuration.columns.band,use_case_test
 REQ-139,frontend,"The master CSV shall accept panel rows naming aircraft panel HTML files; the page shall show the panels in a full-width top pane above the left and right panes, always visible, at full size unless the window is too narrow, then scaled down to fit",frontend_ui_spec.3,use_case_test
 REQ-140,frontend,"Panel elements shall bind to variables with data-input (inputs), data-show (any variable) and data-lit-by (any variable); the loader shall reject an unknown or empty binding with its file:line",frontend_ui_spec.3,unit_test
