@@ -30,3 +30,4 @@ not fma_vnav_engaged_1_to and not fma_vnav_engaged_1_flc and not fma_vnav_engage
 state_ac == 'Takeoff',"FMA VNAV_armed_2 shows ""FLC""",,fma_vnav_armed_2_flc,10,129
 "not fma_vnav_armed_2_flc and (state_ac in ['Climb', 'Descent'])","FMA VNAV_armed_2 shows ""ALTS""","First matching line wins, as in the previous tool",fma_vnav_armed_2_alts,10,130
 "state_ac in ['APPR armed', 'Approach']","FMA VNAV_armed_3 shows ""GS""",,fma_vnav_armed_3_gs,10,131
+fma_ap_visible and (fma_at_color_green or fma_at_color_white),FMA AP <- AT arrow shown,Not in fma_logic: shown while both AP and AT are shown,fma_ap_at_arrow,10,132

@@ -92,17 +92,25 @@
       }
     }
 
+    // All panels on one row, in master order. Each is shown at its own scale;
+    // if the row is wider than the window, every panel is reduced by the same
+    // factor so they stay side by side.
     function fit() {
-      const avail = top.clientWidth - 2 * 12;
-      for (const { host, wrap, scale } of hosts) {
+      const GAP = 12;
+      const avail = top.clientWidth - 2 * 12 - GAP * Math.max(hosts.length - 1, 0);
+      const sizes = hosts.map(({ wrap }) => {
         wrap.style.transform = "none";
-        const w = wrap.offsetWidth, h = wrap.offsetHeight;
-        // the panel's scale, reduced further only if the window is too narrow
-        const s = w > 0 ? Math.min(scale, avail / w) : scale;
+        return [wrap.offsetWidth, wrap.offsetHeight];
+      });
+      const row = hosts.reduce((sum, { scale }, i) => sum + sizes[i][0] * scale, 0);
+      const k = row > 0 ? Math.min(1, avail / row) : 1;
+      hosts.forEach(({ host, wrap, scale }, i) => {
+        const [w, h] = sizes[i];
+        const s = scale * k;
         wrap.style.transform = s !== 1 ? `scale(${s})` : "none";
         host.style.width = Math.floor(w * s) + "px";
         host.style.height = Math.ceil(h * s) + "px";
-      }
+      });
     }
 
     function update(st) {

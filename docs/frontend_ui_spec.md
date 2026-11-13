@@ -75,11 +75,13 @@ the look entirely with HTML and CSS; StateSim provides the behaviour.
 ### 3.1 Placement
 
 - Panels are shown in the **top pane**, full window width, above the left and
-  right panes, in master CSV order, centred. The top pane is always shown.
+  right panes, side by side on **one row** in master CSV order (the first on
+  the left), centred and top-aligned. The top pane is always shown.
 - A panel is shown at its natural size times the `scale` of its master CSV
   row (optional, a positive number, default 1; e.g. `0.5` for half size),
-  with its proportions kept. If the window is narrower than that, it is
-  scaled down further to fit, without leaving gaps.
+  with its proportions kept. If the row is wider than the window, every panel
+  is scaled down by the same factor so they stay on one row, without leaving
+  gaps.
 
 ### 3.2 What StateSim takes from the file
 

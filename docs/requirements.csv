@@ -157,3 +157,4 @@ REQ-155,actions,"A during action shall belong to its row's current_state and run
 REQ-156,actions,"The master init_action column of a state machine row shall name an action run once on the machine's first pass before its transitions; empty runs nothing",decisions.C,unit_test
 REQ-157,actions,"Action writes shall be visible immediately to later items in the same pass and each changed variable shall be logged under the state machine name",decisions.C,unit_test
 REQ-158,frontend,"Input controls shall show values written by actions on the next state update",decisions.C,unit_test
+REQ-159,frontend,"Aircraft panels shall be shown side by side on one row in master CSV order; if the row is too wide for the window every panel shall be scaled down by the same factor",frontend_ui_spec.3.1,use_case_test

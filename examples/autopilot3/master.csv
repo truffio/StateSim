@@ -10,3 +10,4 @@ equations.csv,equations,,,,
 inputs.csv,inputs,,,,
 actions.csv,actions,,,,
 fcp.html,panel,,,Flight control panel,0.75
+fma.html,panel,,,Flight mode annunciator,0.75
