@@ -10,6 +10,7 @@ import asyncio
 import json
 import mimetypes
 import sys
+from urllib.parse import urlsplit
 from http import HTTPStatus
 from pathlib import Path
 
@@ -36,7 +37,8 @@ MAX_LAG_S = 0.5         # real time: a backlog longer than this is dropped, not 
 class App:
     """Session plus pacing loop plus connected clients."""
 
-    def __init__(self, model: Model, trace=None) -> None:
+    def __init__(self, model: Model, trace=None, host: str = "127.0.0.1") -> None:
+        self.host = host
         self.session = Session(model, trace)
         self.model_msg = json.dumps(describe_model(model))
         self.clients: set[ServerConnection] = set()
@@ -49,6 +51,8 @@ class App:
     def process_request(self, connection: ServerConnection, request: Request):
         path = request.path.split("?", 1)[0]
         if path == WS_PATH:
+            if not self._own_page(request):
+                return connection.respond(HTTPStatus.FORBIDDEN, "Forbidden: other origin\n")
             return None
         if path == TIMELINE_TEXT:
             body = self.session.timeline_text().encode("utf-8")
@@ -66,6 +70,18 @@ class App:
         headers = Headers([("Content-Type", ctype), ("Content-Length", str(len(body))),
                            ("Cache-Control", "no-store")])
         return Response(200, "OK", headers, body)
+
+    def _own_page(self, request: Request) -> bool:
+        """Only StateSim's own page may open the WebSocket: a browser request
+        must come from the page this server served (Origin matches Host), and
+        Host must name this machine (no DNS rebinding). A request with no
+        Origin is not from a web page (a script or a test) and is allowed."""
+        host = request.headers.get("Host", "")
+        name = urlsplit(f"//{host}").hostname or ""
+        if name not in {"127.0.0.1", "localhost", "::1", self.host.strip("[]")}:
+            return False
+        origin = request.headers.get("Origin")
+        return origin is None or urlsplit(origin).netloc == host
 
     # --------------------------------------------------------- websocket
     async def handler(self, ws: ServerConnection) -> None:
@@ -209,7 +225,7 @@ class App:
 
 async def start(model: Model, host: str, port: int, trace=None):
     """Start serving; returns (App, server). Port 0 picks a free port."""
-    app = App(model, trace)
+    app = App(model, trace, host)
     server = await serve(app.handler, host, port, process_request=app.process_request)
     asyncio.get_running_loop().create_task(app.run())
     return app, server
