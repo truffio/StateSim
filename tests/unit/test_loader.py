@@ -450,3 +450,23 @@ def test_utf8_with_bom_still_loads(tmp_path):
             "1,A,B,A,True,r1,,Temp > 30 °C,1\n")
     (tmp_path / "m.csv").write_bytes(text.encode("utf-8-sig"))
     assert load_model(tmp_path / "master.csv").state_machines[0].transitions[0].title == "Temp > 30 °C"
+
+
+@pytest.mark.parametrize("row", [
+    "a,float,nan,,slider,,0,10,",
+    "a,float,inf,,number,,,,",
+    "a,float,1,,number,,nan,,",
+    "a,float,1,,number,,,inf,",
+    "a,float,1,,number,,0,10,nan",
+])
+def test_non_finite_float_definitions_are_load_errors(tmp_path, row):
+    """#30: nan/inf would skip the min/max checks and break the JSON messages."""
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\nm.csv,state_machine,1,10\ninputs.csv,inputs,,\n",
+                                         encoding="utf-8")
+    (tmp_path / "m.csv").write_text("transition_id,current_state,next_state,default_state,equation,result_variable,"
+                                    "rationale,title,order\n1,A,B,A,True,r1,,,1\n", encoding="utf-8")
+    (tmp_path / "inputs.csv").write_text("variable_name,type,default_value,group,widget,label,min,max,step\n" + row + "\n",
+                                         encoding="utf-8")
+    with pytest.raises(ModelError) as e:
+        load_model(tmp_path / "master.csv")
+    assert "inputs.csv:2" in str(e.value)
