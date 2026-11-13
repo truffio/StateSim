@@ -152,6 +152,52 @@ pip install -e ".[server]"
 python -m statesim_server examples/autopilot2/master.csv   # --port N, --no-browser, --trace FILE
 ```
 
+## Timeline
+Structured fields on `TraceEvent` (`src/statesim/trace.py`). They have defaults
+and are not in the text line:
+* `kind`: `input`, `result`, `transition` or `action`.
+* `name`: the variable written; for a transition, the state machine.
+* `old`, `new`: value before and after (states, for a transition).
+* `trigger`: sorted names read by the item whose value changed since it last ran.
+* `label`, `title`: transition id (`T2`) and title; for an action, `label` is the action name.
+* `phase`: for an action, `init`, `exit`, `entry` or `during`.
+
+```python
+from statesim import load_model, Engine
+from statesim import Timeline, format_text
+
+model = load_model("examples/actions/master.csv")
+tl = Timeline()                    # a TraceSink; Timeline(cap=...) sets the item cap
+eng = Engine(model, trace=tl)
+eng.set_input("toga", True)        # Ground -> Takeoff, caused by this input
+eng.run(5)
+items = tl.all()                   # every kept item, oldest first
+tl.items_since(tl.last_id)         # only the items after an id (here: none)
+```
+
+As text (the pane's **Save as text** button, or `/timeline.txt` on the server):
+`format_text(tl.all(), {"phase": "Phase of flight"})` gives one numbered line per
+input change and transition, with its causes and action writes.
+
+Two item shapes, with sequential `id`s and `t` in ms:
+* `{"k": "tr", "id", "t", "tick", "sm", "tid", "title", "from", "to", "causes": [ids], "writes": [[var, value], ...]}`
+* `{"k": "in", "id", "t", "tick", "name", "value"}` (only when the value changes)
+* `{"k": "dp", "id", "t", "tick", "name", "value", "causes": [ids]}`: a result shown on a
+  panel (e.g. an FMA mode text) changed; only for names in `Timeline(watch=...)`.
+  The server watches every result a panel shows; the text lists them as `DISPLAY` lines.
+
+`causes` are the ids of the items that produced the transition's trigger, folded
+through equations. The cap is 20,000 items; the oldest are dropped.
+
+Server messages (`statesim_server`, WebSocket):
+* `{"type": "timeline", "gen", "items": [...]}`: sent on connect, and after a
+  Reset (the new `gen`). A broadcast with more than 2,000 new items sends this
+  full message instead.
+* `state` messages carry `t` (ms), `gen`, and `tl`: the items added since the
+  previous state message.
+
+See `docs/frontend_ui_spec.md` section 11 for the pane.
+
 ## Tests and report
 ```
 python -m pytest --junitxml=reports/junit.xml -q

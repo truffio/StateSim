@@ -1,0 +1,88 @@
+/* Timeline pane (timeline.js): swimlanes and sequence chart. Uses the colour
+   tokens of app.css and adds its own. */
+:root {
+  /* state colours: by the state's index in its machine, modulo 8 */
+  --tl-s0: #75a7e4; --tl-s1: #f29d7b; --tl-s2: #6bcba9; --tl-s3: #f3c259;
+  --tl-s4: #f0a9c4; --tl-s5: #59ae59; --tl-s6: #998de4; --tl-s7: #ed8988;
+  --tl-unknown: #c3cad4;      /* a state that is not in the model, and bars too thin to tell apart */
+  --tl-plot: #f6f8fa;         /* lane background */
+  --tl-grid: #e3e7ec;         /* second lines */
+  --tl-tick: #1c2430;         /* transition tick, input dot */
+  --tl-cursor: #c62a3a;       /* current time */
+  --tl-cause: #005c99;        /* cause lines, selection */
+  --tl-write: #007a5e;        /* action writes in the sequence chart */
+}
+
+/* pane and its splitter, full width under the left and right panes */
+.tl-splitter { flex: 0 0 8px; cursor: row-resize; background: var(--bg); border-top: 1px solid var(--line-strong);
+               border-bottom: 1px solid var(--line-strong); position: relative; touch-action: none; }
+.tl-splitter::after { content: ""; position: absolute; left: 50%; top: 2px; height: 2px; width: 40px; margin-left: -20px;
+                      border-top: 1px solid #8b96a5; border-bottom: 1px solid #8b96a5; box-sizing: border-box; }
+.tl-splitter:hover, .tl-splitter:focus-visible, .tl-splitter.dragging { background: var(--blue-tint); outline: none; }
+body.resizing-v { cursor: row-resize; user-select: none; }
+.timeline { flex: 0 0 auto; height: 260px; min-height: 0; overflow: auto; background: var(--card); position: relative; }
+.timeline[hidden], .tl-splitter[hidden] { display: none; }
+#timeline-toggle[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* swimlanes */
+.tl-lanes { position: sticky; top: 0; z-index: 1; background: var(--card); }   /* stays visible over the chart */
+.tl-svg { display: block; user-select: none; touch-action: pan-y; cursor: grab; }
+.tl-svg.tl-pointing { cursor: pointer; }
+.tl-svg.tl-panning { cursor: grabbing; }
+.tl-svg text { font-family: inherit; }
+.tl-plot { fill: var(--tl-plot); }
+.tl-rowline { stroke: var(--line); stroke-width: 1; }
+.tl-grid { stroke: var(--tl-grid); stroke-width: 1; }
+.tl-label { font-size: 12px; font-weight: 600; fill: var(--ink); }
+.tl-label-inputs { fill: var(--blue); }
+.tl-bar { stroke: none; }
+.tl-hit { fill: transparent; stroke: none; }
+.tl-s0 { fill: var(--tl-s0); } .tl-s1 { fill: var(--tl-s1); } .tl-s2 { fill: var(--tl-s2); } .tl-s3 { fill: var(--tl-s3); }
+.tl-s4 { fill: var(--tl-s4); } .tl-s5 { fill: var(--tl-s5); } .tl-s6 { fill: var(--tl-s6); } .tl-s7 { fill: var(--tl-s7); }
+.tl-sx, .tl-dense { fill: var(--tl-unknown); }
+.tl-bar-text { font-size: 10px; font-weight: 600; fill: var(--ink); pointer-events: none; }
+.tl-tick line { stroke: var(--tl-tick); stroke-width: 1.5; }
+.tl-tid { font-size: 9px; font-weight: 700; fill: var(--muted); }
+.tl-dot circle { fill: var(--tl-tick); stroke: var(--tl-plot); stroke-width: 1; }
+.tl-in-label { font-size: 9px; font-weight: 500; fill: var(--muted); }
+.tl-tick.hover line, .tl-tick.sel line { stroke: var(--tl-cause); stroke-width: 3; }
+.tl-tick.hover .tl-tid, .tl-tick.sel .tl-tid, .tl-dot.hover .tl-in-label, .tl-dot.sel .tl-in-label {
+  fill: var(--blue-dark); paint-order: stroke; stroke: var(--tl-plot); stroke-width: 3px; }
+.tl-dot.hover circle, .tl-dot.sel circle { fill: var(--tl-cause); stroke: var(--blue-tint); stroke-width: 3; }
+.tl-cause { stroke: var(--tl-cause); stroke-width: 1.5; stroke-dasharray: 4 3; fill: none; pointer-events: none; }
+.tl-cause-end { fill: var(--tl-cause); pointer-events: none; }
+.tl-cursor { stroke: var(--tl-cursor); stroke-width: 1.5; pointer-events: none; }
+.tl-axis-line, .tl-axis-tick { stroke: var(--line-strong); stroke-width: 1; }
+.tl-axis-text { font-size: 10px; fill: var(--muted); text-anchor: middle; font-family: "JetBrains Mono", Consolas, monospace; }
+.btn.tl-live { position: absolute; top: 4px; right: 20px; padding: 4px 10px; background: var(--blue); border-color: var(--blue);
+               color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.tl-live[hidden], .tl-tip[hidden], .tl-chart[hidden] { display: none; }
+.tl-tip { position: absolute; z-index: 2; max-width: 340px; background: var(--ink); color: #fff; font-size: 12px; line-height: 1.35;
+          padding: 6px 9px; border-radius: 6px; pointer-events: none; overflow-wrap: anywhere; }
+.tl-tip-head { font-weight: 700; }
+.tl-tip-meta { color: #b9c1cc; font-size: 11px; }
+
+/* sequence chart, below the lanes */
+.tl-chart { border-top: 1px solid var(--line-strong); }
+.tl-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 4px; }
+.tl-chart-title { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--blue); text-transform: uppercase;
+                  overflow-wrap: anywhere; min-width: 0; }
+.btn.tl-close { padding: 4px 10px; }
+.tl-chart-body { overflow-x: auto; padding: 0 0 8px; }
+.tl-seq { display: block; }
+.tl-seq text { font-family: inherit; }
+.tl-life { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.tl-life-box { fill: var(--state-bg); stroke: var(--line-strong); stroke-width: 1; }
+.tl-life-text { font-size: 11px; font-weight: 600; fill: var(--ink); text-anchor: middle; }
+.tl-seq-band { fill: var(--blue-tint); }
+.tl-seq-text { font-size: 11px; paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+.tl-seq-row.sel .tl-seq-text { stroke: var(--blue-tint); }
+.tl-seq-time { fill: var(--muted); font-family: "JetBrains Mono", Consolas, monospace; font-size: 10px; }
+.tl-seq-tid { fill: var(--ink); font-weight: 700; }
+.tl-seq-in { fill: var(--ink); font-weight: 600; }
+.tl-seq-write { fill: var(--tl-write); font-weight: 600; }
+.tl-seq-dot, .tl-seq-mark, .tl-arrow-start { fill: var(--tl-tick); }
+.tl-arrow { stroke: var(--tl-tick); stroke-width: 1.5; fill: none; }
+.tl-arrow-head { fill: var(--tl-tick); stroke: none; }
+.tl-arrow.tl-write { stroke: var(--tl-write); stroke-dasharray: 5 3; }
+.tl-arrow-head.tl-write { fill: var(--tl-write); }

@@ -5,6 +5,7 @@ from .engine import Engine
 from .errors import EvaluationError, ModelError
 from .loader import load_model
 from .model import Model
+from .timeline import Timeline, format_text
 from .trace import FileTraceWriter, ListTraceSink, TraceEvent, TraceSink, format_event
 
 __all__ = [
@@ -14,6 +15,8 @@ __all__ = [
     "TraceEvent",
     "FileTraceWriter",
     "ListTraceSink",
+    "Timeline",
+    "format_text",
     "ModelError",
     "EvaluationError",
     "TraceSink",

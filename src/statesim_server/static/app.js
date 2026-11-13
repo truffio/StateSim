@@ -16,6 +16,8 @@ let machines = {};   // machine name -> {boxes, next, active, shown}
 let litButtons = []; // [{el, var}]
 let built = false;
 let panels = null;    // StateSimPanels.build() result
+let timeline = null;  // StateSimTimeline.build() result
+let timelineMsg = null; // "timeline" message that came before the model
 
 function send(msg) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -29,6 +31,7 @@ function connect() {
     const msg = JSON.parse(ev.data);
     if (msg.type === "model") build(msg);
     else if (msg.type === "state") show(msg);
+    else if (msg.type === "timeline") { if (timeline) timeline.reset(msg.gen, msg.items); else timelineMsg = msg; }
     else if (msg.type === "error") { console.warn("StateSim:", msg.message); banner(msg.message, 3000); }
   };
   ws.onclose = () => {
@@ -61,6 +64,10 @@ function build(model) {
   root.replaceChildren();
   for (const m of model.machines) root.append(machineCard(m));
   panels = window.StateSimPanels.build($("top"), model.panels || [], send);
+  if (timeline) timeline.destroy();
+  timeline = window.StateSimTimeline ? window.StateSimTimeline.build($("timeline"), model.machines) : null;
+  if (timeline && timelineMsg) timeline.reset(timelineMsg.gen, timelineMsg.items);
+  timelineMsg = null;
   built = true;
   requestAnimationFrame(fitStateText);
 }
@@ -220,6 +227,7 @@ function show(st) {
     b.setAttribute("aria-pressed", String(b.dataset.mode === st.mode));
   }
   if (panels) panels.update(st);
+  if (timeline) timeline.state(st);          // optional t, gen and tl (new timeline items)
   $("pause").textContent = st.paused ? "Resume" : "Pause";
   $("step").disabled = !st.paused;
 }

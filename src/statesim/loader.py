@@ -632,7 +632,8 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         elif ftype == constants.TYPE_ACTIONS:
             actions = _load_actions(path, fname)
         elif ftype == constants.TYPE_PANEL:
-            panels.append(replace(_load_panel(path, fname, src), scale=scale_of[src]))
+            panels.append(replace(_load_panel(path, fname, src), scale=scale_of[src],
+                                  label=label_of[src]))
         else:
             for line, r in _read_csv(path, fname, constants.INPUTS_COLUMNS):
                 rsrc = f"{fname}:{line}"

@@ -5,11 +5,27 @@ the server (server.py) decides when to call step()."""
 from __future__ import annotations
 
 from fractions import Fraction
+from html.parser import HTMLParser
 
-from statesim import Engine, Model
+from statesim import Engine, Model, format_text
+from statesim.timeline import Timeline
 from statesim.scheduler import build_schedule
 
 MODES = ("realtime", "fast")
+MAX_DELTA = 2_000   # more new timeline items than this in one broadcast: send them all as a full timeline
+
+
+class _FanOut:
+    """Trace sink that passes every event to the user's sink (if any) and the timeline."""
+
+    def __init__(self, user, timeline: Timeline) -> None:
+        self.user = user
+        self.timeline = timeline
+
+    def emit(self, event) -> None:
+        if self.user is not None:
+            self.user.emit(event)
+        self.timeline.emit(event)
 
 
 def describe_model(model: Model) -> dict:
@@ -48,6 +64,64 @@ def describe_model(model: Model) -> dict:
             "panels": panels}
 
 
+class _LitText(HTMLParser):
+    """Collects the text inside each element bound with data-lit-by."""
+
+    VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+            "source", "track", "wbr"}
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.open: list[tuple[str, str | None]] = []     # (tag, lit variable or None)
+        self.text: dict[str, str] = {}
+        self.named: dict[str, str] = {}     # aria-label or title, for an element with no text
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.VOID:
+            return
+        a = dict(attrs)
+        var = a.get("data-lit-by")
+        self.open.append((tag, var))
+        if var:
+            self.text.setdefault(var, "")
+            self.named.setdefault(var, a.get("aria-label") or a.get("title") or "")
+
+    def handle_endtag(self, tag):
+        while self.open:
+            if self.open.pop()[0] == tag:
+                break
+
+    def handle_data(self, data):
+        for _tag, var in self.open:
+            if var:
+                self.text[var] += data
+
+
+def display_labels(model: Model) -> dict[str, str]:
+    """Result variables shown on a panel -> how the text timeline names them.
+
+    A data-lit-by result is named by its panel and the text it lights, e.g.
+    "Flight mode annunciator: SPD (fma_tm_engaged_spd)"; a data-show result
+    by its panel and name. Inputs and states are left out: input changes and
+    transitions are already in the timeline.
+    """
+    plain = {i.name for i in model.inputs} | {sm.name for sm in model.state_machines}
+    labels: dict[str, str] = {}
+    for p in model.panels:
+        parser = _LitText()
+        parser.feed(p.html)
+        panel = p.label or p.name
+        for var in p.lits:
+            if var in plain or var in labels:
+                continue
+            text = " ".join(parser.text.get(var, "").split()) or parser.named.get(var, "")
+            labels[var] = f"{panel}: {text} ({var})" if text else f"{panel}: {var}"
+        for var in p.shows:
+            if var not in plain and var not in labels:
+                labels[var] = f"{panel}: {var}"
+    return labels
+
+
 class Session:
     """Owns the Engine and everything the controls can change."""
 
@@ -64,8 +138,11 @@ class Session:
         self.shown_vars = sorted({v for p in model.panels for v in p.shows})
         self.mode = "realtime"
         self.paused = False
-        self.engine = Engine(model, trace)
+        self.displays = display_labels(model)
+        self.timeline = Timeline(gen=1, watch=self.displays)
+        self.engine = Engine(model, _FanOut(trace, self.timeline))
         self.releases: dict[str, int] = {}
+        self._taken = (self.timeline.gen, 0)   # (gen, last item id already handed out)
 
     # ------------------------------------------------------------- running
     @property
@@ -83,7 +160,8 @@ class Session:
 
     def reset(self) -> None:
         """Back to start values; keeps the model, run mode and pause state."""
-        self.engine = Engine(self.model, self.trace)
+        self.timeline = Timeline(gen=self.timeline.gen + 1, watch=self.displays)
+        self.engine = Engine(self.model, _FanOut(self.trace, self.timeline))
         self.releases.clear()
 
     # ------------------------------------------------------------ messages
@@ -167,6 +245,27 @@ class Session:
         self.engine.set_input(name, value)
         return None
 
+    def timeline_message(self) -> dict:
+        """The whole timeline so far, for a client that connects or after a reset."""
+        return {"type": "timeline", "gen": self.timeline.gen, "items": self.timeline.all()}
+
+    def timeline_text(self) -> str:
+        """The current run's timeline as plain text (statesim.format_text)."""
+        labels = {sm.name: sm.label for sm in self.model.state_machines}
+        title = f"StateSim timeline: {self.model.master_path} (run {self.timeline.gen})"
+        return format_text(self.timeline.all(), labels, title, self.displays)
+
+    def take_new_items(self) -> tuple[list[dict], bool]:
+        """Items added since the previous call (each is returned once, in order),
+        and whether there are too many (more than MAX_DELTA) for a delta."""
+        tl = self.timeline
+        gen, last = self._taken
+        if gen != tl.gen:
+            last = 0
+        items = tl.items_since(last)
+        self._taken = (tl.gen, tl.last_id)
+        return items, len(items) > MAX_DELTA
+
     def state(self) -> dict:
         """The changing values the browser shows."""
         snap = self.engine.snapshot()
@@ -178,6 +277,8 @@ class Session:
             "values": {v: self._value(snap, v) for v in self.shown_vars},
             "mode": self.mode,
             "paused": self.paused,
+            "t": snap["t"],
+            "gen": self.timeline.gen,
         }
 
     @staticmethod

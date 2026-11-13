@@ -1,6 +1,6 @@
 # Future feature: live timeline and sequence chart
 
-Status: **designed, not implemented** (recorded 2026-11-12).
+Status: **implemented** on branch `charts` (2026-11-12); see `docs/timeline_plan.md` and UI spec section 11.
 
 Two views of the current session, built live while the tool runs:
 
@@ -43,19 +43,41 @@ have defaults, so existing code and the text log format do not change.
 | `kind` | `input`, `result` (equation or row result), `transition`, `action` |
 | `name` | variable written, or state machine name for a transition |
 | `old`, `new` | value before / after (states for a transition) |
-| `trigger` | names read by the item whose value changed since that item last ran |
+| `trigger` | names read by the item whose value changed since it last read them (plus the gate rule below) |
 | `label`, `title` | transition label (`T2`) and title; for an action, `label` is the action name |
 | `phase` | for an action: `entry`, `exit`, `during` or `init` |
 
 How `trigger` is computed:
-- The engine keeps, for each state machine and each standalone equation, the
-  values of the names it reads, as they were at the end of its previous run.
-  At start these are the initial values.
-- When the item runs, `trigger` = the names it read whose value differs from
-  that copy. For a transition, only the names read by its own rows count.
-- `t`, `tick` and `dt` are excluded, so a timer transition has no cause link.
-- Because it is "since this item last ran", it stays exact when machines run
-  at different rates (bands).
+- The engine keeps, for each standalone equation and each transition row, a
+  copy of the values of the names it reads, as they were when it last read
+  them. At start these are the initial values.
+- When the equation or row runs, its `trigger` = the names whose value
+  differs from that copy. The copy is then updated, before the row writes its
+  result. So a row also sees a result written by a later row of the same
+  machine, or a counter written by the machine's own action, as a change on
+  the next pass.
+- The `trigger` of a transition = the triggers of its own rows in this pass,
+  put together.
+- **Gate rule (state entry counts as a cause).** A transition with a
+  `current_state` can only fire once its machine is in that state. If the
+  machine entered that state since its previous pass, the entry is what let
+  the transition fire. Its `trigger` is then the machine's own name plus
+  every name its rows read. The own name links the transition that entered
+  the state. The other names link whatever produced the conditions that were
+  already waiting. The start state does not count as entered, and global
+  transitions (no `current_state`) are not gated.
+  - Example (`examples/autopilot2`): Vertical `preGsTrk -> GsTrk` fires one
+    pass after Vertical entered `preGsTrk`, because `ifcc_in_control` was
+    already true. Its causes are Vertical's own `No_Vertical_State ->
+    preGsTrk` and Guidance source `DMC -> IFCC`.
+  - Example (`examples/actions`): `Climb -> Cruise` reads `climb_ticks`,
+    counted by the machine's own during action. Its cause is `T2`, the
+    transition that entered `Climb`.
+- `t`, `tick` and `dt` are excluded, so a transition that only waits for a
+  timer has no cause link.
+- Because each copy is "since this row or equation last ran", it stays exact
+  when machines run at different rates (bands).
+- All of this runs only when a trace sink is attached.
 
 ### 2. `Timeline` recorder (`statesim/timeline.py`, no dependencies)
 
