@@ -300,6 +300,7 @@ def test_values_are_json_serialisable() -> None:
     assert json.loads(json.dumps(tl.items_since(3))) == items[3:]
 
 
+@pytest.mark.req("REQ-171")
 def test_cap_drops_oldest_and_ids_keep_counting() -> None:
     tl = Timeline(cap=3)
     assert tl.cap == 3

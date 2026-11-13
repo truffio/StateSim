@@ -111,6 +111,7 @@ def test_hidden_by_default_and_toggle_is_remembered(page):
     assert not pg.locator("#timeline").is_visible()
 
 
+@pytest.mark.req("REQ-177")
 def test_splitter_resizes_and_remembers_the_height(page):
     pg = page
     show(pg)

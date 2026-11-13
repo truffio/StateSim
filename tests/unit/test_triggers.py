@@ -108,6 +108,7 @@ def _two_band(tmp_path):
     return eng, sink
 
 
+@Q("REQ-164")
 def test_two_bands_change_between_passes(tmp_path):
     eng, sink = _two_band(tmp_path)
     eng.step()
@@ -121,6 +122,7 @@ def test_two_bands_change_between_passes(tmp_path):
     assert s1.trigger == ("ap",)
 
 
+@Q("REQ-164")
 def test_two_bands_change_reverted_between_passes(tmp_path):
     eng, sink = _two_band(tmp_path)
     eng.set_input("alt", 7)
@@ -308,6 +310,7 @@ def test_pure_timer_has_no_cause_even_in_an_entered_state(tmp_path):
     assert causes[("S", "T2", 6)] == []
 
 
+@Q("REQ-160")
 def test_action_phases(tmp_path):
     sms = {"S": [R("1", "Ground", "Air", "alt > 400", "r1", default="Ground",
                    kind="entry", action="EN"),

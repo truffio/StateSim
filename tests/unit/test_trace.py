@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from fractions import Fraction
 
+import pytest
+
 from statesim.trace import (
     FileTraceWriter,
     ListTraceSink,
@@ -203,3 +205,15 @@ def test_file_writer_is_deterministic(tmp_path) -> None:
                 writer.emit(e)
         outputs.append(path.read_bytes())
     assert outputs[0] == outputs[1]
+
+
+@pytest.mark.req("REQ-160", "REQ-165")
+def test_structured_fields_default_and_do_not_change_the_line():
+    from fractions import Fraction
+    plain = TraceEvent(3, Fraction(200), "AP", 'T1 OFF->ON "Go"', (("sw", True),))
+    for f, v in (("kind", ""), ("name", ""), ("old", None), ("new", None), ("trigger", ()),
+                 ("label", ""), ("title", ""), ("phase", "")):
+        assert getattr(plain, f) == v
+    rich = TraceEvent(3, Fraction(200), "AP", 'T1 OFF->ON "Go"', (("sw", True),), kind="transition",
+                      name="AP", old="OFF", new="ON", trigger=("sw",), label="T1", title="Go")
+    assert format_event(rich) == format_event(plain)
