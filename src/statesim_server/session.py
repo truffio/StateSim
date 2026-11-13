@@ -7,7 +7,7 @@ from __future__ import annotations
 from fractions import Fraction
 from html.parser import HTMLParser
 
-from statesim import Engine, Model, format_text
+from statesim import Engine, EvaluationError, Model, format_text
 from statesim.timeline import Timeline, json_value
 from statesim.scheduler import build_schedule
 
@@ -174,6 +174,8 @@ class Session:
         {"type": "resume"}, {"type": "step"}, {"type": "reset"}.
         """
         kind = msg.get("type")
+        if kind in ("set", "toggle", "press") and not isinstance(msg.get("name"), str):
+            return f"{kind}: name must be a string, not {msg.get('name')!r}"
         if kind == "set":
             return self._set(msg.get("name"), msg.get("value"))
         if kind == "toggle":
@@ -206,7 +208,10 @@ class Session:
         if kind == "step":
             if not self.paused:
                 return "step is only available while paused"
-            self.step()
+            try:
+                self.step()
+            except EvaluationError as exc:        # stays paused; Reset gives a working run
+                return f"Paused: {exc}"
             return None
         if kind == "reset":
             self.reset()
@@ -237,7 +242,7 @@ class Session:
                     raise ValueError
             elif not isinstance(value, str):
                 raise ValueError
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             return f"invalid value {value!r} for {kind} input {name!r}"
         if kind in ("int", "float"):
             if (i.min is not None and value < i.min) or (i.max is not None and value > i.max):
