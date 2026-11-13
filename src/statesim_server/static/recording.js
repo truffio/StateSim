@@ -95,6 +95,7 @@
     let maxId = 0;            // newest timeline item seen
     let gen = null;
     let rec0 = null;          // {t, lit, gen, startId, items: Map}
+    let resetting = false;    // Reset clicked: the next new gen is expected
     const say = opts && opts.banner ? opts.banner : () => {};
 
     const ingest = (items) => {
@@ -112,15 +113,27 @@
       if (clock && rec0 && last) clock.textContent = `REC ${((last.t - rec0.t) / 1000).toFixed(1)} s`;
     };
 
+    const fresh = (st) => ({
+      t: st.t || 0, gen,
+      lit: rec.vars.filter((v) => st.lit && st.lit[v]),
+      startId: maxId, items: new Map(),
+    });
     function start() {
       if (!last) return;
-      rec0 = {
-        t: last.t || 0, gen,
-        lit: rec.vars.filter((v) => last.lit && last.lit[v]),
-        startId: maxId, items: new Map(),
-      };
+      rec0 = fresh(last);
       showButtons();
       tick();
+    }
+    // A new gen (Reset): item ids start again at 1. A recording started after
+    // the Reset click restarts on the new run; one from before ends.
+    function newGen(g, st) {
+      gen = g;
+      maxId = 0;
+      if (rec0) {
+        if (resetting && st) rec0 = fresh(st);
+        else stop(false);
+      }
+      resetting = false;
     }
 
     // Stop: build the rows and open the preview. Called from the click (so the
@@ -158,18 +171,21 @@
 
     return {
       state(st) {
-        if (st.gen !== undefined && gen !== null && st.gen !== gen && rec0) stop(false);   // a reset ends it
-        if (st.gen !== undefined) gen = st.gen;
+        if (st.gen !== undefined && gen !== null && st.gen !== gen) newGen(st.gen, st);
+        else if (st.gen !== undefined) gen = st.gen;
         last = st;
         ingest(st.tl);
         tick();
       },
       timeline(msg) {
-        if (msg.gen !== gen && rec0) stop(false);
-        gen = msg.gen;
+        if (gen !== null && msg.gen !== gen) newGen(msg.gen, null);
+        else gen = msg.gen;
         ingest(msg.items);
       },
-      beforeReset() { if (rec0) stop(true); },          // Reset clicked while recording: same as Stop
+      beforeReset() {                                   // Reset clicked while recording: same as Stop
+        if (rec0) stop(true);
+        resetting = true;
+      },
       get recording() { return !!rec0; },
       start, stop,
     };

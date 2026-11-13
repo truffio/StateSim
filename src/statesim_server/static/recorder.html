@@ -7,7 +7,7 @@
 <style>
   :root { --blue: #005c99; --blue-tint: #dcf0fa; --ink: #1c2430; --muted: #4a5565; --line: #d9dee5;
           --line-strong: #c3cad4; --bg: #eef1f5; --card: #fff; --red: #c62a3a; }
-  * { box-sizing: border-box; }
+  .rc-bar, .rc-bar * { box-sizing: border-box; }   /* not the report: it must lay out as in the PNG */
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, "Segoe UI", system-ui, sans-serif; }
   .rc-bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
             padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--line-strong); font-size: 13px; }

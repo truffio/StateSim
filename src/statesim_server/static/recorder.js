@@ -158,7 +158,7 @@
         btn(s.hidden ? "Show" : "Hide", s.hidden ? "Put this row back in the image" : "Leave this row out of the image",
             () => { push(); s.hidden = !s.hidden; render(); }),
         btn(s.note === null ? "+ Note" : "− Note", s.note === null ? "Add a note under the caption" : "Remove the note",
-            () => { push(); s.note = s.note === null ? "" : null; render(); if (s.note === "") list.querySelector(`[data-i="${i}"] .rc-note`).focus(); }));
+            () => { push(); s.note = s.note === null ? "" : null; render(); if (s.note === "") $("sheet").querySelector(`[data-i="${i}"] .rc-note`).focus(); }));
 
       rec.addEventListener("dragover", (e) => {
         if (dragFrom === null) return;
