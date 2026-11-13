@@ -121,6 +121,27 @@ the look entirely with HTML and CSS; StateSim provides the behaviour.
   with a `panel` is used by that panel, and that the panel is listed in the
   master CSV. Errors give the `file:line`.
 
+### 3.5 Aircraft types
+
+The panels of an aircraft type (its FCP and FMA) are kept together and chosen
+by the master CSV, so models of the same aircraft share them:
+
+- A type is a folder `aircraft/<TYPE>/` with its panel HTML files and an
+  `aircraft.csv` listing them, with the columns of a master panel row:
+  `file_name,type,name,scale,role` (`type` = `panel`).
+- The master CSV picks the type with one row: `A220,aircraft,,,,,`. Its panels
+  are loaded as if they were master panel rows, in the order of
+  `aircraft.csv`. Explicit `panel` rows can be added for a model's own
+  panels; only one panel may have role `fma`.
+- The folder is looked up next to the master CSV first, then in the package
+  (`src/statesim/aircraft/`). Built in: **A220** (`fcp.html`, `fma.html`).
+- An undefined type is a load error that names the defined ones. To add a
+  type such as the **A320** (not defined yet): create `aircraft/A320/` with
+  its panel files and `aircraft.csv`, bind the panels to the model's inputs
+  and FMA equations, and set the master row to `A320,aircraft,,,,,`.
+- Panel inputs still name the panel file in the inputs CSV `panel` column
+  (`fcp.html`).
+
 ## 4. Input cards
 
 Input cards let the user write the engine's external inputs. They are

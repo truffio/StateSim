@@ -29,6 +29,34 @@ from .model import (
 )
 
 
+BUILTIN_AIRCRAFT = Path(__file__).resolve().parent / constants.AIRCRAFT_DIR
+
+
+def aircraft_types(base: Path | None = None) -> list[str]:
+    """The defined aircraft types: folders with an aircraft.csv, next to the
+    master CSV (``base``) or built in."""
+    found = set()
+    for root in ([base / constants.AIRCRAFT_DIR] if base else []) + [BUILTIN_AIRCRAFT]:
+        if root.is_dir():
+            found |= {d.name for d in root.iterdir() if (d / constants.AIRCRAFT_FILE).is_file()}
+    return sorted(found)
+
+
+def _aircraft_folder(name: str, base: Path, source: str) -> Path:
+    """The folder of an aircraft type: aircraft/<name>/ next to the master CSV
+    if it has an aircraft.csv, else the built-in one."""
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        raise ModelError(f"invalid aircraft type {name!r}", source)
+    for root in (base / constants.AIRCRAFT_DIR, BUILTIN_AIRCRAFT):
+        if (root / name / constants.AIRCRAFT_FILE).is_file():
+            return root / name
+    known = ", ".join(aircraft_types(base)) or "none"
+    raise ModelError(
+        f"aircraft type {name!r} is not defined (defined: {known}); add a folder "
+        f"{constants.AIRCRAFT_DIR}/{name}/ with {constants.AIRCRAFT_FILE} next to the master CSV "
+        "or in statesim/aircraft/", source)
+
+
 def _read_csv(
     path: Path, display: str, required: tuple[str, ...]
 ) -> list[tuple[int, dict[str, str]]]:
@@ -551,6 +579,21 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     role_of: dict[str, str] = {}
     init_of: dict[str, str] = {}
     seen_single: dict[str, str] = {}
+    folder_of: dict[str, Path] = {}      # panel source -> folder holding its file
+    aircraft: tuple[str, str] | None = None
+
+    def add_panel(fname: str, r: dict[str, str], src: str, line: int, folder: Path) -> None:
+        entries.append((fname, constants.TYPE_PANEL, None, src))
+        row_of[src] = line
+        folder_of[src] = folder
+        label_of[src] = r.get("name", "")
+        scale_of[src] = _panel_scale(r.get("scale", ""), src)
+        role = r.get(constants.MASTER_ROLE_COLUMN, "").strip().lower()
+        if role not in constants.PANEL_ROLES:
+            raise ModelError(f"unknown panel role {role!r} (expected fma or empty)", src)
+        if role and role in role_of.values():
+            raise ModelError(f"only one panel may have role {role!r}", src)
+        role_of[src] = role
     for line, r in mrows:
         src = f"{master_name}:{line}"
         ftype = r["type"]
@@ -574,16 +617,21 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
             if init:
                 raise ModelError("init_action applies to state_machine rows only", src)
             if ftype == constants.TYPE_PANEL:
-                entries.append((fname, ftype, order, src))
-                row_of[src] = line
-                label_of[src] = r.get("name", "")
-                scale_of[src] = _panel_scale(r.get("scale", ""), src)
-                role = r.get(constants.MASTER_ROLE_COLUMN, "").strip().lower()
-                if role not in constants.PANEL_ROLES:
-                    raise ModelError(f"unknown panel role {role!r} (expected fma or empty)", src)
-                if role and role in role_of.values():
-                    raise ModelError(f"only one panel may have role {role!r}", src)
-                role_of[src] = role
+                add_panel(fname, r, src, line, base)
+                continue
+            if ftype == constants.TYPE_AIRCRAFT:
+                if aircraft:
+                    raise ModelError(f"more than one 'aircraft' row (first at {aircraft[1]})", src)
+                aircraft = (fname, src)
+                folder = _aircraft_folder(fname, base, src)
+                list_name = f"{constants.AIRCRAFT_DIR}/{fname}/{constants.AIRCRAFT_FILE}"
+                for pline, pr in _read_csv(folder / constants.AIRCRAFT_FILE, list_name, ("file_name", "type")):
+                    psrc = f"{list_name}:{pline}"
+                    if pr["type"] != constants.TYPE_PANEL:
+                        raise ModelError(f"an aircraft type lists panels only, not {pr['type']!r}", psrc)
+                    if pr["file_name"] == "":
+                        raise ModelError("file_name is empty", psrc)
+                    add_panel(pr["file_name"], pr, psrc, line, folder)
                 continue
             if ftype in seen_single:
                 raise ModelError(
@@ -620,7 +668,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
 
     eq_row = 1 << 60
     for fname, ftype, order, src in entries:
-        path = base / fname
+        path = folder_of.get(src, base) / fname
         if not path.is_file():
             raise ModelError(f"file not found: {fname}", src)
         if ftype == constants.TYPE_STATE_MACHINE:
@@ -685,4 +733,5 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
         equations_master_row=eq_row,
         panels=tuple(panels),
         actions=tuple(actions),
+        aircraft=aircraft[0] if aircraft else "",
     )

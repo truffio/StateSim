@@ -61,6 +61,12 @@ The display names on the front end are the JSON machine names.
   as in the previous tool: each line is ANDed with "no earlier line of this
   field". The FMA panel shows them (see below).
 
+## Panels: the A220 aircraft type
+
+The FCP and FMA are the **A220** aircraft type's panels
+(`src/statesim/aircraft/A220/`), picked by the master row `A220,aircraft,,,,,`
+(UI spec section 3.5). The FMA has role `fma` there, for the FMA recording.
+
 ## Flight control panel (`fcp.html`)
 
 This is the panel from `autopilot2`, shown in the top pane at 3/4 size

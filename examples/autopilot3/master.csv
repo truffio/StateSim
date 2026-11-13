@@ -9,5 +9,4 @@ state_at.csv,state_machine,70,10,Autothrottle,,
 equations.csv,equations,,,,,
 inputs.csv,inputs,,,,,
 actions.csv,actions,,,,,
-fcp.html,panel,,,Flight control panel,0.75,
-fma.html,panel,,,Flight mode annunciator,0.75,fma
+A220,aircraft,,,,,

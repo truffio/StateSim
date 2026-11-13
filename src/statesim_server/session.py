@@ -63,7 +63,7 @@ def describe_model(model: Model) -> dict:
     } for p in model.panels]
     return {"type": "model", "machines": machines, "groups": list(groups.values()),
             "panels": panels, "inputs": input_meta(model), "recorder": recorder_panel(model),
-            "source": model.master_path}
+            "source": model.master_path, "aircraft": model.aircraft}
 
 
 def input_meta(model: Model) -> dict[str, dict]:
