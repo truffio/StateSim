@@ -62,7 +62,27 @@ def describe_model(model: Model) -> dict:
                    for n in p.inputs},
     } for p in model.panels]
     return {"type": "model", "machines": machines, "groups": list(groups.values()),
-            "panels": panels}
+            "panels": panels, "inputs": input_meta(model), "recorder": recorder_panel(model)}
+
+
+def input_meta(model: Model) -> dict[str, dict]:
+    """Every input's report wording: label, plain-English description and unit
+    (inputs CSV columns), widget and type. The FMA recording names its causes
+    with these ("Approach button pressed", "Radio altitude set to 2500 ft")."""
+    return {i.name: {"label": i.label, "description": i.description, "unit": i.unit,
+                     "widget": i.widget, "type": i.type_name} for i in model.inputs}
+
+
+def recorder_panel(model: Model) -> dict | None:
+    """The FMA panel for the recording: the panel whose data-lit-by lights are
+    computed results (not inputs or states). A model has at most one; None
+    when there is none (the recording buttons are then not shown)."""
+    labels = display_labels(model)
+    for p in model.panels:
+        lits = [v for v in p.lits if v in labels]
+        if lits:
+            return {"name": p.name, "label": p.label or p.name, "html": p.html, "vars": lits}
+    return None
 
 
 class _LitText(HTMLParser):

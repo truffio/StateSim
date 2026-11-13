@@ -46,6 +46,8 @@ class InputDef:
     lit_by: str = ""
     wide: bool = False
     panel: str = ""          # panel file that drives this input (no card), else ""
+    description: str = ""    # plain-English name for reports, e.g. "Approach button"
+    unit: str = ""           # unit for reports, e.g. "ft"
 
 
 @dataclass(frozen=True)

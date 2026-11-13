@@ -284,7 +284,7 @@ def _input_def(r: dict[str, str], default: object, src: str) -> InputDef:
         group=get("group") or constants.DEFAULT_INPUT_GROUP, widget=widget,
         label=get("label") or r["variable_name"], min=lo, max=hi, step=step,
         choices=choices, lit_by=lit_by, wide=_BOOLS[wide] if wide else False,
-        panel=panel,
+        panel=panel, description=get("description"), unit=get("unit"),
     )
 
 

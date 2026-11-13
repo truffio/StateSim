@@ -70,6 +70,7 @@ INPUTS_COLUMNS: tuple[str, ...] = ("variable_name", "type", "default_value")
 # Optional display columns of the inputs CSV (front end only).
 INPUTS_DISPLAY_COLUMNS: tuple[str, ...] = (
     "group", "widget", "label", "min", "max", "step", "choices", "lit_by", "wide", "panel",
+    "description", "unit",
 )
 INPUT_TYPES: tuple[str, ...] = ("bool", "int", "float", "str", "enum")
 # Allowed widgets per input type; the first is the default (for int/float the
