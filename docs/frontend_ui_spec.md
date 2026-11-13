@@ -397,3 +397,63 @@ Inputs set to the value they already have are not shown.
 #7     0.200 s  DISPLAY  Flight mode annunciator: AT (fma_at_color_white) on
                 caused by: #6 Autothrottle T1 -> Hold armed
 ```
+
+## 12. FMA recording
+
+A report of how the FMA changed during a manoeuvre, and which crew input
+caused each change. Recording only marks a window: the trace and the
+timeline keep running all the time.
+
+### 12.1 Buttons
+
+- The master CSV marks the FMA panel with `role` = `fma` on its panel row (at
+  most one panel). Only then does the run bar show **Start recording**. While
+  recording it shows **Stop recording** (red, with a dot) and a clock with
+  the recording's simulation time (`REC 4.2 s`).
+- **Reset** while recording ends the recording, like Stop.
+
+### 12.2 Rows
+
+- The first row is the FMA at Start, captioned "Start of the manoeuvre". A
+  blank FMA is not drawn: the row is then only its caption and time.
+- Then one row per input that changed the FMA. All FMA changes between one
+  input and the next are merged, and the row shows the settled result.
+  Inputs that change nothing on the FMA are not shown.
+- The caption is the input that caused the change, found by following the
+  recorded causes back to it, in plain English: `<description> pressed` for
+  a push-button, `<description> on/off` for a switch, `<description> set to
+  <value> <unit>` otherwise. The inputs CSV columns `description` and `unit`
+  give the words; without them the input's label or name is used.
+- If the FMA did not change, the report says "no FMA change during the
+  recording".
+
+### 12.3 Compact layout
+
+- A header: title, then the model, date, recording window, number of FMA
+  changes and the layout name.
+- A vertical list. Each row has a number badge, its caption and time, then
+  the FMA, drawn from the FMA panel's own HTML and CSS with the lights of
+  that moment. Each row is indented one step (28 px) more than the one
+  before, with a thin connector, so the list reads down and to the right.
+- Other layouts may be added later; compact is the first and the default.
+
+### 12.4 Preview and Save PNG
+
+Stop opens the report in a new window as an editable preview:
+
+| Item | What can be done |
+|---|---|
+| Title | Click to edit. Starts as "FMA recording"; the last title is remembered in the browser. |
+| Description | An optional line under the title; left out of the image when empty. |
+| Caption | Click to edit. A rewrite replaces the recorded text. |
+| Note | **+ Note** adds an editable line under the caption; **− Note** removes it. |
+| Times | **Show times** shows or hides every row's time. |
+| Order | Drag a row by its handle (⠇). The numbers follow the new order; moved rows are not flagged. |
+| Hide | **Hide** leaves a row out of the image (shown faded in the preview); **Show** puts it back. |
+| Indent | ◀ ▶ move one row by a step; **Indent step** sets the step for all rows. |
+| Undo / Reset | **Undo** reverts the last change; **Reset to recording** restores the original report. |
+
+The FMA snapshots themselves cannot be edited. **Save PNG** saves the preview
+as shown, without the controls or hidden rows, at twice the screen
+resolution, named `<title> - <date> <time>.png`. If the browser blocks the
+window, a message asks to allow pop-ups and press Stop again.
