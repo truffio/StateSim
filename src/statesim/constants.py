@@ -9,7 +9,7 @@ MAX_STATE_MACHINES: int = 10_000
 
 # Context names provided by the engine; no input, result_variable or state
 # machine may use them.
-RESERVED_NAMES: frozenset[str] = frozenset({"tick", "t", "dt"})
+RESERVED_NAMES: frozenset[str] = frozenset({"tick", "t", "dt", "__builtins__"})  # the last: eval globals
 
 # Master CSV.
 MASTER_COLUMNS: tuple[str, ...] = ("file_name", "type", "order", "band")

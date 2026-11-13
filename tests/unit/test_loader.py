@@ -470,3 +470,15 @@ def test_non_finite_float_definitions_are_load_errors(tmp_path, row):
     with pytest.raises(ModelError) as e:
         load_model(tmp_path / "master.csv")
     assert "inputs.csv:2" in str(e.value)
+
+
+def test_builtins_is_a_reserved_name(tmp_path):
+    """#34: __builtins__ would be overwritten by the evaluator and break snapshot()."""
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\nm.csv,state_machine,1,10\ninputs.csv,inputs,,\n",
+                                         encoding="utf-8")
+    (tmp_path / "m.csv").write_text("transition_id,current_state,next_state,default_state,equation,result_variable,"
+                                    "rationale,title,order\n1,A,B,A,True,r1,,,1\n", encoding="utf-8")
+    (tmp_path / "inputs.csv").write_text("variable_name,type,default_value\n__builtins__,int,0\n", encoding="utf-8")
+    with pytest.raises(ModelError) as e:
+        load_model(tmp_path / "master.csv")
+    assert "reserved" in str(e.value) and "inputs.csv:2" in str(e.value)
