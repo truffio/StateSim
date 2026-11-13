@@ -427,3 +427,23 @@ def test_appr_light_on_the_fcp(open_page):
     pg.locator("#step").click()
     pg.wait_for_timeout(300)
     assert "lit" not in (appr.get_attribute("class") or "")
+
+
+@pytest.mark.req("REQ-125")
+def test_switches_low_in_a_card_do_not_scroll_the_page(open_page):
+    """#45: turning off a switch low in a long card (law_rollout and below on
+    autopilot3) must not scroll the page and hide the top pane."""
+    pg = open_page("autopilot3")
+    top = pg.locator("#top")
+    y0 = top.bounding_box()["y"]
+    names = pg.evaluate("() => [...document.querySelectorAll('.switch input')].map(i => i.id)")
+    laws = [n for n in names if n.startswith("in-law_")]
+    assert len(laws) >= 8
+    for n in laws:
+        pg.locator(f"label.switch:has(#{n})").click()
+        pg.wait_for_timeout(50)
+        scrolled = pg.evaluate("""() => [document.scrollingElement.scrollTop, document.body.scrollTop,
+                                          document.documentElement.scrollTop]""")
+        assert scrolled == [0, 0, 0], f"{n}: page scrolled {scrolled}"
+        assert top.bounding_box()["y"] == y0, f"{n}: the top pane moved"
+    assert pg.evaluate("() => [...document.querySelectorAll('.switch input')].filter(i => i.id.startsWith('in-law_') && i.checked).length") == 0

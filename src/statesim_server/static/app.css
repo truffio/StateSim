@@ -70,8 +70,12 @@ select, input[type=number], input[type=text] { font: inherit; font-size: 13px; p
 input[type=number] { width: 110px; }
 
 /* two-state sliding switch */
-.switch { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
-.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+          font-size: 13px; cursor: pointer; }
+/* the real checkbox stays inside its switch: positioned against the page, a
+   focused checkbox low in a card was off-screen and the browser scrolled the
+   whole page to it, hiding the top pane (#45) */
+.switch input { position: absolute; right: 0; top: 50%; margin: 0; opacity: 0; width: 1px; height: 1px; }
 .track { position: relative; flex: 0 0 auto; width: 42px; height: 24px; border-radius: 12px; background: #b9c1cc; transition: background .15s; }
 .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
                 background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
