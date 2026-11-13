@@ -404,3 +404,90 @@ def test_actions_example_end_to_end() -> None:
     assert t2["writes"][0] == ["ground_speed", 0]   # entry
     assert t3["writes"] == []                       # during writes are not shown
     assert t4["writes"] == [["ground_speed", 60]]   # exit
+
+
+# ------------------------------------------------------------------ text
+@pytest.mark.req("REQ-190")
+def test_format_text_reconstructs_inputs_transitions_causes_and_writes() -> None:
+    from statesim import format_text
+    items = [
+        {"k": "in", "id": 1, "t": 100.0, "tick": 2, "name": "toga", "value": True},
+        {"k": "tr", "id": 2, "t": 200.0, "tick": 3, "sm": "phase", "tid": "T1", "title": "Takeoff roll",
+         "from": "Ground", "to": "Takeoff", "causes": [1], "writes": [["ground_speed", 140]]},
+        {"k": "in", "id": 3, "t": 300.0, "tick": 4, "name": "mode", "value": "LAND3"},
+        {"k": "tr", "id": 4, "t": 400.0, "tick": 5, "sm": "lamp", "tid": "G1", "title": "",
+         "from": "OFF", "to": "ON", "causes": [], "writes": []},
+        {"k": "tr", "id": 5, "t": 500.0, "tick": 6, "sm": "lamp", "tid": "T2", "title": "Back",
+         "from": "ON", "to": "OFF", "causes": [2, 3], "writes": []},
+    ]
+    text = format_text(items, {"phase": "Phase of flight"}, "My run")
+    lines = text.splitlines()
+    assert lines[0] == "My run"
+    assert lines[1] == "2 input changes, 3 transitions; times in seconds."
+    body = [line.strip() for line in lines[lines.index("") + 1:]]
+    assert body == [
+        "#1     0.100 s  INPUT  toga = True",
+        '#2     0.200 s  Phase of flight (phase)  T1  Ground -> Takeoff  "Takeoff roll"',
+        "caused by: #1 input toga = True",
+        "writes: ground_speed = 140",
+        "#3     0.300 s  INPUT  mode = 'LAND3'",
+        "#4     0.400 s  lamp  G1  OFF -> ON",
+        "no recorded cause (a timer, or true from the start)",
+        '#5     0.500 s  lamp  T2  ON -> OFF  "Back"',
+        "caused by: #2 Phase of flight T1 -> Takeoff; #3 input mode = 'LAND3'",
+    ]
+    assert text.endswith("\n")
+
+
+@pytest.mark.req("REQ-190")
+def test_format_text_marks_dropped_items_and_empty_runs() -> None:
+    from statesim import format_text
+    items = [{"k": "tr", "id": 7, "t": 0.0, "tick": 1, "sm": "a", "tid": "T1", "title": "",
+              "from": "X", "to": "Y", "causes": [3], "writes": []}]
+    text = format_text(items)
+    assert "Items #1 to #6 are no longer kept" in text
+    assert "caused by: #3 (no longer kept)" in text
+    empty = format_text([])
+    assert empty.startswith("StateSim timeline\n0 input changes, 0 transitions;")
+
+
+@pytest.mark.req("REQ-190")
+def test_format_text_on_a_real_run_names_every_transition() -> None:
+    from statesim import format_text
+    model = load_model(ACTIONS)
+    tl = Timeline()
+    eng = Engine(model, trace=tl)
+    eng.set_input("toga", True)
+    eng.run(5)
+    eng.set_input("radio_altitude", 500)
+    eng.run(70)
+    text = format_text(tl.all(), {"phase": "Phase of flight"})
+    assert text.count("Phase of flight (phase)") == sum(1 for i in tl.all() if i["k"] == "tr") >= 3
+    assert "INPUT  toga = True" in text and "writes: ground_speed = 140" in text
+
+
+@pytest.mark.req("REQ-191")
+def test_watched_results_become_display_items_with_causes() -> None:
+    tl = Timeline(watch={"fma_spd"})
+    feed(tl, inp(1, "speed", 0, 130),
+         res(2, "EQ", "fma_spd", False, True, ("speed",)),
+         res(2, "EQ", "other", False, True, ("speed",)))          # not watched
+    items = tl.all()
+    assert [i["k"] for i in items] == ["in", "dp"]
+    dp = items[1]
+    assert dp == {"k": "dp", "id": 2, "t": dp["t"], "tick": 2, "name": "fma_spd", "value": True, "causes": [1]}
+
+
+@pytest.mark.req("REQ-191")
+def test_format_text_lists_display_changes() -> None:
+    from statesim import format_text
+    items = [
+        {"k": "in", "id": 1, "t": 100.0, "tick": 2, "name": "AP_btn", "value": True},
+        {"k": "dp", "id": 2, "t": 200.0, "tick": 3, "name": "fma_ap", "value": True, "causes": [1]},
+        {"k": "dp", "id": 3, "t": 300.0, "tick": 4, "name": "alt_shown", "value": 1500, "causes": []},
+    ]
+    text = format_text(items, displays={"fma_ap": "FMA: AP (fma_ap)"})
+    assert "1 input change, 0 transitions, 2 display changes;" in text
+    body = [line.strip() for line in text.splitlines()[text.splitlines().index("") + 1:]]
+    assert body[1:] == ["#2     0.200 s  DISPLAY  FMA: AP (fma_ap) on", "caused by: #1 input AP_btn = True",
+                        "#3     0.300 s  DISPLAY  alt_shown = 1500", "no recorded cause"]

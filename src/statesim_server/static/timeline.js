@@ -106,6 +106,8 @@
     pane.el.hidden = !on;
     pane.bar.hidden = !on;
     if (pane.btn) pane.btn.setAttribute("aria-pressed", String(on));
+    const saveLink = document.getElementById("timeline-save");
+    if (saveLink) saveLink.hidden = !on;
     if (save) store.set(KEY_SHOWN, on ? "1" : "0");
     if (pane.instance) pane.instance.refresh();
   }

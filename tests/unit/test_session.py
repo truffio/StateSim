@@ -238,3 +238,24 @@ def test_too_many_items_flagged(ap2, monkeypatch):
     items, too_many = ap2.take_new_items()
     assert too_many and len(items) == n
     assert ap2.take_new_items() == ([], False)
+
+
+@pytest.mark.req("REQ-191")
+def test_fma_display_changes_are_in_the_text_timeline():
+    from statesim_server.session import display_labels
+    model = load_model(EXAMPLES / "autopilot3" / "master.csv")
+    labels = display_labels(model)
+    assert labels["fma_tm_engaged_spd"] == "Flight mode annunciator: SPD (fma_tm_engaged_spd)"
+    assert labels["fma_ap_at_arrow"] == "Flight mode annunciator: AP <- AT arrow (fma_ap_at_arrow)"
+    assert "fd_on" not in labels and "AP_btn" not in labels       # inputs: already in the timeline
+    s = Session(model)
+    for _ in range(2):
+        s.step()
+    s.handle({"type": "press", "name": "AP_btn"})
+    for _ in range(3):
+        s.step()
+    text = s.timeline_text()
+    assert "DISPLAY  Flight mode annunciator: AP (fma_ap_visible) on" in text
+    lines = text.splitlines()
+    i = next(k for k, line in enumerate(lines) if "(fma_ap_visible) on" in line)
+    assert "AP engage T1 -> AP-engaged" in lines[i + 1]

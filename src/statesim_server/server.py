@@ -24,6 +24,7 @@ STATIC = Path(__file__).resolve().parent / "static"
 PAGES = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/app.css": "app.css",
          "/panels.js": "panels.js", "/timeline.js": "timeline.js", "/timeline.css": "timeline.css"}
 WS_PATH = "/ws"
+TIMELINE_TEXT = "/timeline.txt"   # the current run's timeline as text (a download)
 SEND_HZ = 30            # at most this many screen updates per second
 FAST_SLICE_S = 0.02     # "as fast as possible": run ticks for this long, then yield
 MAX_LAG_S = 0.5         # real time: a backlog longer than this is dropped, not caught up
@@ -46,6 +47,12 @@ class App:
         path = request.path.split("?", 1)[0]
         if path == WS_PATH:
             return None
+        if path == TIMELINE_TEXT:
+            body = self.session.timeline_text().encode("utf-8")
+            headers = Headers([("Content-Type", "text/plain; charset=utf-8"),
+                               ("Content-Length", str(len(body))), ("Cache-Control", "no-store"),
+                               ("Content-Disposition", 'attachment; filename="statesim-timeline.txt"')])
+            return Response(200, "OK", headers, body)
         name = PAGES.get(path)
         if name is None:
             return connection.respond(HTTPStatus.NOT_FOUND, "Not found\n")

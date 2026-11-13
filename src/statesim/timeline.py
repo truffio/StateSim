@@ -8,6 +8,10 @@ float milliseconds:
 
 * transition: ``{"k": "tr", "id", "t", "tick", "sm", "tid", "title",
   "from", "to", "causes": [ids], "writes": [[var, value], ...]}``
+* display change: ``{"k": "dp", "id", "t", "tick", "name", "value",
+  "causes": [ids]}`` for a result variable in ``watch`` (a value shown on a
+  panel, such as an FMA mode text), each time it changes. The pane ignores
+  these items; the text timeline lists them. They are never a cause.
 * input change: ``{"k": "in", "id", "t", "tick", "name", "value"}``; a
   ``set_input`` that leaves the value unchanged gives no item.
 
@@ -42,6 +46,7 @@ How the recorder works (all state is per ``Timeline``; nothing is global):
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Iterable
 from fractions import Fraction
 
 from .trace import TraceEvent
@@ -68,9 +73,13 @@ class Timeline:
     ``last_id`` is the id of the newest item (0 when empty).
     """
 
-    def __init__(self, gen: int = 1, cap: int = DEFAULT_CAP) -> None:
+    def __init__(self, gen: int = 1, cap: int = DEFAULT_CAP,
+                 watch: Iterable[str] = ()) -> None:
         self.gen = gen
         self.cap = cap
+        # result variables shown on a panel (e.g. the FMA): their changes
+        # become "dp" items, so the text timeline records what was displayed
+        self.watch = frozenset(watch)
         self.last_id = 0
         self._items: deque[dict] = deque(maxlen=max(0, cap))
         self._origins: dict[str, frozenset[int]] = {}
@@ -88,6 +97,12 @@ class Timeline:
             self._on_input(event)
         elif kind == "result":
             self._origins[event.name] = self._union(event.trigger)
+            if event.name in self.watch:
+                self._items.append({
+                    "k": "dp", "id": self._next_id(), "t": float(event.t), "tick": event.tick,
+                    "name": event.name, "value": _json_value(event.new),
+                    "causes": sorted(self._origins[event.name]),
+                })
         elif kind == "transition":
             self._on_transition(event)
         elif kind == "action":
@@ -173,3 +188,92 @@ class Timeline:
         self._origins[e.name] = (
             frozenset((last[1]["id"],)) if last is not None else _NO_ORIGIN
         )
+
+
+# ------------------------------------------------------------------ text
+def _text_value(value: object) -> str:
+    """Values as in the trace: strings quoted, everything else with str()."""
+    return repr(value) if isinstance(value, str) else str(value)
+
+
+def _count(n: int, noun: str) -> str:
+    return f"{n} {noun}" + ("" if n == 1 else "s")
+
+
+def format_text(items: list[dict], labels: dict[str, str] | None = None,
+                title: str = "", displays: dict[str, str] | None = None) -> str:
+    """The timeline as plain text: a readable reconstruction of the run.
+
+    One entry per item, in time order, each starting with ``#<id>`` and the
+    time in seconds:
+
+    * an input change: ``INPUT  <name> = <value>``;
+    * a display change (a ``dp`` item, e.g. an FMA mode text):
+      ``DISPLAY  <label> on`` / ``off`` (``= <value>`` when not a bool),
+      then what caused it;
+    * a transition: ``<machine>  <tid>  <from> -> <to>  "<title>"``, then
+      ``caused by:`` the items that led to it (``#id`` plus a short name) or
+      ``no recorded cause`` (a timer, or a value already true at the start),
+      then ``writes:`` its exit and entry action writes, if any.
+
+    ``labels`` maps a state machine name to its display name (the master
+    CSV ``name``); a machine without one is shown by its name. ``title`` is
+    the first line (for example the master file). Causes dropped by the cap
+    are shown as ``#id (no longer kept)``.
+    """
+    labels = labels or {}
+    displays = displays or {}
+    by_id = {it["id"]: it for it in items}
+
+    def machine(sm: str) -> str:
+        label = labels.get(sm) or sm
+        return label if label == sm else f"{label} ({sm})"
+
+    def short(it: dict) -> str:
+        if it["k"] == "in":
+            return f"#{it['id']} input {it['name']} = {_text_value(it['value'])}"
+        return f"#{it['id']} {labels.get(it['sm']) or it['sm']} {it['tid']} -> {it['to']}"
+
+    inputs = sum(1 for it in items if it["k"] == "in")
+    shown = sum(1 for it in items if it["k"] == "dp")
+    counts = [_count(inputs, "input change"), _count(len(items) - inputs - shown, "transition")]
+    if shown:
+        counts.append(_count(shown, "display change"))
+    lines = [title or "StateSim timeline",
+             ", ".join(counts) + "; times in seconds.",
+             "Each transition and display change lists what caused it (inputs and other",
+             "transitions, through any equations); transitions also list what their",
+             "actions wrote."]
+    if items and items[0]["id"] > 1:
+        lines.append(f"Items #1 to #{items[0]['id'] - 1} are no longer kept "
+                     "(only the most recent are).")
+    lines.append("")
+    width = len(str(items[-1]["id"])) + 1 if items else 2
+    pad = " " * (width + 2 + 8 + 4)        # under the machine name: "#id", time, " s  "
+    for it in items:
+        head = f"{'#' + str(it['id']):<{width}}  {it['t'] / 1000:8.3f} s  "
+        if it["k"] == "in":
+            lines.append(f"{head}INPUT  {it['name']} = {_text_value(it['value'])}")
+            continue
+        if it["k"] == "dp":
+            v = it["value"]
+            state = ("on" if v else "off") if isinstance(v, bool) else f"= {_text_value(v)}"
+            lines.append(f"{head}DISPLAY  {displays.get(it['name']) or it['name']} {state}")
+            lines.append(f"{pad}caused by: " + "; ".join(
+                short(by_id[c]) if c in by_id else f"#{c} (no longer kept)" for c in it["causes"])
+                if it["causes"] else f"{pad}no recorded cause")
+            continue
+        text = f"{head}{machine(it['sm'])}  {it['tid']}  {it['from']} -> {it['to']}"
+        if it.get("title"):
+            text += f'  "{it["title"]}"'
+        lines.append(text)
+        if it["causes"]:
+            causes = [short(by_id[c]) if c in by_id else f"#{c} (no longer kept)"
+                      for c in it["causes"]]
+            lines.append(f"{pad}caused by: " + "; ".join(causes))
+        else:
+            lines.append(f"{pad}no recorded cause (a timer, or true from the start)")
+        if it["writes"]:
+            lines.append(f"{pad}writes: " + ", ".join(
+                f"{var} = {_text_value(value)}" for var, value in it["writes"]))
+    return "\n".join(lines) + "\n"

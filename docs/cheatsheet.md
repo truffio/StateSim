@@ -164,7 +164,7 @@ and are not in the text line:
 
 ```python
 from statesim import load_model, Engine
-from statesim.timeline import Timeline
+from statesim import Timeline, format_text
 
 model = load_model("examples/actions/master.csv")
 tl = Timeline()                    # a TraceSink; Timeline(cap=...) sets the item cap
@@ -175,9 +175,16 @@ items = tl.all()                   # every kept item, oldest first
 tl.items_since(tl.last_id)         # only the items after an id (here: none)
 ```
 
+As text (the pane's **Save as text** button, or `/timeline.txt` on the server):
+`format_text(tl.all(), {"phase": "Phase of flight"})` gives one numbered line per
+input change and transition, with its causes and action writes.
+
 Two item shapes, with sequential `id`s and `t` in ms:
 * `{"k": "tr", "id", "t", "tick", "sm", "tid", "title", "from", "to", "causes": [ids], "writes": [[var, value], ...]}`
 * `{"k": "in", "id", "t", "tick", "name", "value"}` (only when the value changes)
+* `{"k": "dp", "id", "t", "tick", "name", "value", "causes": [ids]}`: a result shown on a
+  panel (e.g. an FMA mode text) changed; only for names in `Timeline(watch=...)`.
+  The server watches every result a panel shows; the text lists them as `DISPLAY` lines.
 
 `causes` are the ids of the items that produced the transition's trigger, folded
 through equations. The cap is 20,000 items; the oldest are dropped.

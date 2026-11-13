@@ -366,3 +366,34 @@ Inputs set to the value they already have are not shown.
 - Reset clears the lanes and the chart.
 - The data is the current session only, the same whether it is driven by
   hand or by a test.
+
+### 11.8 Save as text
+
+- While the pane is shown, a **Save as text** button sits in the run bar
+  next to the Timeline button. It downloads `statesim-timeline.txt`: the
+  current run as plain text, also served at `/timeline.txt`.
+- The file is a reconstruction of the run in time order. Each entry starts
+  with its number (`#12`) and time in seconds:
+  - an input change: `INPUT  name = value`;
+  - a transition: machine (display name and file name), transition id,
+    `from -> to` and title, then `caused by:` the numbered input changes and
+    transitions that led to it (through any equations), or `no recorded
+    cause`, then `writes:` its action writes.
+  - a display change: a result variable shown on a panel (lit by
+    `data-lit-by` or shown by `data-show`), such as an FMA mode text, as
+    `DISPLAY  <panel>: <text lit> (<variable>) on` or `off`, then what caused
+    it. Inputs and states shown on panels are already listed as input changes
+    and transitions. The pane does not draw display changes.
+- It holds the same items as the pane (the most recent 20,000), and says so
+  when older ones have been dropped.
+
+```
+#1     0.100 s  INPUT  TOGA = True
+#2     0.200 s  Aircraft (state_ac)  T1  Waiting TOGA -> Takeoff  "Ac accelerating to VR"
+                caused by: #1 input TOGA = True
+#3     0.200 s  FD engage (state_fd)  T3  FD-disengaged -> FD-engaged  "Automatic engaging of FD"
+                caused by: #1 input TOGA = True
+                writes: fd_on = True
+#7     0.200 s  DISPLAY  Flight mode annunciator: AT (fma_at_color_white) on
+                caused by: #6 Autothrottle T1 -> Hold armed
+```

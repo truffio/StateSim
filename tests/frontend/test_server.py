@@ -177,3 +177,13 @@ def test_second_client_mid_run_sees_no_gaps_or_duplicates():
     ids = [i["id"] for i in msgs[1]["items"]]
     ids += [i["id"] for m in msgs[3:] if m["type"] == "state" for i in m["tl"]]
     assert ids == list(range(ids[0], ids[0] + len(ids)))   # contiguous, no repeats
+
+
+@R("REQ-190")
+def test_timeline_text_download(server_url):
+    url = server_url(EXAMPLES / "actions" / "master.csv")
+    resp = urllib.request.urlopen(url + "timeline.txt")
+    assert resp.headers["Content-Type"] == "text/plain; charset=utf-8"
+    assert "attachment" in resp.headers["Content-Disposition"]
+    text = resp.read().decode("utf-8")
+    assert text.startswith("StateSim timeline: ") and "(run 1)" in text.splitlines()[0]

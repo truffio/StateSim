@@ -236,3 +236,21 @@ def test_hovering_a_transition_with_causes_draws_cause_lines(open_page):
     frame(pg)
     assert pg.locator("#timeline .tl-cause").count() == 0
     assert "Rollout" not in pg.locator("#timeline").inner_text() and "==" not in pg.locator("#timeline").inner_text()   # no equations
+
+
+@R("REQ-190")
+def test_save_as_text_downloads_the_run(open_page):
+    pg = open_page("autopilot3")
+    save = pg.locator("#timeline-save")
+    assert not save.is_visible()                       # only with the pane
+    show(pg)
+    assert save.is_visible()
+    pg.get_by_role("button", name="TOGA").click()
+    pg.wait_for_selector("#timeline .tl-tick")
+    with pg.expect_download() as info:
+        save.click()
+    text = open(info.value.path(), encoding="utf-8").read()
+    assert info.value.suggested_filename == "statesim-timeline.txt"
+    assert "INPUT  TOGA = True" in text
+    assert "Aircraft (state_ac)  T1  Waiting TOGA -> Takeoff" in text
+    assert "caused by: #1 input TOGA = True" in text

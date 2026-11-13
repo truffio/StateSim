@@ -40,7 +40,8 @@ where it can go next. Options: `--port N`, `--no-browser`, `--trace FILE`.
 
 The **Timeline** button in the run bar shows a pane with one lane per state
 machine, and the input changes, over time. Click a transition to see what it
-caused (a sequence chart).
+caused (a sequence chart). **Save as text** downloads the run as a numbered
+list of input changes and transitions, each with its causes and action writes.
 
 Or run it from Python:
 
