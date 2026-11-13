@@ -187,3 +187,40 @@ def test_timeline_text_download(server_url):
     assert "attachment" in resp.headers["Content-Disposition"]
     text = resp.read().decode("utf-8")
     assert text.startswith("StateSim timeline: ") and "(run 1)" in text.splitlines()[0]
+
+
+def _write_model(d, rows, inputs="variable_name,type,default_value\ngo,bool,false\n", actions=None):
+    master = "file_name,type,order,band\nm.csv,state_machine,1,10\ninputs.csv,inputs,,\n"
+    if actions:
+        master += "actions.csv,actions,,\n"
+        (d / "actions.csv").write_text(actions, encoding="utf-8")
+    (d / "master.csv").write_text(master, encoding="utf-8")
+    (d / "inputs.csv").write_text(inputs, encoding="utf-8")
+    head = "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order"
+    (d / "m.csv").write_text(head + "\n" + rows, encoding="utf-8")
+    return load_model(d / "master.csv")
+
+
+@R("REQ-117")
+def test_runtime_error_pauses_reports_and_reset_recovers(tmp_path):
+    """#25: a failing step pauses the run and tells the client; Reset + Resume work again."""
+    model = _write_model(tmp_path, "1,A,B,A,go and undefined_name > 1,r1,,,1\n")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            await ws.send(json.dumps({"type": "set", "name": "go", "value": True}))
+            err = await recv_type(ws, "error")
+            assert err["message"].startswith("Paused:") and "m.csv:2" in err["message"]
+            st = await recv_type(ws, "state")
+            while not st["paused"]:
+                st = await recv_type(ws, "state")
+            await ws.send(json.dumps({"type": "reset"}))
+            await ws.send(json.dumps({"type": "resume"}))
+            t0 = app.session.engine.tick
+            await asyncio.sleep(0.4)
+            assert app.session.engine.tick > t0 and not app.session.paused
+        server.close()
+        await server.wait_closed()
+    run(go())

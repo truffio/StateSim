@@ -32,7 +32,12 @@ function connect() {
     if (msg.type === "model") build(msg);
     else if (msg.type === "state") show(msg);
     else if (msg.type === "timeline") { if (timeline) timeline.reset(msg.gen, msg.items); else timelineMsg = msg; }
-    else if (msg.type === "error") { console.warn("StateSim:", msg.message); banner(msg.message, 3000); }
+    else if (msg.type === "error") {
+      console.warn("StateSim:", msg.message);
+      // A failed step pauses the run: keep its message until resumed or reset.
+      stickyError = msg.message.startsWith("Paused:");
+      banner(msg.message, stickyError ? 0 : 3000);
+    }
   };
   ws.onclose = () => {
     banner("Disconnected from the StateSim server. Reconnecting…");
@@ -41,6 +46,7 @@ function connect() {
 }
 
 let bannerTimer = null;
+let stickyError = false;
 function banner(text, ms) {
   const b = $("banner");
   clearTimeout(bannerTimer);
@@ -227,6 +233,7 @@ function show(st) {
     b.setAttribute("aria-pressed", String(b.dataset.mode === st.mode));
   }
   if (panels) panels.update(st);
+  if (stickyError && !st.paused) { stickyError = false; banner(""); }
   if (timeline) timeline.state(st);          // optional t, gen and tl (new timeline items)
   $("pause").textContent = st.paused ? "Resume" : "Pause";
   $("step").disabled = !st.paused;
@@ -238,7 +245,10 @@ for (const b of document.querySelectorAll(".seg button")) {
 }
 $("pause").addEventListener("click", () => send({ type: $("pause").textContent === "Resume" ? "resume" : "pause" }));
 $("step").addEventListener("click", () => send({ type: "step" }));
-$("reset").addEventListener("click", () => send({ type: "reset" }));
+$("reset").addEventListener("click", () => {
+  if (stickyError) { stickyError = false; banner(""); }
+  send({ type: "reset" });
+});
 
 // --------------------------------------------------------------- splitter
 const left = $("left"), bar = $("splitter");

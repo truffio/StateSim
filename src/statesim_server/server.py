@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import mimetypes
+import sys
 from http import HTTPStatus
 from pathlib import Path
 
@@ -121,6 +122,16 @@ class App:
         state["tl"] = items
         await self._send_all(json.dumps(state))
 
+    async def stopped(self, exc: Exception) -> None:
+        """A step failed: pause the session (Reset gives a working one again)
+        and tell every client where, with the error's file:line, tick and item."""
+        self.session.paused = True
+        message = f"Paused: {exc}"
+        print(f"StateSim: {message}", file=sys.stderr, flush=True)
+        async with self._lock:
+            await self._send_all(json.dumps({"type": "error", "message": message}))
+            await self._broadcast(force=True)
+
     # ------------------------------------------------------------- pacing
     async def run(self) -> None:
         """Advance the session according to its mode while not paused."""
@@ -138,17 +149,21 @@ class App:
                 await self.wake.wait()
                 continue
             now = loop.time()
-            if s.mode == "fast":
-                end = now + FAST_SLICE_S
-                while loop.time() < end:
-                    s.step()
-            else:
-                due = int((now - anchor) * tick_hz) + 1 - done
-                if due * 1.0 / tick_hz > MAX_LAG_S:   # overrun: drop the backlog
-                    anchor, done, due = now, 0, 1
-                for _ in range(max(due, 0)):
-                    s.step()
-                    done += 1
+            try:
+                if s.mode == "fast":
+                    end = now + FAST_SLICE_S
+                    while loop.time() < end:
+                        s.step()
+                else:
+                    due = int((now - anchor) * tick_hz) + 1 - done
+                    if due * 1.0 / tick_hz > MAX_LAG_S:   # overrun: drop the backlog
+                        anchor, done, due = now, 0, 1
+                    for _ in range(max(due, 0)):
+                        s.step()
+                        done += 1
+            except Exception as exc:        # e.g. EvaluationError: an undefined name
+                await self.stopped(exc)
+                continue
             if loop.time() - last_send >= 1 / SEND_HZ:
                 last_send = loop.time()
                 await self.broadcast()
