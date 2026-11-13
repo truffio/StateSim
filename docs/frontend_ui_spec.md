@@ -1,12 +1,11 @@
 # StateSim user interface spec
 
-Version: draft 4, 2026-11-11. Status: implemented on branch `frontend`
-(`src/statesim_server/`); requirements REQ-114 to REQ-134.
+Version: 5, 2026-11-12. Status: implemented (`src/statesim_server/`);
+requirements REQ-114 to REQ-147 and REQ-159 in `docs/requirements.csv`.
 
 This spec defines the screen of the StateSim front end: what is on it, what
 can be clicked, what each control does, and which colours change and why.
-Decisions and open points behind it are in `docs/frontend_decisions.md`. A
-mockup is in `docs/mockups/frontend_mockup.html` (example data only).
+The decisions behind it (D1, D19, ...) are in `docs/decisions.md` Part D.
 
 The front end is a web page served by the local Python server, which runs the
 engine (D1). The page shows the engine's current values and sends user
@@ -148,15 +147,17 @@ optional; a file without them still loads.
 
 Widgets allowed per type: bool `switch`, `momentary`, `lit`, `toggle`
 (panel only); int and float `slider`, `number`, `knob` (panel only); enum
-`dropdown`; str `text`. Anything else, a default
+`dropdown`; str `text`. Any type may use `none`: an internal variable that
+actions write, with no control and no card. Anything else, a default
 outside min/max, or a column that does not apply to the type is a load error
 with its `file:line`.
 
 ### 4.3 Controls
 
 Every control shows the **engine's current value** of its input. The value
-changes only when the user operates the control, or when the engine's inputs
-are reset (section 6). The logic never writes inputs.
+changes when the user operates the control, when an action writes the input
+(`docs/decisions.md` Part C), or when the engine's inputs are reset
+(section 6). The last writer wins.
 
 | Control | Input type | Look | Clickable | What it does | What changes colour |
 |---|---|---|---|---|---|

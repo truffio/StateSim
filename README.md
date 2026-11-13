@@ -1,139 +1,250 @@
 # StateSim
 
 A lightweight, deterministic Python engine that makes aircraft Autoflight /
-Autopilot guidance requirements executable. Logic is expressed as state
-machines and Boolean equations defined in CSV files and evaluated on a
-time-based, synchronous simulation loop. There is no front end in the current
-phase; the engine is an importable package (`statesim`).
+Autopilot guidance requirements executable. The logic is written as state
+machines and Boolean equations in CSV files and evaluated on a time-based,
+synchronous loop. A local web front end lets you drive a model by hand, with
+aircraft panels such as a flight control panel; tests drive the same model
+from Python.
 
-See `requirements_simulation_framework_spec.yaml` for the full specification.
+## Documentation
 
-## Development plan
-
-### Scope
-Evaluation and execution of equations and state machines only. No front end,
-WebSocket server or orchestration server (deferred). Python only; fully
-synchronous and deterministic (no async, threads, wall-clock time or
-randomness).
-
-### Architecture (layered engine, compile at load)
-| Module | Role |
+| Document | What it is |
 |---|---|
-| `model.py` | Frozen dataclasses: the shared contract |
-| `loader.py` | CSV files -> immutable `Model`, with load-time checks |
-| `scheduler.py` | Builds the execution plan ordered by band and manual order |
-| `evaluator.py` | `compile()` expressions once, `eval()` them at run time |
-| `trace.py` | Plain-text trace/log hook |
-| `engine.py` | Runtime state (context, state machine states, tick) and API |
+| [Cheat sheet](docs/cheatsheet.md) | One-page reference: API, CSV columns, execution rules, trace format |
+| [Decisions](docs/decisions.md) | The authoritative behaviour spec: engine (Parts A, B), actions (Part C), front end (Part D) |
+| [User interface spec](docs/frontend_ui_spec.md) | The front end screen: panels, input cards, state machine grid, run controls, colours |
+| [Requirements](docs/requirements.csv) | Numbered requirements (REQ-xxx), each traced to its source and to its tests |
+| [Framework spec](docs/requirements_simulation_framework_spec.yaml) | The original specification; `decisions.md` wins where it is more specific |
+| [Future: timeline](docs/future_timeline.md) | Designed, not yet built: a live timeline and sequence chart |
 
-Public API: `load_model(master_csv)`, `Engine(model, trace=None)`, `.step()`,
-`.run(ticks)`, `.snapshot()`, `.set_input(name, value)`.
+## Install and run
 
-Time is an integer tick count. Bands are explicit frequencies in Hz with no
-required relationship between them; the tick rate is the least common
-multiple of all band frequencies, so all arithmetic is exact. Execution order
-is manual (band, then order); state machine order comes from the master file.
-
-### Work breakdown, waves and model tiers
-| Wave | Task | Model |
-|---|---|---|
-| Start | T0 Contracts: package skeleton, `model.py`, `docs/decisions.md` | opus |
-| Start | T1 Requirement ID list (`docs/requirements.csv`) | sonnet |
-| 1 (parallel) | T2 Loader and load checks, with unit tests | sonnet |
-| 1 | T3 Scheduler, with unit tests | haiku |
-| 1 | T4 Evaluator, with unit tests | haiku |
-| 1 | T5 Trace and logging, with unit tests | haiku |
-| 1 | T6 Requirement-based tests, written test-first from the spec | sonnet |
-| 1 | T7 Fixture CSV sets with hand-computed expected results | sonnet |
-| 1 | T8 Report generator, with unit test | haiku |
-| 2 | T9 Engine / runtime, with unit tests | sonnet |
-| 3 | T10 Full run, defect fixes, determinism tests | sonnet |
-| 3 | T11 Independent semantics and traceability review | opus |
-| 4 | T12 Final test report and README usage example | haiku |
-
-Each task owns specific files so parallel agents do not collide. Requirement
-tests (T6) and fixtures (T7) depend only on the spec and contracts, so they
-are written before the engine is complete.
-
-### Testing
-- **Unit tests**: one file per module; coverage target of 90% or more.
-- **Requirement-based tests**: each test is tagged `@pytest.mark.req("REQ-xxx")`
-  and traces to `docs/requirements.csv`.
-- **Determinism tests**: identical runs give identical logs; different
-  `PYTHONHASHSEED` values give identical logs; shuffling CSV row order does not
-  change results; static check for forbidden imports (random, time, threading,
-  asyncio).
-- **Final report**: `pytest --junitxml=reports/junit.xml`, then
-  `python tools/make_report.py` produces `reports/test_report.md` covering both
-  unit and requirement tests, with a requirement -> test -> result
-  traceability matrix that flags untested requirements and orphan tests.
-
-### Approved behavior defaults
-Recorded in `docs/decisions.md`. Highlights: at most one transition fires per
-state machine per pass; a state machine's state is a context variable named
-after it (e.g. `AP == "ENGAGED"`); results are visible immediately to later
-items in the same pass; result variables start `False`; reserved names `tick`,
-`t` (absolute simulation time, ms), `dt` (ms since the item last ran); limits `MAX_EQUATIONS` and `MAX_STATE_MACHINES` are 10,000 each.
-
-## Usage
-
-Install in editable mode (Python 3.11+, no runtime dependencies):
+Python 3.11 or later. The engine has no runtime dependencies.
 
 ```
-pip install -e ".[dev]"
+pip install -e ".[dev]"        # engine and tests
+pip install -e ".[server]"     # front end server
 ```
+
+Run a model in the browser:
+
+```
+python -m statesim_server examples/autopilot3/master.csv
+```
+
+It opens `http://127.0.0.1:8765/`. Aircraft panels sit on top, input cards on
+the left, run controls at the bottom left, and the state machines on the
+right with the active state highlighted. Hover over the active state to see
+where it can go next. Options: `--port N`, `--no-browser`, `--trace FILE`.
+
+Or run it from Python:
 
 ```python
 from statesim import load_model, Engine, FileTraceWriter
 
-model = load_model("tests/fixtures/minimal/master.csv")   # master CSV
-with FileTraceWriter("run.log") as log:                   # plain-text trace
+model = load_model("examples/quickstart/master.csv")
+with FileTraceWriter("run.log") as log:       # plain-text trace
     eng = Engine(model, trace=log)
-    eng.step()                       # first step is tick 1, t = 0 ms
-    eng.set_input("go", True)        # external input
-    eng.run(3)                       # run 3 more ticks
-    print(eng.snapshot())
+    eng.step()                                # first step: tick 1, t = 0 ms
+    eng.set_input("sw", True)                 # external input
+    eng.run(3)                                # 3 more ticks
+    print(eng.snapshot())                     # tick, t, states, outputs, inputs
 ```
 
-`snapshot()` returns `{"tick", "t" (ms), "states", "outputs", "inputs"}`:
-state machine states are strings (use `AP == "ENGAGED"` in equations), outputs
-are every equation / transition result variable. Inputs are Python values; the
-inputs CSV `default_value` is parsed according to its `type` (`bool`, `int`,
-`float`, `str`). Time is absolute simulation time in milliseconds (`t`), and
-`dt` is the milliseconds since the item last ran.
+## Defining a model
 
-### Actions (writing variables)
+A model is a folder of CSV files (plus optional HTML panels), tied together by
+one **master** CSV. Paths are relative to the master file. Every file has a
+header row, and the column order is free. Expressions are plain Python
+(`a and not b`, `alt > 1000`, `state_ac == 'Climb'`).
 
-Equations and transitions only compute Booleans and states. To change a
-variable, such as setting the speed slider to 0 when the aircraft starts to
-climb, use actions. They are listed in an `actions` CSV (one Python assignment
-per row, rows with the same name run in order). State machine rows name them
-in two optional columns, `action_type` (`entry`, `exit` or `during`) and
-`action`. Actions write inputs only. An internal counter is an input with
-widget `none`. See `docs/decisions.md` Part C and `docs/cheatsheet.md`.
+| File | Holds | How many |
+|---|---|---|
+| Master | The list of files, machine order and rates | 1 |
+| Inputs | External inputs and internal variables | 0 or 1 |
+| State machine | One state machine | any number |
+| Equations | Standalone Boolean equations | 0 or 1 |
+| Actions | Assignments that write variables | 0 or 1 |
+| Panel (HTML) | An aircraft panel for the front end | any number |
 
-Known limitations (a load-time checker is a possible future feature): a default
-state with no outgoing transition, a global transition to the current state and
-undefined variable names are not detected at load. An undefined name raises
-`EvaluationError` at run time with the file, line, tick and item.
+### 1. Master
 
-Cheat sheet: `docs/cheatsheet.md`. Jupyter demos: `notebooks/` (quickstart,
-closed-loop 6-state autopilot, bands/computation rate/timers/errors), with example CSV sets in `examples/`.
-
-## Front end
-
-A local web front end (`src/statesim_server/`, a separate package so the
-engine stays synchronous) runs a model in real time or as fast as possible:
+One row per file.
 
 ```
-pip install -e ".[server]"
-python -m statesim_server examples/autopilot2/master.csv
+file_name,type,order,band,name,scale,init_action
+state_ac.csv,state_machine,10,10,Aircraft,,
+state_ap.csv,state_machine,20,10,AP engage,,
+equations.csv,equations,,,,,
+inputs.csv,inputs,,,,,
+actions.csv,actions,,,,,
+fcp.html,panel,,,Flight control panel,0.75,
 ```
 
-It opens `http://127.0.0.1:8765/`: input cards on the left (built from the
-inputs CSV display columns), run controls at the bottom left, and the state
-machines on the right, with the active state highlighted. Hover the active
-state to see its next states. See `docs/frontend_ui_spec.md`.
+- `type`: `state_machine`, `inputs`, `equations`, `actions` or `panel`.
+- `order` and `band` are required on `state_machine` rows. `band` is the rate
+  in Hz. `order` sets when the machine runs within its band.
+- `name` (optional) is the title shown on the front end. If it's empty, the
+  file name is used. Equations always use the file name: `state_ac.csv` is
+  read as `state_ac`.
+- `scale` (optional, panel rows) shows the panel at that size, for example
+  `0.75`.
+- `init_action` (optional, `state_machine` rows) names an action that runs
+  once on the machine's first pass.
+
+### 2. Inputs
+
+```
+variable_name,type,default_value,group,widget,label,min,max,step,choices,lit_by,wide,panel
+radio_altitude,int,0,Aircraft,slider,Radio altitude (ft),0,2500,5,,,,
+capa,enum,LAND3,Aircraft,dropdown,,,,,NONE|APPR1|LAND3,,,
+TOGA,bool,false,Stick,momentary,TOGA,,,,,,,
+AP_btn,bool,false,,momentary,,,,,,,,fcp.html
+climb_ticks,int,0,,none,,,,,,,,
+```
+
+- `variable_name`, `type` and `default_value` are required. `type` is `bool`,
+  `int`, `float`, `str` or `enum`.
+- The other columns only change how the input looks on the front end, and a
+  file without them still loads.
+  - `group` is the card the input appears in.
+  - `widget`: `switch`, `momentary` or `lit` for a bool; `slider` or `number`
+    for an int or float; `dropdown` for an enum; `text` for a str.
+  - A `momentary` push-button holds the input true for one period of the
+    slowest band. A `lit` push-button is lit by the variable named in `lit_by`.
+  - `none` makes an internal variable, such as a counter or a flag that only
+    actions write. It gets no control.
+  - `panel` names the HTML panel that drives the input. The input then gets no
+    card. Its widget is `momentary`, `toggle` or `knob`.
+- Full column rules: [UI spec section 4.2](docs/frontend_ui_spec.md).
+
+### 3. State machines
+
+One file per machine. The file name is the machine's name, and its current
+state is a string variable with that name (`state_ap == 'Engaged'`).
+
+```
+transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order,action_type,action
+T1,Off,Engaged,Off,AP_btn,ap_t1_btn,Pilot engages AP,Engage,2,entry,AP_ON
+T1,Off,Engaged,,law_AP,ap_t1_law,AP law available,Engage,2,,
+T2,Engaged,Off,,AP_btn or APdisc,ap_t2,Pilot disengages AP,Disengage,3,entry,AP_OFF
+G1,,Off,,not law_AP,ap_g1,AP law lost,Law lost,1,entry,AP_OFF
+```
+
+- **A transition is one or more rows that share a `transition_id`.** Its
+  rows are ANDed, so extra rows act as guards. In the example, T1 needs both
+  `AP_btn` and `law_AP`.
+- `current_state` is the state the transition leaves. **Leave it empty for a
+  global transition**, which can fire from any state (G1).
+- `default_state` is filled on exactly one row: the starting state.
+- `equation` is the row's Boolean condition. Its result is stored in
+  `result_variable`, a unique name that other logic can read.
+- `order` sets the order of the transitions. On each pass all rows are
+  evaluated, and the **first** enabled transition fires. At most one fires per
+  pass. Give global transitions the lowest numbers when they must win.
+- `rationale` and `title` document the transition. The title also appears in
+  the trace.
+- `action_type` and `action` (optional) run an action:
+  - `entry` runs after the transition fires.
+  - `exit` runs just before the state changes.
+  - `during` runs on every pass spent in `current_state` when no transition
+    fires.
+
+### 4. Equations
+
+```
+equation,explanation,rationale,result_variable,band,order
+state_ap == 'Engaged' and state_at == 'Active',AP and AT both on,,ap_at_on,10,100
+t >= 2000,2 s timer,,timer_2s,10,101
+```
+
+- Each row is a standalone Boolean, assigned to `result_variable` every time
+  it runs, at `band` Hz and in `order` within its band.
+- State machines and other equations can use the result.
+- An equation can read its own result, which gives its value from the previous
+  pass. That makes a latch, for example
+  `(state_ac == 'Descent' and appr) or (appr_light and state_ac != 'Landed')`.
+- Timers are expressions on `t`, the simulation time in ms. Also available are
+  `tick`, and `dt`, the ms since this item last ran.
+
+### 5. Actions
+
+Equations and transitions only compute values. To **write** a variable (set
+the speed to 0 at climb, engage AP, count passes), use an action:
+
+```
+action,statement,rationale
+AP_ON,ap_on = True,
+AP_ON,fd_on = True,FD comes on with AP
+AP_OFF,ap_on = False,
+CLIMB_TIMER,climb_ticks += 1,
+```
+
+- Each row is one Python assignment (`=`, `a = b = 0` or `+=`). Rows with
+  the same `action` name run in file order.
+- Actions write inputs only. Declare internal variables in the inputs CSV
+  with widget `none`.
+- Writes are visible at once to later items in the same pass, and they appear
+  in the trace.
+
+### 6. Aircraft panels (optional)
+
+A panel is an HTML file with its own CSS. StateSim wires it through
+attributes, and its scripts never run.
+
+```html
+<button data-input="AP_btn" data-lit-by="ap_on">AP</button>   <!-- press + light -->
+<div data-input="hdg_sel"></div>                              <!-- knob -->
+<span data-show="hdg_sel" data-format="%03d"></span>          <!-- readout -->
+```
+
+`data-lit-by` adds the class `lit` while the variable is true, and the
+panel's CSS draws the light. See [UI spec section 3](docs/frontend_ui_spec.md).
+
+### How a model runs
+
+- **Ticks and bands:** time advances in integer ticks. The tick rate is the
+  least common multiple of all the bands. On each tick, the due bands run
+  from the highest frequency to the lowest, and within a band by `order`.
+- **Same-pass visibility:** a later item sees an earlier item's results in
+  the same pass. Order is never implicit, so give `order` numbers with care.
+- **Holding values:** between two passes an item holds its value. A slow band
+  never sees an input change that is reverted before its next pass.
+- **Load checks:** loading checks syntax, names, states, orders and bindings,
+  and stops on the first error with its `file:line`.
+- **Not checked at load:** undefined names, which raise `EvaluationError` at
+  run time with the file, line and tick. Also a default state with no way out,
+  and a global transition to the current state, which does nothing but still
+  wins the pass.
+
+### Examples
+
+| Folder | Shows |
+|---|---|
+| `examples/quickstart` | The smallest model: one lamp, one switch |
+| `examples/timers` | Bands, `t` and `dt` |
+| `examples/autopilot` | A 6-state autopilot closed-loop with a Python aircraft model (`plant.py`) |
+| `examples/actions` | Entry, exit, during and init actions |
+| `examples/autopilot2` | Autoland logic with a flight control panel |
+| `examples/autopilot3` | Autoland with actions, FCP and FMA panels |
+
+Jupyter demos are in `notebooks/`.
+
+## Architecture
+
+| Module | Role |
+|---|---|
+| `statesim/model.py` | Frozen dataclasses: the shared contract |
+| `statesim/loader.py` | CSV files -> immutable `Model`, with load-time checks |
+| `statesim/scheduler.py` | Execution plan ordered by band and `order` |
+| `statesim/evaluator.py` | Compiles expressions once, evaluates them at run time |
+| `statesim/engine.py` | Runtime state and API (`step`, `run`, `set_input`, `snapshot`) |
+| `statesim/trace.py` | Plain-text trace |
+| `statesim_server/` | Local web server and front end (a separate package, so the engine stays synchronous) |
+
+The engine is deterministic: there are no threads, async code, wall-clock time
+or randomness.
 
 ## Tests and report
 
@@ -142,10 +253,6 @@ python -m pytest --junitxml=reports/junit.xml -q
 python tools/make_report.py          # writes reports/test_report.md
 ```
 
-The report covers unit tests and requirement-based use-case tests, with a
-requirement -> test -> result traceability matrix.
-
-## Status
-Engine, front end (branch `frontend`), tests and the test report are in
-place. The test report (`reports/test_report.md`) lists every requirement with
-its tests and results.
+Unit tests, requirement tests (each tagged `@pytest.mark.req("REQ-xxx")`),
+determinism tests and front end tests (browser tests need Playwright). The
+report traces every requirement to its tests and results.
