@@ -16,7 +16,7 @@ from Python.
 | [User interface spec](docs/frontend_ui_spec.md) | The front end screen: panels, input cards, state machine grid, run controls, colours |
 | [Requirements](docs/requirements.csv) | Numbered requirements (REQ-xxx), each traced to its source and to its tests |
 | [Framework spec](docs/requirements_simulation_framework_spec.yaml) | The original specification; `decisions.md` wins where it is more specific |
-| [Future: timeline](docs/future_timeline.md) | Designed, not yet built: a live timeline and sequence chart |
+| [Timeline design](docs/future_timeline.md) | Live timeline and sequence chart: design and decisions |
 
 ## Install and run
 
@@ -37,6 +37,10 @@ It opens `http://127.0.0.1:8765/`. Aircraft panels sit on top, input cards on
 the left, run controls at the bottom left, and the state machines on the
 right with the active state highlighted. Hover over the active state to see
 where it can go next. Options: `--port N`, `--no-browser`, `--trace FILE`.
+
+The **Timeline** button in the run bar shows a pane with one lane per state
+machine, and the input changes, over time. Click a transition to see what it
+caused (a sequence chart).
 
 Or run it from Python:
 
@@ -241,6 +245,7 @@ Jupyter demos are in `notebooks/`.
 | `statesim/evaluator.py` | Compiles expressions once, evaluates them at run time |
 | `statesim/engine.py` | Runtime state and API (`step`, `run`, `set_input`, `snapshot`) |
 | `statesim/trace.py` | Plain-text trace |
+| `statesim/timeline.py` | Records transitions and input changes with their causes for the timeline pane |
 | `statesim_server/` | Local web server and front end (a separate package, so the engine stays synchronous) |
 
 The engine is deterministic: there are no threads, async code, wall-clock time

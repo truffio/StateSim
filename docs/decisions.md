@@ -219,3 +219,22 @@ decisions later merged into others.
 |---|---|---|
 | O5b | Aircraft panels | Light equations for the remaining FCP buttons. |
 | O8b | Reloading | Reload edited CSV files without restarting the server. Postponed. |
+
+## Part E: timeline, user-approved 2026-11-12
+
+The live timeline and sequence chart. The design is in
+`docs/future_timeline.md`; the screen rules are in `docs/frontend_ui_spec.md`
+section 11.
+
+- **Lanes:** state machines only. Equations get no lane and never appear as
+  events; they are folded into the cause links between machines.
+- **Events:** transitions, labelled with their id (and the title on hover or
+  when there is room).
+- **Where:** an optional pane in the front end, updated live as the user works
+  and states change. It can be shown or hidden.
+- **Data source:** the current session's log, the same whether the session is
+  driven by hand or by an automated test. There are no scenario files.
+- **Pane:** at the bottom of the page, full width, hidden by default.
+- **Time axis:** the view shows the last 30 s and follows the run.
+- **Limits:** at most 20,000 timeline items (the oldest are dropped). A
+  broadcast with more than 2,000 new items sends the whole timeline instead.

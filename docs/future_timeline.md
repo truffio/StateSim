@@ -1,6 +1,6 @@
 # Future feature: live timeline and sequence chart
 
-Status: **designed, not implemented** (recorded 2026-11-12).
+Status: **implemented** on branch `charts` (2026-11-12); see `docs/timeline_plan.md` and UI spec section 11.
 
 Two views of the current session, built live while the tool runs:
 
