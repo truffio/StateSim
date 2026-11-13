@@ -259,3 +259,12 @@ section 11.
   snapshots are not editable. Save PNG saves what is shown.
 - The FMA panel is marked by the master CSV role column (role = fma, one at
   most); the FCP is not shown.
+
+## Part G: aircraft types, user-approved 2026-11-13
+
+- The FCP and FMA are configurable by aircraft type from the master CSV: one
+  `aircraft` row (file_name = the type) brings in the type's panel set.
+- A type is a folder `aircraft/<TYPE>/` with its panel files and
+  `aircraft.csv`; next to the master CSV first, else built in
+  (`src/statesim/aircraft/`). The A220 is built in; the A320 is not defined
+  yet. Panel HTML and CSV in the package are data, not code (Python only).

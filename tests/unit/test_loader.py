@@ -482,3 +482,66 @@ def test_builtins_is_a_reserved_name(tmp_path):
     with pytest.raises(ModelError) as e:
         load_model(tmp_path / "master.csv")
     assert "reserved" in str(e.value) and "inputs.csv:2" in str(e.value)
+
+
+# --- aircraft types (#44) -------------------------------------------------------
+_SM = ("transition_id,current_state,next_state,default_state,equation,result_variable,"
+       "rationale,title,order\n1,A,B,A,True,r1,,,1\n")
+
+
+def _aircraft_model(tmp_path, master_rows, inputs="variable_name,type,default_value\n"):
+    (tmp_path / "m.csv").write_text(_SM, encoding="utf-8")
+    (tmp_path / "inputs.csv").write_text(inputs, encoding="utf-8")
+    (tmp_path / "master.csv").write_text(
+        "file_name,type,order,band,name,scale,role\nm.csv,state_machine,1,10,,,\n"
+        "inputs.csv,inputs,,,,,\n" + master_rows, encoding="utf-8")
+    return tmp_path / "master.csv"
+
+
+@pytest.mark.req("REQ-200", "REQ-201")
+def test_aircraft_row_brings_in_the_types_panels():
+    from pathlib import Path
+    model = load_model(Path(__file__).resolve().parents[2] / "examples" / "autopilot3" / "master.csv")
+    assert model.aircraft == "A220"
+    assert [(p.name, p.label, p.scale, p.role) for p in model.panels] == [
+        ("fcp", "Flight control panel", 0.75, ""), ("fma", "Flight mode annunciator", 0.75, "fma")]
+
+
+@pytest.mark.req("REQ-202")
+def test_undefined_aircraft_type_is_a_load_error(tmp_path):
+    with pytest.raises(ModelError) as e:
+        load_model(_aircraft_model(tmp_path, "A320,aircraft,,,,,\n"))
+    msg = str(e.value)
+    assert "master.csv:4" in msg and "'A320' is not defined" in msg and "A220" in msg
+
+
+@pytest.mark.req("REQ-200", "REQ-201")
+def test_local_aircraft_folder_overrides_the_builtin(tmp_path):
+    folder = tmp_path / "aircraft" / "A320"
+    folder.mkdir(parents=True)
+    (folder / "aircraft.csv").write_text("file_name,type,name,scale,role\nfma.html,panel,A320 FMA,1,fma\n",
+                                         encoding="utf-8")
+    (folder / "fma.html").write_text('<style>.m{display:none}.m.lit{display:inline}</style>'
+                                     '<div><span class="m" data-lit-by="r1">SRS</span></div>', encoding="utf-8")
+    model = load_model(_aircraft_model(tmp_path, "A320,aircraft,,,,,\n"))
+    assert model.aircraft == "A320"
+    assert [(p.name, p.label, p.role) for p in model.panels] == [("fma", "A320 FMA", "fma")]
+
+
+@pytest.mark.req("REQ-202")
+def test_only_one_aircraft_row_and_one_fma_role(tmp_path):
+    with pytest.raises(ModelError) as e:
+        load_model(_aircraft_model(tmp_path, "A220,aircraft,,,,,\nA220,aircraft,,,,,\n"))
+    assert "more than one 'aircraft' row" in str(e.value)
+    (tmp_path / "own.html").write_text('<div data-lit-by="r1">X</div>', encoding="utf-8")
+    with pytest.raises(ModelError) as e:
+        load_model(_aircraft_model(tmp_path, "own.html,panel,,,Own,1,fma\nA220,aircraft,,,,,\n"))
+    assert "only one panel may have role 'fma'" in str(e.value)
+
+
+@pytest.mark.req("REQ-202")
+@pytest.mark.parametrize("name", ["../x", "a/b", ".hidden", "a" + chr(92) + "b"])
+def test_aircraft_type_must_be_a_plain_name(tmp_path, name):
+    with pytest.raises(ModelError) as e:
+        load_model(_aircraft_model(tmp_path, f"{name},aircraft,,,,,\n"))
+    assert "invalid aircraft type" in str(e.value)

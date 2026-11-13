@@ -90,7 +90,8 @@ actions.csv,actions,,,,,
 fcp.html,panel,,,Flight control panel,0.75,
 ```
 
-- `type`: `state_machine`, `inputs`, `equations`, `actions` or `panel`.
+- `type`: `state_machine`, `inputs`, `equations`, `actions`, `panel` or
+  `aircraft` (file_name = an aircraft type, e.g. `A220`: its FCP and FMA).
 - `order` and `band` are required on `state_machine` rows. `band` is the rate
   in Hz. `order` sets when the machine runs within its band.
 - `name` (optional) is the title shown on the front end. If it's empty, the
@@ -197,6 +198,12 @@ CLIMB_TIMER,climb_ticks += 1,
   in the trace.
 
 ### 6. Aircraft panels (optional)
+
+Choose an aircraft type to get its FCP and FMA with one master row:
+`A220,aircraft,,,,,`. A type is a folder `aircraft/<TYPE>/` (next to the master
+CSV, else built in: `src/statesim/aircraft/`, today the A220) with its panels
+and an `aircraft.csv` listing them. Other types (e.g. an A320) are added as new
+folders. A model can also list its own panels:
 
 A panel is an HTML file with its own CSS. StateSim wires it through
 attributes, and its scripts never run.
