@@ -8,7 +8,7 @@ from fractions import Fraction
 from html.parser import HTMLParser
 
 from statesim import Engine, Model, format_text
-from statesim.timeline import Timeline
+from statesim.timeline import Timeline, json_value
 from statesim.scheduler import build_schedule
 
 MODES = ("realtime", "fast")
@@ -272,9 +272,9 @@ class Session:
         return {
             "type": "state",
             "states": snap["states"],
-            "inputs": snap["inputs"],
+            "inputs": {n: json_value(v) for n, v in snap["inputs"].items()},
             "lit": {v: bool(self._value(snap, v)) for v in self.lit_vars},
-            "values": {v: self._value(snap, v) for v in self.shown_vars},
+            "values": {v: json_value(self._value(snap, v)) for v in self.shown_vars},
             "mode": self.mode,
             "paused": self.paused,
             "t": snap["t"],

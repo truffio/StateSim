@@ -197,6 +197,9 @@ def _write_model(d, rows, inputs="variable_name,type,default_value\ngo,bool,fals
     (d / "master.csv").write_text(master, encoding="utf-8")
     (d / "inputs.csv").write_text(inputs, encoding="utf-8")
     head = "transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order"
+    if actions:
+        head += ",action_type,action"
+        rows = "".join(r if r.count(",") > 8 else r.rstrip("\n") + ",,\n" for r in rows.splitlines(True))
     (d / "m.csv").write_text(head + "\n" + rows, encoding="utf-8")
     return load_model(d / "master.csv")
 
@@ -221,6 +224,33 @@ def test_runtime_error_pauses_reports_and_reset_recovers(tmp_path):
             t0 = app.session.engine.tick
             await asyncio.sleep(0.4)
             assert app.session.engine.tick > t0 and not app.session.paused
+        server.close()
+        await server.wait_closed()
+    run(go())
+
+
+@R("REQ-117")
+def test_action_writing_t_and_dt_keeps_the_server_running(tmp_path):
+    """#26: t and dt are Fractions; an action storing them must not break the state messages."""
+    model = _write_model(
+        tmp_path,
+        "1,A,B,A,go,r1,,,1,entry,STAMP\n2,B,A,,not go,r2,,,2,during,COUNT\n",
+        inputs="variable_name,type,default_value\ngo,bool,false\nstarted,float,0\nelapsed,int,0\n",
+        actions="action,statement\nSTAMP,started = t\nCOUNT,elapsed += dt\n")
+
+    async def go():
+        app, server = await start(model, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws:
+            await ws.send(json.dumps({"type": "set", "name": "go", "value": True}))
+            await asyncio.sleep(0.4)
+            st = await recv_type(ws, "state")
+            while st["inputs"]["elapsed"] == 0:
+                st = await recv_type(ws, "state")
+            assert isinstance(st["inputs"]["started"], float) and isinstance(st["inputs"]["elapsed"], float)
+        async with connect(f"ws://127.0.0.1:{port}/ws") as ws2:          # new clients still connect
+            assert json.loads(await ws2.recv())["type"] == "model"
+        assert not app.session.paused
         server.close()
         await server.wait_closed()
     run(go())
