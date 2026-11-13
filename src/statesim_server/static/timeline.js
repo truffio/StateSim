@@ -85,6 +85,7 @@
   // The pane, its splitter and its run-bar button are in index.html. They
   // work before a model arrives; an instance only draws inside the pane.
   const pane = { el: null, bar: null, btn: null, instance: null };
+  const CHART_MIN_H = 200;   // chart height kept visible under the lanes when it opens
 
   const store = {
     get(key) { try { return localStorage.getItem(key); } catch { return null; } },
@@ -616,8 +617,14 @@
       }
       chart.hidden = false;
       renderChart();
-      // bring the top of the chart into the pane
-      const want = chart.offsetTop - Math.max(0, container.clientHeight - Math.min(chart.offsetHeight, 170));
+      // The lanes stay at the top of the pane (sticky). If the pane is too
+      // short to show some of the chart under them, grow it for now (up to
+      // the pane's maximum; the saved height is not changed).
+      if (container === pane.el) {
+        const need = lanesBox.offsetHeight + Math.min(chart.offsetHeight, CHART_MIN_H);
+        if (paneH() < need) setH(need);
+      }
+      const want = chart.offsetTop - lanesBox.offsetHeight;
       if (container.scrollTop < want) container.scrollTop = want;
       refresh();
     }

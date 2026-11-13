@@ -25,7 +25,7 @@ body.resizing-v { cursor: row-resize; user-select: none; }
 #timeline-toggle[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
 
 /* swimlanes */
-.tl-lanes { position: relative; }
+.tl-lanes { position: sticky; top: 0; z-index: 1; background: var(--card); }   /* stays visible over the chart */
 .tl-svg { display: block; user-select: none; touch-action: pan-y; cursor: grab; }
 .tl-svg.tl-pointing { cursor: pointer; }
 .tl-svg.tl-panning { cursor: grabbing; }
