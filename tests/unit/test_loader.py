@@ -431,3 +431,22 @@ def test_max_equations_counts_sm_rows_and_standalone(tmp_path, monkeypatch):
 def test_error_str_format(tmp_path):
     m = master(tmp_path, ["x.csv,bogus,1"])
     assert str(err(tmp_path, m)).startswith("master.csv:2: ")
+
+
+def test_non_utf8_csv_is_a_model_error_with_line(tmp_path):
+    """#29: a CSV saved as cp1252 (Excel 'CSV') gives file:line, not UnicodeDecodeError."""
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\nm.csv,state_machine,1,10\n", encoding="utf-8")
+    text = ("transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order\n"
+            "1,A,B,A,True,r1,,Temp > 30 °C,1\n")
+    (tmp_path / "m.csv").write_bytes(text.encode("cp1252"))
+    with pytest.raises(ModelError) as e:
+        load_model(tmp_path / "master.csv")
+    assert "not UTF-8" in str(e.value) and "m.csv:2" in str(e.value)
+
+
+def test_utf8_with_bom_still_loads(tmp_path):
+    (tmp_path / "master.csv").write_text("file_name,type,order,band\nm.csv,state_machine,1,10\n", encoding="utf-8")
+    text = ("transition_id,current_state,next_state,default_state,equation,result_variable,rationale,title,order\n"
+            "1,A,B,A,True,r1,,Temp > 30 °C,1\n")
+    (tmp_path / "m.csv").write_bytes(text.encode("utf-8-sig"))
+    assert load_model(tmp_path / "master.csv").state_machines[0].transitions[0].title == "Temp > 30 °C"
