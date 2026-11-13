@@ -16,6 +16,8 @@ MASTER_COLUMNS: tuple[str, ...] = ("file_name", "type", "order", "band")
 # order and band are used (and required) on state_machine rows only.
 # Optional master column for panel rows: display size factor (default 1).
 MASTER_SCALE_COLUMN = "scale"
+MASTER_ROLE_COLUMN = "role"      # panel rows: "fma" marks the panel the FMA recording uses
+PANEL_ROLES: tuple[str, ...] = ("", "fma")
 # Optional master column: display name of a state machine (front end only).
 MASTER_NAME_COLUMN = "name"
 TYPE_STATE_MACHINE = "state_machine"

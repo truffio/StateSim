@@ -75,13 +75,13 @@ def input_meta(model: Model) -> dict[str, dict]:
 
 
 def recorder_panel(model: Model) -> dict | None:
-    """The FMA panel for the recording: the panel whose data-lit-by lights are
-    computed results (not inputs or states). A model has at most one; None
-    when there is none (the recording buttons are then not shown)."""
+    """The FMA panel for the recording: the panel whose master CSV row has
+    role "fma" (at most one). Its rows are drawn from its data-lit-by lights
+    that are computed results. None when there is none (no recording buttons)."""
     labels = display_labels(model)
     for p in model.panels:
         lits = [v for v in p.lits if v in labels]
-        if lits:
+        if p.role == "fma" and lits:
             return {"name": p.name, "label": p.label or p.name, "html": p.html, "vars": lits}
     return None
 

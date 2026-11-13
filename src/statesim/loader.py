@@ -548,6 +548,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
     row_of: dict[str, int] = {}
     label_of: dict[str, str] = {}
     scale_of: dict[str, float] = {}
+    role_of: dict[str, str] = {}
     init_of: dict[str, str] = {}
     seen_single: dict[str, str] = {}
     for line, r in mrows:
@@ -577,6 +578,12 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
                 row_of[src] = line
                 label_of[src] = r.get("name", "")
                 scale_of[src] = _panel_scale(r.get("scale", ""), src)
+                role = r.get(constants.MASTER_ROLE_COLUMN, "").strip().lower()
+                if role not in constants.PANEL_ROLES:
+                    raise ModelError(f"unknown panel role {role!r} (expected fma or empty)", src)
+                if role and role in role_of.values():
+                    raise ModelError(f"only one panel may have role {role!r}", src)
+                role_of[src] = role
                 continue
             if ftype in seen_single:
                 raise ModelError(
@@ -647,7 +654,7 @@ def load_model(master_csv: str | PathLike[str]) -> Model:
             actions = _load_actions(path, fname)
         elif ftype == constants.TYPE_PANEL:
             panels.append(replace(_load_panel(path, fname, src), scale=scale_of[src],
-                                  label=label_of[src]))
+                                  label=label_of[src], role=role_of[src]))
         else:
             for line, r in _read_csv(path, fname, constants.INPUTS_COLUMNS):
                 rsrc = f"{fname}:{line}"
