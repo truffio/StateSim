@@ -28,9 +28,12 @@
   <button type="button" class="btn primary" id="save">Save PNG</button>
   <button type="button" class="btn" id="undo" disabled>Undo</button>
   <button type="button" class="btn" id="reset">Reset to recording</button>
+  <button type="button" class="btn" id="blank" title="Add a blank FMA at the end; type what you expect in it">+ Blank FMA</button>
+  <button type="button" class="btn" id="align-v" title="Line all blocks up on the left, keeping their order">Align vertical</button>
+  <button type="button" class="btn" id="align-s" title="Indent each block one step more than the one above">Align staircase</button>
   <label><input type="checkbox" id="times" checked> Show times</label>
   <label>Indent step <input type="number" id="step" min="0" max="120" step="4" value="28"> px</label>
-  <span class="rc-status" id="status">Click a text to edit it. Drag &#x2807; to move a row.</span>
+  <span class="rc-status" id="status">Click a text to edit it. Drag a block to move it.</span>
 </div>
 <div class="rc-stage" id="stage"><div class="rc-wait" id="wait">Waiting for the recording…</div></div>
 <script src="recorder.js"></script>
