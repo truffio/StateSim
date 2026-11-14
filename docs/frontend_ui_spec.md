@@ -478,3 +478,25 @@ The FMA snapshots themselves cannot be edited. **Save PNG** saves the preview
 as shown, without the controls or hidden rows, at twice the screen
 resolution, named `<title> - <date> <time>.png`. If the browser blocks the
 window, a message asks to allow pop-ups and press Stop again.
+
+### 12.5 Expected FMAs and free layout
+
+- **FMA positions.** The FMA panel marks each text position with
+  `data-slot` (and `data-slot-color`: top row `green`, bottom row `white`),
+  and its palette on the root with `data-slot-colors`. The A220 FMA has 15:
+  thrust 1 + 1, lateral 2 + 2, engage DR + AP / arrow + AT, vertical 2 + 3;
+  palette green, white, yellow, amber, red. Without positions, the blank FMA
+  buttons are not shown.
+- **Blank FMAs.** **+ Blank FMA** adds one at the end; **+ Blank FMA below**
+  (block tools) inserts one under any block. Any number can be added. A blank
+  FMA is the real FMA with every position empty (dashed in the preview, not in
+  the PNG). Click a position and type **any text**; it takes the position's
+  default colour, and the colour menu shown under the focused position picks
+  another palette colour (**default** restores it). The arrow position cycles
+  none, ←, → on click. Its caption ("Expected FMA"), time and note are
+  editable; **Delete** removes it.
+- **Free layout.** Drag any block (caption and FMA) anywhere; numbers follow
+  the top-to-bottom order. **Align vertical** lines all blocks up on the left;
+  **Align staircase** indents each one step more than the one above (the
+  compact layout). Both keep the order. Undo and Reset to recording cover all
+  of this; Save PNG draws the blocks where they are.
