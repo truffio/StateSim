@@ -28,6 +28,16 @@ def record(pg, steps):
     return w
 
 
+def drag(w, block, target):
+    """Drag a block by its badge to just above the target block."""
+    src = block.locator(".rc-num").bounding_box()
+    dst = target.bounding_box()
+    w.mouse.move(src["x"] + 3, src["y"] + 3)
+    w.mouse.down()
+    w.mouse.move(dst["x"] + 3, dst["y"] - 6, steps=8)
+    w.mouse.up()
+
+
 TAKEOFF = [
     {"type": "press", "name": "TOGA"},
     {"type": "set", "name": "ground_speed", "value": 130},
@@ -77,12 +87,12 @@ def test_preview_edits_and_save_png(open_page):
     full = w.evaluate("window.lastPng")
     assert d.value.suggested_filename.startswith("Takeoff check - ") and d.value.suggested_filename.endswith(".png")
     assert full["width"] > 1000 and full["size"] > 10000
-    # hide a row and drag the last one up: the image gets shorter, the order follows
+    # hide a block and drag the last one up: the image gets shorter, the order follows
     rec = w.locator(".rc-rec").nth(2)
     rec.hover()
     rec.locator("button", has_text="Hide").click()
     assert w.locator(".rc-rec.rc-hidden").count() == 1
-    w.locator(".rc-rec").nth(4).locator(".rc-grip").drag_to(w.locator(".rc-rec").nth(1), target_position={"x": 5, "y": 2})
+    drag(w, w.locator(".rc-rec").nth(4), w.locator(".rc-rec").nth(1))
     assert w.locator(".rc-label").all_text_contents()[1] == "Crew engages the autopilot"
     with w.expect_download():
         w.locator("#save").click()
@@ -120,3 +130,54 @@ def test_cause_is_followed_back_to_the_input(open_page):
                      radio_altitude: {type: "int", description: "Radio altitude", unit: "ft"}})""")
     assert [r["label"] for r in rows] == ["Start of the manoeuvre", "TOGA button pressed"]
     assert rows[1]["lit"] == ["fma_a"]
+
+
+@R("REQ-203", "REQ-204", "REQ-205")
+def test_blank_fma_typing_colours_and_arrow(open_page):
+    pg = open_page("autopilot3")
+    w = record(pg, TAKEOFF)
+    n = w.locator(".rc-rec").count()
+    w.locator("#blank").click()                                    # at the end
+    blk = w.locator(".rc-rec").nth(1)
+    blk.hover()
+    blk.locator("button", has_text="+ Blank FMA below").click()    # between recorded FMAs
+    assert w.locator(".rc-rec").count() == n + 2
+    assert "Expected FMA" in w.locator(".rc-label").all_text_contents()[2]
+    man = w.locator(".rc-rec").nth(2)
+    top = man.locator('.fma-txt[data-slot="vert-top-1"]')
+    top.click()
+    w.keyboard.type("ANY TEXT 1")                                   # any text is accepted
+    assert top.text_content() == "ANY TEXT 1" and "fma-c-green" in top.get_attribute("class")
+    bot = man.locator('.fma-txt[data-slot="vert-bot-alt"]')
+    bot.click()
+    w.keyboard.type("ALT")
+    assert "fma-c-white" in bot.get_attribute("class")
+    w.locator("#swatches button[title=amber]").dispatch_event("mousedown")
+    assert "fma-c-amber" in bot.get_attribute("class")
+    w.locator("#swatches button.rc-default").dispatch_event("mousedown")
+    assert "fma-c-white" in bot.get_attribute("class")
+    man.locator(".arrow").click()
+    assert man.locator(".arrow .m.lit").count() == 1
+    with w.expect_download():
+        w.locator("#save").click()
+    assert w.evaluate("window.lastPng")["size"] > 10000
+    w.close()
+
+
+@R("REQ-206", "REQ-207")
+def test_drag_anywhere_numbers_follow_and_realign(open_page):
+    pg = open_page("autopilot3")
+    w = record(pg, TAKEOFF)
+    labels = w.locator(".rc-label").all_text_contents()
+    drag(w, w.locator(".rc-rec").nth(len(labels) - 1), w.locator(".rc-rec").nth(1))
+    after = w.locator(".rc-label").all_text_contents()
+    assert after[1] == labels[-1] and w.locator(".rc-num").nth(1).text_content() == "1"
+    w.locator("#align-v").click()
+    lefts = [w.locator(".rc-rec").nth(k).evaluate("e => e.offsetLeft") for k in range(len(labels))]
+    assert len(set(lefts)) == 1
+    w.locator("#align-s").click()
+    lefts = [w.locator(".rc-rec").nth(k).evaluate("e => e.offsetLeft") for k in range(len(labels))]
+    assert lefts == sorted(lefts) and lefts[-1] > lefts[0]
+    assert w.locator(".rc-label").all_text_contents() == after       # realign keeps the order
+    w.locator("#undo").click()
+    w.close()
