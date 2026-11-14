@@ -40,7 +40,7 @@
     .rc-others { font-size: 12px; color: #4a5565; margin: -2px 0 6px 2px; }
     .rc-note { font-size: 13px; color: #1c2430; margin: -2px 0 8px 2px; font-style: italic; white-space: pre-wrap; }
     .rc-note:empty::before { content: "Note"; color: #9aa3ae; }
-    .rc-fma { display: inline-block; }
+    .rc-fma { display: inline-block; zoom: 0.5; }   /* the FMA at half its natural size */
   `;
   // Preview only: edit controls and hidden rows (never in the PNG).
   const EDIT_CSS = `

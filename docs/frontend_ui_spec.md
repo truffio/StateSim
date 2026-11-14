@@ -453,7 +453,7 @@ timeline keep running all the time.
 - A header: title, then the model, date, recording window, number of FMA
   changes and the layout name.
 - A vertical list. Each row has a number badge, its caption and time, then
-  the FMA, drawn from the FMA panel's own HTML and CSS with the lights of
+  the FMA at half its natural size, drawn from the FMA panel's own HTML and CSS with the lights of
   that moment. Each row is indented one step (28 px) more than the one
   before, with a thin connector, so the list reads down and to the right.
 - Other layouts may be added later; compact is the first and the default.
